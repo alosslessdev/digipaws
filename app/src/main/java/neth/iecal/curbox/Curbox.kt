@@ -11,16 +11,15 @@ class Curbox: Application() {
     AppLogger.init(this)
     AppLogger.logInfo("Curbox", "App initialized")
 
-    // Start the communication bridge service
-    BridgeServiceManager.ensureBridgeRunning(this)
-    AppLogger.logInfo("Curbox", "Communication bridge service started")
+    // Communication bridge is no longer needed as AppBlockerService handles duties
+    // BridgeServiceManager.ensureBridgeRunning(this)
 
     Thread.setDefaultUncaughtExceptionHandler(CrashLogger(this))
     super.onCreate()
   }
 
   override fun onTerminate() {
-    BridgeServiceManager.cleanup(this)
+    // BridgeServiceManager.cleanup(this)
     super.onTerminate()
   }
 }

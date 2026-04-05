@@ -76,11 +76,14 @@
                 android:resource="@xml/usage_tracker_service_config" />
         </service>
 
+        <!-- Communication Bridge is disabled as its duties were moved to AppBlockerService -->
+        <!--
         <service
             android:name=".services.CommunicationBridgeService"
             android:exported="false"
             android:description="@string/communication_bridge_desc"
             android:foregroundServiceType="dataSync" />
+        -->
 
         <receiver
             android:name=".receivers.AdminReceiver"
