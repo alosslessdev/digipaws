@@ -73,31 +73,11 @@ class AppBlockerService : BaseBlockingService() {
 
     private val heartbeatReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val action = intent?.action ?: return
-            when (action) {
-                CommunicationBridgeService.ACTION_PING -> {
-                    val pongIntent = Intent(CommunicationBridgeService.ACTION_PONG).apply {
-                        setPackage(packageName)
-                    }
-                    sendBroadcast(pongIntent)
+            if (intent?.action == CommunicationBridgeService.ACTION_PING) {
+                val pongIntent = Intent(CommunicationBridgeService.ACTION_PONG).apply {
+                    setPackage(packageName)
                 }
-                in CommunicationBridgeService.REFRESH_ACTIONS -> {
-                    when (action) {
-                        CommunicationBridgeService.ACTION_REFRESH_APPBLOCKER -> appBlocker.setupAppBlocker(this@AppBlockerService)
-                        CommunicationBridgeService.ACTION_REFRESH_REELBLOCKER -> reelBlocker.setupBlocker(this@AppBlockerService)
-                        CommunicationBridgeService.ACTION_REFRESH_GRAYSCALE -> grayScaleFilter.setup(this@AppBlockerService)
-                        CommunicationBridgeService.ACTION_REFRESH_FOCUS_MODE -> focusModeBlocker.setupFocusMode(this@AppBlockerService)
-                        CommunicationBridgeService.ACTION_REFRESH_KEYWORD_CONFIG -> keywordBlocker.setupBlocker(this@AppBlockerService)
-                        CommunicationBridgeService.ACTION_REFRESH_VIEWBLOCKER -> {
-                            viewBlocker.setupBlocker(this@AppBlockerService)
-                            // We use setupBlocker instead of private rebuildParsedRules
-                        }
-                        CommunicationBridgeService.ACTION_UNSUSPEND_ALL -> {
-                            context?.let { neth.iecal.curbox.utils.AppSuspendHelper.init(serviceScope)
-                                neth.iecal.curbox.utils.AppSuspendHelper.unsuspendAllApps(it) }
-                        }
-                    }
-                }
+                sendBroadcast(pongIntent)
             }
         }
     }
@@ -310,10 +290,7 @@ class AppBlockerService : BaseBlockingService() {
             }
             AppLogger.logDebug(TAG, "Picker receiver registered")
 
-            val heartbeatFilter = IntentFilter().apply {
-                addAction(CommunicationBridgeService.ACTION_PING)
-                CommunicationBridgeService.REFRESH_ACTIONS.forEach { addAction(it) }
-            }
+            val heartbeatFilter = IntentFilter(CommunicationBridgeService.ACTION_PING)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(heartbeatReceiver, heartbeatFilter, Context.RECEIVER_EXPORTED)
             } else {
