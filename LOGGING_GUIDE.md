@@ -1,4 +1,4 @@
-# DigiPaws Comprehensive Logging Documentation
+# Curbox Comprehensive Logging Documentation
 
 ## Overview
 A comprehensive logging system has been added to track every service lifecycle event, accessibility event handling, and blocker actions. This will help identify why accessibility services are crashing.
