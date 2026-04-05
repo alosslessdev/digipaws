@@ -81,15 +81,10 @@ object ZipUtils {
                     while (entry != null) {
                         val outputFile = File(sharedPrefsDir, entry.name)
 
-                        Log.d("Unzipping", entry.name + " to ${outputFile.path}")
                         // Ensure the file is deleted if it already exists
                         if (outputFile.exists()) {
                             outputFile.delete()
                         }
-                        Log.d(
-                            "Permissions",
-                            "Can read: ${sharedPrefsDir.canRead()}, Can write: ${sharedPrefsDir.canWrite()}"
-                        )
 
                         FileOutputStream(outputFile).use { outputStream ->
                             zis.copyTo(outputStream) // Efficiently copy data
@@ -104,8 +99,6 @@ object ZipUtils {
 
                             // Force a reload by accessing the preferences
                             sharedPreferences.all // This forces a read from disk
-                            Log.d("ReloadSharedPreferences", "Reloaded preferences: $prefsName")
-
                         }
                         entry = zis.nextEntry
                     }
@@ -114,7 +107,7 @@ object ZipUtils {
 
 
         } catch (e: Exception) {
-            Log.e("error", e.toString())
+            AppLogger.functionError("ZipUtils", "unzipSharedPreferencesFromUri", e)
         }
     }
 

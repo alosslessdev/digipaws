@@ -18,10 +18,7 @@ import neth.iecal.curbox.utils.AppLogger
 class UsageTrackingService : BaseBlockingService() {
 
     private val TAG = "UsageTrackingService"
-    private val reelsOverlayManager by lazy { 
-        AppLogger.logDebug(TAG, "Initializing ReelsOverlayManager")
-        ReelsOverlayManager(this) 
-    }
+    private val reelsOverlayManager by lazy { ReelsOverlayManager(this) }
     private val reelsCountTracker = ReelsCountTracker()
     private val mindfulMessageTracker = MindfulMessageTracker()
 
@@ -39,28 +36,17 @@ class UsageTrackingService : BaseBlockingService() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onServiceConnected() {
-        AppLogger.logServiceLifecycle(TAG, "onServiceConnected()", "Service connected to accessibility framework")
         try {
-            AppLogger.logDebug(TAG, "Setting up AccessibilityServiceInfo")
             serviceInfo = AccessibilityServiceInfo().apply {
                 eventTypes =
                     AccessibilityEvent.TYPE_VIEW_SCROLLED or AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
                 feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
                 flags = AccessibilityServiceInfo.DEFAULT
             }
-            AppLogger.logVariable(TAG, "serviceInfo.eventTypes", serviceInfo.eventTypes)
             
-            AppLogger.functionEntry(TAG, "reelsCountTracker.setup")
             reelsCountTracker.setup(this, reelsOverlayManager)
-            AppLogger.functionExit(TAG, "reelsCountTracker.setup")
-            
-            AppLogger.functionEntry(TAG, "mindfulMessageTracker.setup")
             mindfulMessageTracker.setup(this)
-            AppLogger.functionExit(TAG, "mindfulMessageTracker.setup")
-            
-            AppLogger.functionEntry(TAG, "reelsCountTracker.setupReceivers")
             reelsCountTracker.setupReceivers()
-            AppLogger.functionExit(TAG, "reelsCountTracker.setupReceivers")
             
             if (!Settings.canDrawOverlays(this)) {
                 AppLogger.logWarn(TAG, "App cannot draw overlays - requesting permission")
@@ -78,12 +64,7 @@ class UsageTrackingService : BaseBlockingService() {
                 }
 
                 startActivity(intent)
-                AppLogger.logDebug(TAG, "Started overlay permission activity")
-            } else {
-                AppLogger.logDebug(TAG, "App has permission to draw overlays")
             }
-            
-            AppLogger.logServiceLifecycle(TAG, "onServiceConnected COMPLETE", "All trackers setup successfully")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "onServiceConnected", e)
         }
@@ -91,22 +72,13 @@ class UsageTrackingService : BaseBlockingService() {
 
 
     override fun onInterrupt() {
-        AppLogger.logServiceLifecycle(TAG, "onInterrupt()", "Usage tracking service interrupted")
     }
 
     override fun onDestroy() {
-        AppLogger.logServiceLifecycle(TAG, "onDestroy()", "UsageTrackingService being destroyed")
         try {
             super.onDestroy()
-            AppLogger.functionEntry(TAG, "mindfulMessageTracker.onDestroy")
             mindfulMessageTracker.onDestroy()
-            AppLogger.functionExit(TAG, "mindfulMessageTracker.onDestroy")
-            
-            AppLogger.functionEntry(TAG, "reelsCountTracker.onDestroy")
             reelsCountTracker.onDestroy()
-            AppLogger.functionExit(TAG, "reelsCountTracker.onDestroy")
-            
-            AppLogger.logServiceLifecycle(TAG, "onDestroy COMPLETE", "All trackers cleaned up")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "onDestroy", e)
         }

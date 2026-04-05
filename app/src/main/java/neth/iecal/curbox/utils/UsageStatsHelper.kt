@@ -144,7 +144,6 @@ class UsageStatsHelper(private val context: Context) {
             for (foregroundProcess in foregroundProcesses) {
                 if (packageManager.getLaunchIntentForPackage(foregroundProcess) != null) {
                     componentForegroundStats.add(ComponentForegroundStat(start, minOf(System.currentTimeMillis(), end), foregroundProcess))
-                    Log.d("UsageStatsHelper", "Assuming that application $foregroundProcess has been used the whole query time")
                 }
             }
         }

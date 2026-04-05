@@ -5,14 +5,12 @@ import android.util.Log
 class GrayscaleControl {
     private val commandListener = object : ShizukuRunner.CommandResultListener {
         override fun onCommandResult(output: String, done: Boolean) {
-            Log.d("monochrome output: ",output)
             // Handle successful command execution if needed
         }
 
         override fun onCommandError(error: String) {
             // Handle command errors if needed
-
-            Log.d("monochrome error: ",error)
+            AppLogger.logError("GrayscaleControl", "Monochrome error: $error")
         }
     }
 

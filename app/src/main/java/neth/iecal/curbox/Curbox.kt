@@ -9,11 +9,9 @@ class Curbox: Application() {
   override fun onCreate() {
     DynamicColors.applyToActivitiesIfAvailable(this)
     AppLogger.init(this)
-    AppLogger.logInfo("Curbox", "App initialized")
 
     // Start the communication bridge service
     BridgeServiceManager.ensureBridgeRunning(this)
-    AppLogger.logInfo("Curbox", "Communication bridge service started")
 
     Thread.setDefaultUncaughtExceptionHandler(CrashLogger(this))
     super.onCreate()

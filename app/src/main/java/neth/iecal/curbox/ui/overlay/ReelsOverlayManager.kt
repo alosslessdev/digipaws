@@ -49,13 +49,10 @@ class ReelsOverlayManager(private val context: Context) {
 
     fun removeOverlay() {
         if (overlayView != null && windowManager != null) {
-            Log.d("UsageStatOverlayManager", "Removing overlay.")
             windowManager?.removeView(overlayView)
             overlayView = null
             binding = null
             isOverlayVisible = false
-        } else {
-            Log.d("UsageStatOverlayManager", "No overlay to remove.")
         }
     }
 

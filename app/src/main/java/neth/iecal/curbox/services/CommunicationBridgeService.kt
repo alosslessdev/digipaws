@@ -38,26 +38,22 @@ class CommunicationBridgeService : Service() {
     private val communicationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action ?: return
-            //AppLogger.logDebug(TAG, "Received broadcast: $action")
             try {
                 when (action) {
                     // Forward broadcasts to accessibility services
                     in REFRESH_ACTIONS -> {
-                        //AppLogger.logBlockerAction(TAG, "BroadcastForward", "Forwarding $action")
                         // Re-broadcast to accessibility services
                         sendBroadcast(intent)
                     }
 
                     // Handle service status requests
                     ACTION_CHECK_STATUS -> {
-                        AppLogger.logDebug(TAG, "Service status check requested")
                         sendServiceStatusBroadcast()
                     }
 
                     // Handle heartbeat pong
                     ACTION_PONG -> {
                         lastAccessibilityHeartbeat = System.currentTimeMillis()
-                        AppLogger.logDebug(TAG, "Received heartbeat pong from accessibility service")
                     }
                 }
             } catch (e: Exception) {
@@ -67,7 +63,6 @@ class CommunicationBridgeService : Service() {
     }
 
     override fun onCreate() {
-        AppLogger.logServiceLifecycle(TAG, "onCreate()", "Communication bridge service starting")
         super.onCreate()
 
         createNotificationChannel()
@@ -93,13 +88,9 @@ class CommunicationBridgeService : Service() {
 
         registerCommunicationReceiver()
         startHeartbeat()
-
-        AppLogger.logServiceLifecycle(TAG, "onCreate COMPLETE", "Service initialized and running in foreground")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        AppLogger.logServiceLifecycle(TAG, "onStartCommand()", "Service start command received")
-
         // Send initial status broadcast
         sendServiceStatusBroadcast()
 
@@ -108,17 +99,13 @@ class CommunicationBridgeService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        AppLogger.logDebug(TAG, "onBind() called - binding not supported")
         return null
     }
 
     override fun onDestroy() {
-        AppLogger.logServiceLifecycle(TAG, "onDestroy()", "Communication bridge service being destroyed")
-
         stopHeartbeat()
         try {
             unregisterReceiver(communicationReceiver)
-            AppLogger.logDebug(TAG, "Communication receiver unregistered")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "onDestroy", e)
         }
@@ -139,7 +126,6 @@ class CommunicationBridgeService : Service() {
 
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
-            AppLogger.logDebug(TAG, "Notification channel created")
         }
     }
 
@@ -163,7 +149,6 @@ class CommunicationBridgeService : Service() {
     }
 
     private fun registerCommunicationReceiver() {
-        AppLogger.logDebug(TAG, "Registering communication receiver")
         val filter = IntentFilter().apply {
             REFRESH_ACTIONS.forEach { addAction(it) }
             addAction(ACTION_CHECK_STATUS)
@@ -176,8 +161,6 @@ class CommunicationBridgeService : Service() {
             filter,
             ContextCompat.RECEIVER_EXPORTED
         )
-
-        AppLogger.logBlockerAction(TAG, "Receiver", "Communication receiver registered", "SUCCESS")
     }
 
     private fun startHeartbeat() {
@@ -194,7 +177,6 @@ class CommunicationBridgeService : Service() {
     }
 
     private fun sendServiceStatusBroadcast() {
-        AppLogger.logDebug(TAG, "Sending service status broadcast")
         val isAccessibilityAlive = (System.currentTimeMillis() - lastAccessibilityHeartbeat) < HEARTBEAT_TIMEOUT
         val statusIntent = Intent(ACTION_STATUS_RESPONSE).apply {
             putExtra("bridge_service_running", true)

@@ -75,7 +75,6 @@ class GrayScaleFilter : BaseBlocker() {
         }
 
         if (shouldGrayscale) {
-            Log.d("Enabling monochrome",currentPackageName)
             grayscaleControl.enableGrayscale()
         } else {
             grayscaleControl.disableGrayscale()
@@ -101,7 +100,6 @@ class GrayScaleFilter : BaseBlocker() {
         CoroutineScope(Dispatchers.IO).launch {
             service.dataStoreManager.settings.collectLatest { settings ->
                 grayscaleGroups = settings.grayscaleGroups
-                Log.d("service", "GrayScale Groups loaded: $grayscaleGroups")
             }
         }
     }

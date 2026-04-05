@@ -50,7 +50,6 @@ class BrowserBlocker(val service: AccessibilityService) : BaseBlocker() {
         // MATCH_DEFAULT_ONLY is usually safer/faster than 0
         val activities = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
 
-        Log.d("packages",activities.toString())
         return activities.isNotEmpty()
     }
 }

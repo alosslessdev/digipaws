@@ -85,17 +85,12 @@ class ReelBlocker : BaseBlocker() {
     fun doViewBlockerCheck(
         event: AccessibilityEvent?
     ){
-        AppLogger.functionEntry(TAG, "doViewBlockerCheck", "eventType=${event?.eventType}")
-        
         fun showWarningScreen(viewId: String){
-            AppLogger.logDebug(TAG, "showWarningScreen() called for viewId=$viewId")
             try {
                 if(service.isDelayOver(service.lastBackPressTimeStamp,1000)) {
-                    AppLogger.logBlockerAction(TAG, "ReelBlocker", "Pressing back before showing warning")
                     service.pressBack()
 
                     if (reelBlockerConfig.warningScreenConfig.isWarningDialogHidden) {
-                        AppLogger.logDebug(TAG, "showWarningScreen: Dialog hidden by config")
                         return
                     }
                     val dialogIntent = Intent(service, WarningActivity::class.java)
@@ -107,10 +102,7 @@ class ReelBlocker : BaseBlocker() {
                         "warning_config",
                         Gson().toJson(reelBlockerConfig.warningScreenConfig)
                     )
-                    AppLogger.logBlockerAction(TAG, "ReelBlocker", "Starting warning activity", "viewId=$viewId")
                     service.startActivity(dialogIntent)
-                } else {
-                    AppLogger.logDebug(TAG, "showWarningScreen: Delay not over yet")
                 }
             } catch (e: Exception) {
                 AppLogger.functionError(TAG, "showWarningScreen", e)
@@ -118,55 +110,40 @@ class ReelBlocker : BaseBlocker() {
         }
         
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) {
-            AppLogger.logDebug(TAG, "doViewBlockerCheck: Event is null or wrong type")
             return
         }
 
         if (!reelBlockerConfig.isActive) {
-            AppLogger.logDebug(TAG, "doViewBlockerCheck: ReelBlocker not active")
             return
         }
 
         val node = service.rootInActiveWindow
         if(node==null) {
-            AppLogger.logDebug(TAG, "doViewBlockerCheck: rootInActiveWindow is null")
             return
         }
         
-        AppLogger.logVariable(TAG, "blocked_view_ids_to_check", BLOCKED_VIEW_ID_LIST.size)
-
         BLOCKED_VIEW_ID_LIST.forEach { viewId ->
             try {
                 if(isViewOpened(node,viewId)){
-                    AppLogger.logBlockerAction(TAG, "ReelBlocker", "Blocked view detected", "viewId=$viewId")
                     
                     // ignore if view-id under cooldown
                     if (isCooldownActive(viewId)) {
-                        AppLogger.logDebug(TAG, "doViewBlockerCheck: ViewId $viewId is under cooldown")
                         return@forEach
                     }
 
                     // check if currently under allowed hours
                     when(reelBlockerConfig.blockingType) {
                         ReelBlockingType.TIMED -> {
-                            AppLogger.logDebug(TAG, "doViewBlockerCheck: Checking time-based blocking for $viewId")
                             val endAllowedMillis = getEndTimeInMillis()
-                            AppLogger.logVariable(TAG, "end_allowed_millis", endAllowedMillis)
                             if(endAllowedMillis==null) {
-                                AppLogger.logBlockerAction(TAG, "ReelBlocker", "Outside allowed time window", "viewId=$viewId")
                                 showWarningScreen(viewId)
                             }
                         }
                         ReelBlockingType.USAGE -> {
-                            AppLogger.logDebug(TAG, "doViewBlockerCheck: USAGE blocking not implemented yet")
                         }
                         ReelBlockingType.REEL_COUNT -> {
-                            AppLogger.logDebug(TAG, "doViewBlockerCheck: Checking count-based blocking for $viewId")
                             val limit = getDailyReelCountLimit()
-                            AppLogger.logVariable(TAG, "daily_reel_limit", limit)
-                            AppLogger.logVariable(TAG, "current_daily_count", currentDailyCount)
                             if (limit != null && limit > 0 && currentDailyCount >= limit) {
-                                AppLogger.logBlockerAction(TAG, "ReelBlocker", "Daily reel count exceeded", "current=$currentDailyCount, limit=$limit")
                                 showWarningScreen(viewId)
                             }
                         }
@@ -178,18 +155,14 @@ class ReelBlocker : BaseBlocker() {
             }
         }
         lastEventTimeStamp = SystemClock.uptimeMillis()
-        AppLogger.functionExit(TAG, "doViewBlockerCheck")
     }
 
 
     fun applyCooldown(viewId: String, endTime: Long) {
-        AppLogger.logDebug(TAG, "applyCooldown() called for viewId=$viewId, endTime=$endTime")
         try {
             val remainingTime = endTime - SystemClock.uptimeMillis()
-            AppLogger.logVariable(TAG, "cooldown_remaining_ms", remainingTime)
             notificationManager.startTimer(totalMillis = remainingTime, timerId = viewId, title = "Remaining usage before reels lockdown")
             cooldownViewIdsList[viewId] = endTime
-            AppLogger.logBlockerAction(TAG, "ReelBlocker", "Cooldown applied", "viewId=$viewId, duration=${remainingTime}ms")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "applyCooldown", e)
         }
@@ -197,48 +170,33 @@ class ReelBlocker : BaseBlocker() {
 
 
     fun setupBlocker(service: BaseBlockingService) {
-        AppLogger.logBlockerAction(TAG, "ReelBlocker", "Setup started")
         try {
             this.service = service
-            AppLogger.logDebug(TAG, "setupBlocker: Service assigned")
 
             notificationManager = TimerNotification(service)
-            AppLogger.logDebug(TAG, "setupBlocker: NotificationManager created")
             
             var displayMetrics: DisplayMetrics = service.resources.displayMetrics
             screenHeight = displayMetrics.heightPixels
             screenWidth = displayMetrics.widthPixels
-            AppLogger.logVariable(TAG, "screen_width", screenWidth)
-            AppLogger.logVariable(TAG, "screen_height", screenHeight)
 
             settingsJob?.cancel()
             countJob?.cancel()
-            AppLogger.logDebug(TAG, "setupBlocker: Previous jobs cancelled")
 
             settingsJob = CoroutineScope(Dispatchers.IO).launch {
                 try {
                     service.dataStoreManager.settings.collectLatest { settings ->
-                        AppLogger.logDebug(TAG, "setupBlocker: Settings updated from DataStore")
                         reelBlockerConfig = settings.reelBlockerConfig
-                        AppLogger.logVariable(TAG, "reel_blocker_active", reelBlockerConfig.isActive)
-                        AppLogger.logVariable(TAG, "reel_blocking_type", reelBlockerConfig.blockingType)
                         
                         when(reelBlockerConfig.blockingType) {
                             ReelBlockingType.TIMED -> {
-                                AppLogger.logDebug(TAG, "setupBlocker: Loading time-based config")
                                 timeBAsedConfig = Gson().fromJson<ReelTimeConfig>(settings.reelBlockerConfig.settings,
                                     ReelTimeConfig::class.java)
-                                AppLogger.logDebug(TAG, "setupBlocker: Time-based config loaded")
                             }
                             ReelBlockingType.USAGE -> {
-                                AppLogger.logDebug(TAG, "setupBlocker: USAGE blocking not implemented yet")
                             }
                             ReelBlockingType.REEL_COUNT -> {
-                                AppLogger.logDebug(TAG, "setupBlocker: Loading count-based config")
                                 countBasedConfig = Gson().fromJson<ReelCountConfig>(settings.reelBlockerConfig.settings,
                                     ReelCountConfig::class.java)
-                                AppLogger.logVariable(TAG, "daily_reel_limit", getDailyReelCountLimit())
-                                AppLogger.logDebug(TAG, "setupBlocker: Count-based config loaded")
                             }
                         }
                     }
@@ -252,14 +210,11 @@ class ReelBlocker : BaseBlocker() {
                 try {
                     db.reelStatsDao().getCountFlow(TimeTools.getCurrentDate()).collectLatest { count ->
                         currentDailyCount = count ?: 0
-                        AppLogger.logVariable(TAG, "current_daily_reel_count", currentDailyCount)
                     }
                 } catch (e: Exception) {
                     AppLogger.functionError(TAG, "setupBlocker.countJob", e)
                 }
             }
-            
-            AppLogger.logBlockerAction(TAG, "ReelBlocker", "Setup complete", "SUCCESS")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "setupBlocker", e)
         }
@@ -267,7 +222,6 @@ class ReelBlocker : BaseBlocker() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun setupReceivers(){
-        AppLogger.logDebug(TAG, "setupReceivers() - Registering ReelBlocker broadcast receivers")
         try {
             val filter = IntentFilter().apply {
                 addAction(INTENT_ACTION_REFRESH_REEL_BLOCKER)
@@ -278,18 +232,15 @@ class ReelBlocker : BaseBlocker() {
             } else {
                 service.registerReceiver(refreshReceiver, filter)
             }
-            AppLogger.logBlockerAction(TAG, "ReelBlocker", "Receivers registered", "SUCCESS")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "setupReceivers", e)
         }
     }
 
     fun removeReceivers(){
-        AppLogger.logDebug(TAG, "removeReceivers() - Cleaning up ReelBlocker resources")
         try {
             service.unregisterReceiver(refreshReceiver)
             notificationManager.release()
-            AppLogger.logBlockerAction(TAG, "ReelBlocker", "Receivers removed", "SUCCESS")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "removeReceivers", e)
         }

@@ -80,33 +80,26 @@ class AppBlocker() : BaseBlocker() {
 
     fun doAppBlockerCheck(event: AccessibilityEvent?) {
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) {
-            AppLogger.logDebug(TAG, "doAppBlockerCheck: Ignoring event - event is null or wrong type")
             return
         }
 
         val packageName = event.packageName?.toString() ?: return
         
         if (lastPackage == packageName || packageName == service.packageName || packageName == "com.android.systemui") {
-            AppLogger.logDebug(TAG, "doAppBlockerCheck: Ignoring same package or system UI: $packageName")
             return
         }
 
         lastPackage = packageName
-        AppLogger.logAccessibilityEvent(TAG, "APP_BLOCKER_CHECK", packageName)
 
         // Check Cooldown
         if (cooldownAppsList.containsKey(packageName)) {
             val cooldownEndTime = cooldownAppsList[packageName]!!
             val currentTime = System.currentTimeMillis()
-            AppLogger.logVariable(TAG, "cooldown_end_time", cooldownEndTime)
-            AppLogger.logVariable(TAG, "current_time", currentTime)
             
             if (cooldownEndTime < currentTime) {
-                AppLogger.logBlockerAction(TAG, "AppBlocker", "Removing cooldown from $packageName")
                 removeCooldownFrom(packageName)
             } else {
                 val remainingTime = cooldownEndTime - currentTime
-                AppLogger.logBlockerAction(TAG, "AppBlocker", "App in cooldown", "remaining=${remainingTime}ms, showing timer")
                 notificationManager.startTimer(totalMillis = remainingTime, timerId = packageName, title = "Remaining usage before lockdown")
                 return // Still in cooldown, let them use it
             }
@@ -114,51 +107,39 @@ class AppBlocker() : BaseBlocker() {
         
         // Check Time Blocks
         if (timeBlockedAppsList.contains(packageName)) {
-            AppLogger.logDebug(TAG, "doAppBlockerCheck: $packageName is time-blocked")
             val endAllowedRealTime = getEndTimeInRealTimeMillis(packageName)
             if (endAllowedRealTime == null) {
-                AppLogger.logBlockerAction(TAG, "AppBlocker", "Time-blocked app blocked", "package=$packageName")
                 notificationManager.stopTimer()
                 showWarningScreen(packageName)
                 return
             } else {
-                AppLogger.logBlockerAction(TAG, "AppBlocker", "Time-blocked app - setting refresh", "endTime=$endAllowedRealTime")
                 setUpForcedRefreshChecker(packageName, endAllowedRealTime)
             }
         }
 
         // Check Usage Blocks
         if (blockedAppsList.contains(packageName)) {
-            AppLogger.logDebug(TAG, "doAppBlockerCheck: $packageName is usage-blocked")
             val config = blockedAppsList[packageName]!!
             val currentUsage = usageStats.getForegroundStatsByRelativeDay(0)
                 .firstOrNull { it.packageName == packageName }?.totalTime ?: 0L
             val usageLimitMillis = getUsageLimitForToday(config) * 60_000L
             val remainingUsage = usageLimitMillis - currentUsage
             
-            AppLogger.logVariable(TAG, "current_usage_ms", currentUsage)
-            AppLogger.logVariable(TAG, "usage_limit_ms", usageLimitMillis)
-            AppLogger.logVariable(TAG, "remaining_usage_ms", remainingUsage)
-
             if (remainingUsage <= 0) {
-                AppLogger.logBlockerAction(TAG, "AppBlocker", "Usage limit reached for $packageName", "remaining=${remainingUsage}ms")
                 notificationManager.stopTimer()
                 showWarningScreen(packageName)
             } else {
-                AppLogger.logBlockerAction(TAG, "AppBlocker", "Usage under limit, showing timer", "remaining=${remainingUsage}ms")
                 notificationManager.startTimer(totalMillis = remainingUsage, timerId = packageName, title = "Remaining usage before lockdown")
                 setUpForcedRefreshChecker(packageName, System.currentTimeMillis() + remainingUsage)
                 return
             }
         }
 
-        AppLogger.logDebug(TAG, "doAppBlockerCheck: $packageName - no blocks applied")
         notificationManager.stopTimer()
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun setupReceivers() {
-        AppLogger.logDebug(TAG, "setupReceivers() - Registering AppBlocker broadcast receivers")
         try {
             val filter = IntentFilter().apply {
                 addAction(INTENT_ACTION_REFRESH_APP_BLOCKER)
@@ -169,41 +150,33 @@ class AppBlocker() : BaseBlocker() {
             } else {
                 service.registerReceiver(refreshReceiver, filter)
             }
-            AppLogger.logBlockerAction(TAG, "AppBlocker", "Receivers registered", "SUCCESS")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "setupReceivers", e)
         }
     }
 
     fun onDestroy() {
-        AppLogger.logDebug(TAG, "onDestroy() - Cleaning up AppBlocker resources")
         try {
             service.unregisterReceiver(refreshReceiver)
             notificationManager.release()
             handler.removeCallbacksAndMessages(null)
             activeRunnables.clear()
-            AppLogger.logBlockerAction(TAG, "AppBlocker", "Cleanup complete", "SUCCESS")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "onDestroy", e)
         }
     }
 
     fun setupAppBlocker(service: BaseBlockingService) {
-        AppLogger.logBlockerAction(TAG, "AppBlocker", "Setup started")
         try {
             this.service = service
-            AppLogger.logDebug(TAG, "setupAppBlocker: Service assigned")
             
             notificationManager = TimerNotification(service)
-            AppLogger.logDebug(TAG, "setupAppBlocker: NotificationManager created")
             
             usageStats = UsageStatsHelper(service)
-            AppLogger.logDebug(TAG, "setupAppBlocker: UsageStatsHelper created")
             
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     service.dataStoreManager.settings.collectLatest { settings ->
-                        AppLogger.logDebug(TAG, "setupAppBlocker: Settings updated from DataStore")
                         // Clear existing thread-safe maps and repopulate them
                         blockedAppsList.clear()
                         timeBlockedAppsList.clear()
@@ -216,13 +189,9 @@ class AppBlocker() : BaseBlocker() {
                                 cooldownAppsList[packageName] = endTime
                             }
                         }
-
-                        var usageBlockedCount = 0
-                        var timeBlockedCount = 0
                         
                         settings.blockedAppGroups.forEach { group ->
                             if (!group.isActive) {
-                                AppLogger.logDebug(TAG, "setupAppBlocker: Skipping inactive group ${group.name}")
                                 return@forEach
                             }
                             
@@ -231,60 +200,40 @@ class AppBlocker() : BaseBlocker() {
                                 group.selectedPackages.forEach {
                                     blockedAppsList[it] = appUsageConfig
                                     appBlockerWarningScrnConfgs[it] = group.warningScreenConfig
-                                    usageBlockedCount++
-                                    AppLogger.logDebug(TAG, "setupAppBlocker: Added usage-blocked app: $it")
                                 }
                             } else {
                                 val appTimedConfig = Gson().fromJson(group.setting, AppTimeConfig::class.java)
                                 group.selectedPackages.forEach {
                                     timeBlockedAppsList[it] = appTimedConfig
                                     appBlockerWarningScrnConfgs[it] = group.warningScreenConfig
-                                    timeBlockedCount++
-                                    AppLogger.logDebug(TAG, "setupAppBlocker: Added time-blocked app: $it")
                                 }
                             }
                         }
-                        
-                        AppLogger.logVariable(TAG, "usage_blocked_apps_count", usageBlockedCount)
-                        AppLogger.logVariable(TAG, "time_blocked_apps_count", timeBlockedCount)
-                        AppLogger.logBlockerAction(TAG, "AppBlocker", "Settings loaded", "usage=$usageBlockedCount, time=$timeBlockedCount")
                     }
                 } catch (e: Exception) {
                     AppLogger.functionError(TAG, "setupAppBlocker.collectLatest", e)
                 }
             }
-            
-            AppLogger.logBlockerAction(TAG, "AppBlocker", "Setup complete", "SUCCESS")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "setupAppBlocker", e)
         }
     }
 
     private fun handlePutCooldownIntentBroadcast(intent: Intent) {
-        AppLogger.functionEntry(TAG, "handlePutCooldownIntentBroadcast")
         try {
-            val coolPackage = intent.getStringExtra("result_id") ?: run {
-                AppLogger.logWarn(TAG, "handlePutCooldownIntentBroadcast: No result_id in intent")
-                return
-            }
+            val coolPackage = intent.getStringExtra("result_id") ?: return
 
             val durationMillis = intent.getIntExtra(
                 "selected_time",
                 appBlockerWarningScrnConfgs[coolPackage]?.timeInterval ?: 10
             )
-            AppLogger.logVariable(TAG, "cooldown_package", coolPackage)
-            AppLogger.logVariable(TAG, "cooldown_duration_ms", durationMillis)
             
             val realTimeEndMillis = System.currentTimeMillis() + durationMillis
-            AppLogger.logVariable(TAG, "cooldown_end_time_ms", realTimeEndMillis)
 
-            AppLogger.logBlockerAction(TAG, "AppBlocker", "Applying cooldown to $coolPackage", "duration=${durationMillis}ms")
             notificationManager.startTimer(totalMillis = durationMillis.toLong(), timerId = coolPackage, title = "Remaining usage before lockdown")
 
             putCooldownTo(coolPackage, realTimeEndMillis)
             setUpForcedRefreshChecker(coolPackage, realTimeEndMillis)
-            
-            AppLogger.functionExit(TAG, "handlePutCooldownIntentBroadcast")
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "handlePutCooldownIntentBroadcast", e)
         }
@@ -304,7 +253,6 @@ class AppBlocker() : BaseBlocker() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 service.dataStoreManager.updateAppBlockerCooldowns(cooldownAppsList.toMap())
-                AppLogger.logDebug(TAG, "Cooldown data persisted to DataStore")
             } catch (e: Exception) {
                 AppLogger.functionError(TAG, "persistCooldownData", e)
             }
@@ -331,7 +279,6 @@ class AppBlocker() : BaseBlocker() {
         )
         val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1
 
-        Log.d("day of week", dayOfWeek.toString())
         val intervals = if (config.isEveryday) config.everydayIntervals else config.dailyIntervals[dayOfWeek] ?: emptyList()
 
         intervals.forEach { interval ->
@@ -372,7 +319,7 @@ class AppBlocker() : BaseBlocker() {
                     lastPackage = ""
                 }
             } catch (e: Exception) {
-                Log.e("AppBlocker", "Recheck error: $e")
+                AppLogger.functionError("AppBlocker", "setUpForcedRefreshChecker recheck", e)
                 // Retry in 1 minute if UI check failed
                 setUpForcedRefreshChecker(coolPackage, System.currentTimeMillis() + 60_000L)
             } finally {

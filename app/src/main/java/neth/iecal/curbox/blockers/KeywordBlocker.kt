@@ -29,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.services.BaseBlockingService
+import neth.iecal.curbox.utils.AppLogger
 import java.util.Locale
 
 class KeywordBlocker : BaseBlocker() {
@@ -93,7 +94,6 @@ class KeywordBlocker : BaseBlocker() {
         if (cachedResult != null) {
             return if (cachedResult == SAFE_STRING_TOKEN) null else cachedResult
         }
-        Log.d("checking ", url)
 
         // If not in cache, process it
         val keywords = parseTextForKeywords(url)
@@ -218,7 +218,7 @@ class KeywordBlocker : BaseBlocker() {
                     }
                 }
             } catch (e: Exception) {
-                Log.d("Keyword Blocker 111", e.toString())
+                AppLogger.functionError("KeywordBlocker", "checkIfUserGettingFreaky - searchAllTextFields", e)
             }
         }
 
@@ -285,7 +285,7 @@ class KeywordBlocker : BaseBlocker() {
         try {
             findNodesByClassName(rootNode, "android.webkit.WebView")
         } catch (e: Exception) {
-            Log.d("error", e.toString())
+            AppLogger.functionError("KeywordBlocker", "searchKeywordsInWebViewTitle", e)
             return null
         }
 
@@ -339,7 +339,6 @@ class KeywordBlocker : BaseBlocker() {
     fun setupBlocker(service: BaseBlockingService){
         this.service = service
         this.browserBlocker = BrowserBlocker(service)
-        Log.d("Keyword Blocker","Setting up kw blocker")
         CoroutineScope(Dispatchers.IO).launch {
             service.dataStoreManager.settings.collectLatest { settings ->
                 blockedKeyword =  settings.keywordBlockerConfig.blockedKeywords.toHashSet()
