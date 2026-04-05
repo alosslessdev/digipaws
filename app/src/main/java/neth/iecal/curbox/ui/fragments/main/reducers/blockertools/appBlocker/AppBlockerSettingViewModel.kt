@@ -17,6 +17,7 @@ import neth.iecal.curbox.data.models.AppGroup
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.AppUsageConfig
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class AppBlockerSettingViewModel(application: Application) : AndroidViewModel(application) {
     var currentUsageConfig: AppUsageConfig = AppUsageConfig()
@@ -37,7 +38,7 @@ class AppBlockerSettingViewModel(application: Application) : AndroidViewModel(ap
 
     private fun requestAppBlockerRefresh() {
         val intent = Intent(AppBlocker.INTENT_ACTION_REFRESH_APP_BLOCKER)
-        application.sendBroadcast(intent)
+        BridgeServiceManager.sendBridgedBroadcast(application, intent)
     }
 
     fun updateGroups(newGroups: List<AppGroup>) {

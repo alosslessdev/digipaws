@@ -18,6 +18,7 @@ import neth.iecal.curbox.data.models.ReelUsageConfig
 import neth.iecal.curbox.data.models.ReelBlockingType
 import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class ReelBlockerViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
@@ -37,7 +38,7 @@ class ReelBlockerViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun requestReelBlockerRefresh() {
         val intent = Intent(neth.iecal.curbox.blockers.ReelBlocker.INTENT_ACTION_REFRESH_REEL_BLOCKER)
-        application.sendBroadcast(intent)
+        BridgeServiceManager.sendBridgedBroadcast(application, intent)
     }
     private fun updateConfig(newConfig: ReelBlocker) {
         viewModelScope.launch {

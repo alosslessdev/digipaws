@@ -1,10 +1,19 @@
 package neth.iecal.curbox.utils
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 import neth.iecal.curbox.data.models.FocusBlockMode
 
 object AppSuspendHelper {
+
+    private var scope: CoroutineScope? = null
+
+    fun init(coroutineScope: CoroutineScope) {
+        scope = coroutineScope
+    }
 
     fun suspendApps(packages: List<String>) {
         executePmCommand(packages, "suspend")
@@ -16,14 +25,14 @@ object AppSuspendHelper {
 
     fun unsuspendAllApps(context: Context) {
         if (!isShizukuAvailable()) return
-        Thread {
+        scope?.launch(Dispatchers.IO) {
             try {
                 val allPackages = context.packageManager.getInstalledPackages(0).map { it.packageName }
                 executePmCommand(allPackages, "unsuspend")
             } catch (e: Exception) {
-                e.printStackTrace()
+                AppLogger.functionError("AppSuspendHelper", "unsuspendAllApps", e)
             }
-        }.start()
+        }
     }
 
     fun getPackagesToSuspend(
@@ -42,16 +51,26 @@ object AppSuspendHelper {
 
     private fun executePmCommand(packages: List<String>, commandType: String) {
         if (!isShizukuAvailable() || packages.isEmpty()) return
-        Thread {
+        scope?.launch(Dispatchers.IO) {
             packages.chunked(40).forEach { chunk ->
                 val command = "pm $commandType ${chunk.joinToString(" ")}"
                 ShizukuRunner.executeCommand(command, object : ShizukuRunner.CommandResultListener {
                     override fun onCommandError(error: String) {
-                        super.onCommandError(error)
+                        AppLogger.logError("AppSuspendHelper", "Command error: $error")
                     }
                 })
             }
-        }.start()
+        } ?: run {
+            // Fallback for when scope is not initialized (not ideal)
+            Thread {
+                packages.chunked(40).forEach { chunk ->
+                    val command = "pm $commandType ${chunk.joinToString(" ")}"
+                    ShizukuRunner.executeCommand(command, object : ShizukuRunner.CommandResultListener {
+                        override fun onCommandError(error: String) {}
+                    })
+                }
+            }.start()
+        }
     }
 
     fun isShizukuAvailable(): Boolean {

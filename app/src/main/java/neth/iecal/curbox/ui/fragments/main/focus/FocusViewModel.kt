@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import neth.iecal.curbox.blockers.FocusModeBlocker
 import neth.iecal.curbox.data.models.ManualFocusGroup
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class FocusViewModel(application: Application) : AndroidViewModel(application) {
     var newGroupSelectedApps = hashSetOf<String>()
@@ -68,7 +69,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun requestFocusBlockerRefresh() {
         val intent = Intent(FocusModeBlocker.INTENT_ACTION_REFRESH_FOCUS_MODE)
-        application.sendBroadcast(intent)
+        BridgeServiceManager.sendBridgedBroadcast(application, intent)
     }
 
     fun forceStopFocus(wasMidwayExit: Boolean = false){

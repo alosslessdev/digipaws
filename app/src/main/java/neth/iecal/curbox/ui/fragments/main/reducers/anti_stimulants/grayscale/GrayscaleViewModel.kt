@@ -13,6 +13,7 @@ import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
 import neth.iecal.curbox.data.models.GrayscaleGroup
 import neth.iecal.curbox.data.models.TimeInterval
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class GrayscaleViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
@@ -69,6 +70,6 @@ class GrayscaleViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun requestGrayscaleRefresh() {
         val intent = Intent(GrayScaleFilter.INTENT_ACTION_REFRESH_GRAYSCALE)
-        getApplication<Application>().sendBroadcast(intent)
+        BridgeServiceManager.sendBridgedBroadcast(getApplication(), intent)
     }
 }

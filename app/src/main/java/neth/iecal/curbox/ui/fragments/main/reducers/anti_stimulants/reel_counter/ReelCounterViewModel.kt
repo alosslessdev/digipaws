@@ -14,6 +14,7 @@ import neth.iecal.curbox.data.db.AppDatabase
 import neth.iecal.curbox.trackers.ReelsCountTracker
 import neth.iecal.curbox.ui.views.WeeklyBarGraphView
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.BridgeServiceManager
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
@@ -87,7 +88,7 @@ class ReelCounterViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun requestReelCounterRefresh() {
         val intent = Intent(ReelsCountTracker.INTENT_ACTION_REFRESH_REEL_COUNTER)
-        application.sendBroadcast(intent)
+        BridgeServiceManager.sendBridgedBroadcast(application, intent)
     }
 
     private suspend fun loadWeekData() = withContext(Dispatchers.IO) {

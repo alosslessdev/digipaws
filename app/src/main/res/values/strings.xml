@@ -273,4 +273,5 @@
     <string name="picker_notification_text">Tap to start picking an element</string>
     <string name="picker_active_title">Element Picker Active</string>
     <string name="picker_active_text">Tap elements on screen to select them</string>
+    <string name="communication_bridge_desc">Maintains communication with accessibility services</string>
 </resources>

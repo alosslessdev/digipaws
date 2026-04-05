@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import neth.iecal.curbox.blockers.FocusModeBlocker
 import neth.iecal.curbox.data.models.AutoFocusGroup
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class AutoFocusViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
@@ -70,6 +71,6 @@ class AutoFocusViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun requestFocusBlockerRefresh() {
         val intent = Intent(FocusModeBlocker.INTENT_ACTION_REFRESH_FOCUS_MODE)
-        application.sendBroadcast(intent)
+        BridgeServiceManager.sendBridgedBroadcast(application, intent)
     }
 }

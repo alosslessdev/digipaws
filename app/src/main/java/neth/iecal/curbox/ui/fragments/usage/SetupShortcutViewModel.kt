@@ -11,6 +11,7 @@ import neth.iecal.curbox.data.models.Settings
 import neth.iecal.curbox.utils.DataStoreManager
 import android.content.Intent
 import neth.iecal.curbox.blockers.AppBlocker
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class SetupShortcutViewModel(application: Application) : AndroidViewModel(application) {
     private var dataStoreManager = DataStoreManager(application)
@@ -33,7 +34,7 @@ class SetupShortcutViewModel(application: Application) : AndroidViewModel(applic
                 if (it.id == groupId) it.copy(isActive = isActive) else it
             }
             dataStoreManager.updateAppGroups(updatedGroups)
-            getApplication<Application>().sendBroadcast(Intent(AppBlocker.INTENT_ACTION_REFRESH_APP_BLOCKER))
+            BridgeServiceManager.sendBridgedBroadcast(getApplication(), Intent(AppBlocker.INTENT_ACTION_REFRESH_APP_BLOCKER))
         }
     }
 
@@ -44,7 +45,7 @@ class SetupShortcutViewModel(application: Application) : AndroidViewModel(applic
                 if (it.groupId == groupId) it.copy(isActive = isActive) else it
             }
             dataStoreManager.updateGrayscaleGroups(updatedGroups)
-            getApplication<Application>().sendBroadcast(Intent("neth.iecal.curbox.ACTION_REFRESH_GRAYSCALE"))
+            BridgeServiceManager.sendBridgedBroadcast(getApplication(), Intent("neth.iecal.curbox.ACTION_REFRESH_GRAYSCALE"))
         }
     }
 }

@@ -22,6 +22,8 @@ import android.util.LruCache
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -164,8 +166,11 @@ class KeywordBlocker : BaseBlocker() {
         return words
     }
 
-    fun checkIfUserGettingFreaky(event: AccessibilityEvent?) {
+    private var isProcessing = false
 
+    fun checkIfUserGettingFreaky(event: AccessibilityEvent?) {
+        if (isProcessing) return
+        
         fun showMessage(word: String) {
             Handler(Looper.getMainLooper()).post {
                 Toast.makeText(
@@ -196,7 +201,6 @@ class KeywordBlocker : BaseBlocker() {
 
         if(isUnsupportedBrowserBlockingOn && browserBlocker!!.isAppBrowser(event)) return pressHome("/ unsupported browser")
         val rootNode = service.rootInActiveWindow ?: return
-        val displayUrlTextNode: AccessibilityNodeInfo?
         var detectedAdultKeyword: String? = null
 
         if (isSearchAllTextFields) {
@@ -226,47 +230,54 @@ class KeywordBlocker : BaseBlocker() {
 
         if (urlBarInfo == null) return
 
-        val idPrefixPart = event.packageName.toString() + ":id/"
-        displayUrlTextNode =
-            ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
+        isProcessing = true
+        runBlocking {
+            try {
+                val idPrefixPart = event.packageName.toString() + ":id/"
+                val displayUrlTextNode =
+                    ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
 
-        if (detectedAdultKeyword == null) {
-            val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
-            val displayText = displayUrlTextNode?.text?.toString() ?: ""
+                if (detectedAdultKeyword == null) {
+                    val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
+                    val displayText = displayUrlTextNode?.text?.toString() ?: ""
 
-            detectedAdultKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
-                containsBlockedKeyword(displayText)
-            else null) ?: return
+                    detectedAdultKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
+                        containsBlockedKeyword(displayText)
+                    else null) ?: return@runBlocking
+                }
+
+                performSmallUpwardScroll()
+                delay(200)
+                displayUrlTextNode?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                delay(200)
+
+                val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
+                val editUrlBar = ReelBlocker.findElementById(rootNode, idPrefixPart + editUrlBarId)
+                    ?: return@runBlocking pressHome(detectedAdultKeyword!!)
+
+                editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
+                    putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, redirectUrl
+                    )
+                })
+                delay(300)
+
+                val goBtnNode =
+                    ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.browserSugggestionBoxId)
+                        ?: return@runBlocking pressHome(detectedAdultKeyword!!)
+
+                if (urlBarInfo.isSuggestionEqualToGo) {
+                    goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                } else {
+                    goBtnNode.getChild(urlBarInfo.suggestionBoxIndexOfGoBtn)
+                        ?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                }
+
+                delay(2000)
+            } finally {
+                isProcessing = false
+            }
         }
-
-        performSmallUpwardScroll()
-        Thread.sleep(200)
-        displayUrlTextNode?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        Thread.sleep(200)
-
-        val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
-        val editUrlBar = ReelBlocker.findElementById(rootNode, idPrefixPart + editUrlBarId)
-            ?: return pressHome(detectedAdultKeyword!!)
-
-        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
-            putCharSequence(
-                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, redirectUrl
-            )
-        })
-        Thread.sleep(300)
-
-        val goBtnNode =
-            ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.browserSugggestionBoxId)
-                ?: return pressHome(detectedAdultKeyword!!)
-
-        if (urlBarInfo.isSuggestionEqualToGo) {
-            goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        } else {
-            goBtnNode.getChild(urlBarInfo.suggestionBoxIndexOfGoBtn)
-                ?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        }
-
-        Thread.sleep(2000)
     }
 
     private fun searchKeywordsInWebViewTitle(rootNode: AccessibilityNodeInfo): String? {

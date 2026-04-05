@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import neth.iecal.curbox.R
 import neth.iecal.curbox.databinding.FragmentFocusBinding
 import neth.iecal.curbox.utils.TimeTools
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class FocusFragment : Fragment() {
 
@@ -88,7 +89,7 @@ class FocusFragment : Fragment() {
                                 binding.btnExitAutoFocus.setOnClickListener {
                                     val intent = android.content.Intent(neth.iecal.curbox.blockers.FocusModeBlocker.INTENT_ACTION_EXIT_AUTO_FOCUS)
                                     intent.setPackage(requireContext().packageName)
-                                    requireContext().sendBroadcast(intent)
+                                    BridgeServiceManager.sendBridgedBroadcast(requireContext(), intent)
                                 }
                             } else {
                                 binding.cvActiveAutoFocus.visibility = View.GONE
@@ -119,7 +120,7 @@ class FocusFragment : Fragment() {
             if (runningSessions.isEmpty()) {
                 val intent = android.content.Intent(neth.iecal.curbox.blockers.FocusModeBlocker.INTENT_ACTION_UNSUSPEND_ALL)
                 intent.setPackage(requireContext().packageName)
-                requireContext().sendBroadcast(intent)
+                BridgeServiceManager.sendBridgedBroadcast(requireContext(), intent)
             }
         }
     }

@@ -108,4 +108,8 @@ class DataStoreManager(private val context: Context) {
     suspend fun updateViewBlockerConfig(config: neth.iecal.curbox.data.models.ViewBlockerConfig) {
         settingsDataStore.updateData { it.copy(viewBlockerConfig = config) }
     }
+
+    suspend fun updateAppBlockerCooldowns(cooldowns: Map<String, Long>) {
+        settingsDataStore.updateData { it.copy(appBlockerCooldowns = cooldowns) }
+    }
 }

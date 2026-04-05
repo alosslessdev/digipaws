@@ -18,6 +18,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.materialswitch.MaterialSwitch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.utils.BridgeServiceManager
 import neth.iecal.curbox.databinding.FragmentViewBlockerBinding
 
 
@@ -63,7 +64,7 @@ class ViewBlockerFragment : Fragment() {
         binding.btnPickElement.setOnClickListener {
             val intent = Intent(INTENT_ACTION_SHOW_PICKER_NOTIFICATION)
             intent.setPackage(requireContext().packageName)
-            requireContext().sendBroadcast(intent)
+            BridgeServiceManager.sendBridgedBroadcast(requireContext(), intent)
             Toast.makeText(requireContext(), "Notification shown. Switch to any app and tap the notification to start picking.", Toast.LENGTH_LONG).show()
         }
     }

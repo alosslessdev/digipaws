@@ -6,6 +6,8 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission
@@ -51,7 +53,6 @@
             android:name=".services.AppBlockerService"
             android:exported="true"
             android:label="App Blocker"
-            android:process=":app_blocker_service"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -74,6 +75,12 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/usage_tracker_service_config" />
         </service>
+
+        <service
+            android:name=".services.CommunicationBridgeService"
+            android:exported="false"
+            android:description="@string/communication_bridge_desc"
+            android:foregroundServiceType="dataSync" />
 
         <receiver
             android:name=".receivers.AdminReceiver"

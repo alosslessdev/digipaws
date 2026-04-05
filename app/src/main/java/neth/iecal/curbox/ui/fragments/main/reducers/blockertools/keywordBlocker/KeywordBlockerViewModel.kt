@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.data.models.KeywordBlocker
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class KeywordBlockerViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
@@ -30,7 +31,7 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     private fun requestKeywordBlockerRefresh() {
         val intent = Intent(neth.iecal.curbox.blockers.KeywordBlocker.INTENT_ACTION_REFRESH_CONFIG)
-        application.sendBroadcast(intent)
+        BridgeServiceManager.sendBridgedBroadcast(application, intent)
     }
     private fun updateConfig(newConfig: KeywordBlocker) {
         viewModelScope.launch {

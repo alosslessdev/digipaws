@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import neth.iecal.curbox.blockers.viewblocker.ViewBlocker
 import neth.iecal.curbox.data.models.ViewBlockerConfig
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.BridgeServiceManager
 
 class ViewBlockerViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
@@ -34,7 +35,8 @@ class ViewBlockerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun requestRefresh() {
-        getApplication<Application>().sendBroadcast(
+        BridgeServiceManager.sendBridgedBroadcast(
+            getApplication(),
             Intent(ViewBlocker.INTENT_ACTION_REFRESH_VIEW_BLOCKER)
         )
     }
