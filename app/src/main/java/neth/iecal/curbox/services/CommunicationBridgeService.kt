@@ -153,8 +153,8 @@ class CommunicationBridgeService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("DigiPaws Active")
-            .setContentText("Communication bridge running")
+            .setContentTitle("Curbox is Active")
+            .setContentText("You can dismiss this notification. Curbox will continue to run")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
