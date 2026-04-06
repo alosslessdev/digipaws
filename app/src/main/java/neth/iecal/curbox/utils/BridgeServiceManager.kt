@@ -40,7 +40,8 @@ object BridgeServiceManager {
     }
 
     /**
-     * Sends a broadcast and ensures the service is running.
+     * Ensures the foreground service is running, then sends a normal broadcast.
+     * The service keeps the accessibility-side process alive but does not relay intents.
      */
     fun sendBridgedBroadcast(context: Context, intent: Intent) {
         ensureBridgeRunning(context)

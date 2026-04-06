@@ -16,9 +16,8 @@ import neth.iecal.curbox.utils.AppLogger
 import android.Manifest
 
 /**
- * Background communication service that acts as a bridge between the main app UI
- * and the accessibility services. This service persists even when the main app is closed
- * to ensure stable communication with accessibility services.
+ * Persistent foreground service that keeps the accessibility process alive even when
+ * the main app UI is closed. It does not proxy broadcasts; callers send those directly.
  */
 class CommunicationBridgeService : Service() {
 
@@ -101,7 +100,7 @@ class CommunicationBridgeService : Service() {
 
     companion object {
         /**
-         * Starts the communication bridge service
+         * Starts the persistent foreground service for the accessibility process.
          */
         fun startService(context: Context) {
             val intent = Intent(context, CommunicationBridgeService::class.java)
@@ -113,7 +112,7 @@ class CommunicationBridgeService : Service() {
         }
 
         /**
-         * Stops the communication bridge service
+         * Stops the persistent foreground service.
          */
         fun stopService(context: Context) {
             val intent = Intent(context, CommunicationBridgeService::class.java)
