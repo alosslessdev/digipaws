@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission
@@ -53,6 +54,7 @@
             android:name=".services.AppBlockerService"
             android:exported="true"
             android:label="App Blocker"
+            android:process=":app_blocker_service"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -79,8 +81,12 @@
         <service
             android:name=".services.CommunicationBridgeService"
             android:exported="false"
+            android:process=":app_blocker_service"
             android:description="@string/communication_bridge_desc"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse|dataSync">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Ensures background persistence for accessibility features and focus protection." />
+        </service>
 
         <receiver
             android:name=".receivers.AdminReceiver"

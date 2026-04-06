@@ -34,10 +34,21 @@ class ShizukuRunner {
          * @param lineBundle Number of lines to batch before invoking the listener
          */
         fun executeCommand(command: String, listener: CommandResultListener, lineBundle: Int = 50) {
+            if (!Shizuku.pingBinder()) {
+                listener.onCommandError("Shizuku binder not available")
+                return
+            }
+
             Thread {
                 try {
+                    val binder = Shizuku.getBinder()
+                    if (binder == null) {
+                        listener.onCommandError("Shizuku binder is null")
+                        return@Thread
+                    }
+
                     // Initialize the Shizuku process
-                    val process = IShizukuService.Stub.asInterface(Shizuku.getBinder())
+                    val process = IShizukuService.Stub.asInterface(binder)
                         .newProcess(arrayOf("sh", "-c", command), null, null)
 
                     // Readers for command output and error streams

@@ -64,18 +64,6 @@ class AppBlockerService : BaseBlockingService() {
         }
     }
 
-
-    private val heartbeatReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == CommunicationBridgeService.ACTION_PING) {
-                val pongIntent = Intent(CommunicationBridgeService.ACTION_PONG).apply {
-                    setPackage(packageName)
-                }
-                sendBroadcast(pongIntent)
-            }
-        }
-    }
-
     private var grayScaleFilter = GrayScaleFilter()
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -218,13 +206,6 @@ class AppBlockerService : BaseBlockingService() {
                 registerReceiver(pickerReceiver, pickerFilter)
             }
 
-            val heartbeatFilter = IntentFilter(CommunicationBridgeService.ACTION_PING)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(heartbeatReceiver, heartbeatFilter, Context.RECEIVER_EXPORTED)
-            } else {
-                registerReceiver(heartbeatReceiver, heartbeatFilter)
-            }
-
             startBackgroundWorker()
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "onServiceConnected", e)
@@ -276,12 +257,6 @@ class AppBlockerService : BaseBlockingService() {
                 unregisterReceiver(pickerReceiver)
             } catch (e: Exception) {
                 AppLogger.logWarn(TAG, "Failed to unregister picker receiver: ${e.message}")
-            }
-
-            try {
-                unregisterReceiver(heartbeatReceiver)
-            } catch (e: Exception) {
-                // ignore
             }
             
             try {

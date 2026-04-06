@@ -3,6 +3,8 @@ package neth.iecal.curbox.utils
 import android.util.Log
 
 class GrayscaleControl {
+    private var isCurrentlyEnabled: Boolean? = null
+
     private val commandListener = object : ShizukuRunner.CommandResultListener {
         override fun onCommandResult(output: String, done: Boolean) {
             // Handle successful command execution if needed
@@ -11,6 +13,8 @@ class GrayscaleControl {
         override fun onCommandError(error: String) {
             // Handle command errors if needed
             AppLogger.logError("GrayscaleControl", "Monochrome error: $error")
+            // Reset state on error to retry next time
+            isCurrentlyEnabled = null
         }
     }
 
@@ -18,6 +22,9 @@ class GrayscaleControl {
      * Enable grayscale mode
      */
     fun enableGrayscale() {
+        if (isCurrentlyEnabled == true) return
+        isCurrentlyEnabled = true
+        
         ShizukuRunner.executeCommand(
             "settings put secure accessibility_display_daltonizer 0 && " +
                     "settings put secure accessibility_display_daltonizer_enabled 1",
@@ -29,6 +36,9 @@ class GrayscaleControl {
      * Disable grayscale mode
      */
     fun disableGrayscale() {
+        if (isCurrentlyEnabled == false) return
+        isCurrentlyEnabled = false
+
         ShizukuRunner.executeCommand(
             "settings put secure accessibility_display_daltonizer_enabled 0",
             commandListener
