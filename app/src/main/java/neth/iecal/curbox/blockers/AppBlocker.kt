@@ -9,7 +9,6 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
@@ -82,6 +81,8 @@ class AppBlocker() : BaseBlocker() {
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) {
             return
         }
+
+        AppLogger.logDebug(TAG, "checking ${event.packageName}")
 
         val packageName = event.packageName?.toString() ?: return
         
@@ -209,6 +210,8 @@ class AppBlocker() : BaseBlocker() {
                                 }
                             }
                         }
+
+                        AppLogger.logDebug(TAG, "loaded blocked apps ${blockedAppsList}")
                     }
                 } catch (e: Exception) {
                     AppLogger.functionError(TAG, "setupAppBlocker.collectLatest", e)
@@ -227,6 +230,8 @@ class AppBlocker() : BaseBlocker() {
                 "selected_time",
                 appBlockerWarningScrnConfgs[coolPackage]?.timeInterval ?: 10
             )
+
+            AppLogger.logDebug(TAG, "cooldown for $durationMillis")
             
             val realTimeEndMillis = System.currentTimeMillis() + durationMillis
 
@@ -278,6 +283,7 @@ class AppBlocker() : BaseBlocker() {
             calendar.get(Calendar.MINUTE)
         )
         val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1
+        AppLogger.logDebug(TAG, "day of week $dayOfWeek")
 
         val intervals = if (config.isEveryday) config.everydayIntervals else config.dailyIntervals[dayOfWeek] ?: emptyList()
 

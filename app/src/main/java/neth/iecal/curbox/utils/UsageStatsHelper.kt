@@ -6,7 +6,6 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.util.Log
 import neth.iecal.curbox.ui.fragments.usage.AllAppsUsageFragment
 import java.time.Instant
 import java.time.LocalDate
@@ -143,6 +142,7 @@ class UsageStatsHelper(private val context: Context) {
             val packageManager = context.packageManager
             for (foregroundProcess in foregroundProcesses) {
                 if (packageManager.getLaunchIntentForPackage(foregroundProcess) != null) {
+                    AppLogger.logDebug("UsageStatsHelper", "Assuming that application $foregroundProcess has been used the whole query time")
                     componentForegroundStats.add(ComponentForegroundStat(start, minOf(System.currentTimeMillis(), end), foregroundProcess))
                 }
             }

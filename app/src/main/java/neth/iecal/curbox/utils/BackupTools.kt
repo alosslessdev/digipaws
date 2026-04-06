@@ -3,7 +3,6 @@ package neth.iecal.curbox.utils
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -80,11 +79,17 @@ object ZipUtils {
 
                     while (entry != null) {
                         val outputFile = File(sharedPrefsDir, entry.name)
+                        AppLogger.logDebug("ZipUtils", "Unzipping ${entry.name} to ${outputFile.path}")
 
                         // Ensure the file is deleted if it already exists
                         if (outputFile.exists()) {
                             outputFile.delete()
                         }
+
+                        AppLogger.logDebug(
+                            "ZipUtils",
+                            "Permissions Can read: ${sharedPrefsDir.canRead()}, Can write: ${sharedPrefsDir.canWrite()}"
+                        )
 
                         FileOutputStream(outputFile).use { outputStream ->
                             zis.copyTo(outputStream) // Efficiently copy data
@@ -99,6 +104,7 @@ object ZipUtils {
 
                             // Force a reload by accessing the preferences
                             sharedPreferences.all // This forces a read from disk
+                            AppLogger.logDebug("ZipUtils", "Reloaded preferences: $prefsName")
                         }
                         entry = zis.nextEntry
                     }

@@ -7,7 +7,6 @@ import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +17,7 @@ import neth.iecal.curbox.blockers.BaseBlocker
 import neth.iecal.curbox.data.models.GrayscaleGroup
 import neth.iecal.curbox.data.models.TimeInterval
 import neth.iecal.curbox.services.BaseBlockingService
+import neth.iecal.curbox.utils.AppLogger
 import neth.iecal.curbox.utils.GrayscaleControl
 import neth.iecal.curbox.utils.getCurrentKeyboardPackageName
 import java.util.Calendar
@@ -75,6 +75,7 @@ class GrayScaleFilter : BaseBlocker() {
         }
 
         if (shouldGrayscale) {
+            AppLogger.logDebug("GrayScaleFilter", "Enabling monochrome for $currentPackageName")
             grayscaleControl.enableGrayscale()
         } else {
             grayscaleControl.disableGrayscale()
@@ -100,6 +101,7 @@ class GrayScaleFilter : BaseBlocker() {
         CoroutineScope(Dispatchers.IO).launch {
             service.dataStoreManager.settings.collectLatest { settings ->
                 grayscaleGroups = settings.grayscaleGroups
+                AppLogger.logDebug("GrayScaleFilter", "GrayScale Groups loaded: $grayscaleGroups")
             }
         }
     }

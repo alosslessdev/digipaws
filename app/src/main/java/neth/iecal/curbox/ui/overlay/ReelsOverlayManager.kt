@@ -3,13 +3,13 @@ package neth.iecal.curbox.ui.overlay
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
 import neth.iecal.curbox.databinding.OverlayUsageStatBinding
+import neth.iecal.curbox.utils.AppLogger
 
 class ReelsOverlayManager(private val context: Context) {
 
@@ -49,10 +49,13 @@ class ReelsOverlayManager(private val context: Context) {
 
     fun removeOverlay() {
         if (overlayView != null && windowManager != null) {
+            AppLogger.logDebug("UsageStatOverlayManager", "Removing overlay.")
             windowManager?.removeView(overlayView)
             overlayView = null
             binding = null
             isOverlayVisible = false
+        } else {
+            AppLogger.logDebug("UsageStatOverlayManager", "No overlay to remove.")
         }
     }
 

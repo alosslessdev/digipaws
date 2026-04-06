@@ -17,7 +17,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.util.LruCache
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -94,6 +93,7 @@ class KeywordBlocker : BaseBlocker() {
         if (cachedResult != null) {
             return if (cachedResult == SAFE_STRING_TOKEN) null else cachedResult
         }
+        AppLogger.logDebug("KeywordBlocker", "checking $url")
 
         // If not in cache, process it
         val keywords = parseTextForKeywords(url)
@@ -339,6 +339,7 @@ class KeywordBlocker : BaseBlocker() {
     fun setupBlocker(service: BaseBlockingService){
         this.service = service
         this.browserBlocker = BrowserBlocker(service)
+        AppLogger.logDebug("KeywordBlocker", "Setting up kw blocker")
         CoroutineScope(Dispatchers.IO).launch {
             service.dataStoreManager.settings.collectLatest { settings ->
                 blockedKeyword =  settings.keywordBlockerConfig.blockedKeywords.toHashSet()

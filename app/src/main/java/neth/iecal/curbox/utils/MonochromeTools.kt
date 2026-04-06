@@ -1,12 +1,11 @@
 package neth.iecal.curbox.utils
 
-import android.util.Log
-
 class GrayscaleControl {
     private var isCurrentlyEnabled: Boolean? = null
 
     private val commandListener = object : ShizukuRunner.CommandResultListener {
         override fun onCommandResult(output: String, done: Boolean) {
+            AppLogger.logDebug("GrayscaleControl", "monochrome output: $output")
             // Handle successful command execution if needed
         }
 
