@@ -135,6 +135,7 @@ class KeywordBlocker : BaseBlocker() {
 
         fun pressHome(word: String) {
             showMessage(word)
+            Thread.sleep(300)
             service.pressHome()
         }
 
