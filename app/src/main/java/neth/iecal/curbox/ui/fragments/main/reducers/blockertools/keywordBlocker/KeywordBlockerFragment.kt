@@ -4,6 +4,7 @@ import neth.iecal.curbox.R
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Patterns
@@ -12,11 +13,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.databinding.FragmentKeywordBlockerBinding
@@ -159,11 +162,50 @@ class KeywordBlockerFragment : Fragment() {
                 text = keyword
                 isCloseIconVisible = true
                 setOnCloseIconClickListener {
-                    viewModel.removeKeyword(keyword)
+                    showRemoveConfirmation(keyword)
                 }
             }
             binding.cgKeywords.addView(chip)
         }
+    }
+
+    private fun showRemoveConfirmation(keyword: String) {
+        var countdownTimer: CountDownTimer? = null
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.remove_entry)
+            .setMessage(getString(R.string.remove_entry_confirmation, keyword))
+            .setPositiveButton(R.string.yes, null)
+            .setNegativeButton(R.string.no, null)
+            .create()
+
+        dialog.setOnShowListener {
+            val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            positiveButton.isEnabled = false
+            positiveButton.text = getString(R.string.yes_in_seconds, 20)
+            positiveButton.setOnClickListener {
+                viewModel.removeKeyword(keyword)
+                dialog.dismiss()
+            }
+
+            countdownTimer = object : CountDownTimer(20_000L, 1_000L) {
+                override fun onTick(millisUntilFinished: Long) {
+                    val secondsRemaining = (millisUntilFinished / 1_000L).toInt()
+                    positiveButton.text = getString(R.string.yes_in_seconds, secondsRemaining)
+                }
+
+                override fun onFinish() {
+                    positiveButton.isEnabled = true
+                    positiveButton.text = getString(R.string.yes)
+                }
+            }.start()
+        }
+
+        dialog.setOnDismissListener {
+            countdownTimer?.cancel()
+        }
+
+        dialog.show()
     }
 
     override fun onDestroyView() {
