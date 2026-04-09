@@ -222,15 +222,14 @@ class KeywordBlocker : BaseBlocker() {
                 })
                 delay(300)
 
-                val goBtnNode =
-                    ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.browserSugggestionBoxId)
-                        ?: return@runBlocking pressHome(detectedAdultKeyword!!)
-
-                if (urlBarInfo.isSuggestionEqualToGo) {
-                    goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                } else {
-                    goBtnNode.getChild(urlBarInfo.suggestionBoxIndexOfGoBtn)
-                        ?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                val didSubmitRedirect = submitEditedUrlBar(
+                    rootNode = rootNode,
+                    editUrlBar = editUrlBar,
+                    idPrefixPart = idPrefixPart,
+                    urlBarInfo = urlBarInfo
+                )
+                if (!didSubmitRedirect) {
+                    return@runBlocking pressHome(detectedAdultKeyword!!)
                 }
 
                 delay(2000)
@@ -254,6 +253,39 @@ class KeywordBlocker : BaseBlocker() {
         if (titleText.isEmpty()) return null
 
         return containsBlockedKeyword(titleText)
+    }
+
+    private fun submitEditedUrlBar(
+        rootNode: AccessibilityNodeInfo,
+        editUrlBar: AccessibilityNodeInfo,
+        idPrefixPart: String,
+        urlBarInfo: BrowserUrlBarInfo
+    ): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val imeEnterActionId = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id
+            val supportsImeEnter = editUrlBar.actionList.any { it.id == imeEnterActionId }
+            if (supportsImeEnter && editUrlBar.performAction(imeEnterActionId)) {
+                AppLogger.logDebug("KeywordBlocker", "Submitted redirect via IME enter")
+                return true
+            }
+        }
+
+        val currentRootNode = service.rootInActiveWindow ?: rootNode
+        val goBtnNode =
+            ReelBlocker.findElementById(currentRootNode, idPrefixPart + urlBarInfo.browserSugggestionBoxId)
+                ?: return false
+
+        val didClickGo = if (urlBarInfo.isSuggestionEqualToGo) {
+            goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        } else {
+            goBtnNode.getChild(urlBarInfo.suggestionBoxIndexOfGoBtn)
+                ?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
+        }
+
+        if (didClickGo) {
+            AppLogger.logDebug("KeywordBlocker", "Submitted redirect via browser go button")
+        }
+        return didClickGo
     }
 
     private fun findNodesByClassName(
