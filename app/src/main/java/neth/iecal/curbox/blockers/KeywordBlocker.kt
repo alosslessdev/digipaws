@@ -206,14 +206,7 @@ class KeywordBlocker : BaseBlocker() {
         val editUrlBar = ReelBlocker.findElementById(rootNode, idPrefixPart + editUrlBarId)
             ?: return pressHome(detectedAdultKeyword!!)
 
-        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
-            putCharSequence(
-                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, redirectUrl
-            )
-        })
-        Thread.sleep(300)
-
-        val didSubmitRedirect = submitEditedUrlBar(
+        val didSubmitRedirect = rewriteAndSubmitRedirect(
             rootNode = rootNode,
             editUrlBar = editUrlBar,
             idPrefixPart = idPrefixPart,
@@ -223,6 +216,8 @@ class KeywordBlocker : BaseBlocker() {
             return pressHome(detectedAdultKeyword!!)
         }
 
+        Thread.sleep(300)
+        resubmitRedirectFromVisibleEditableFields(idPrefixPart, urlBarInfo)
         Thread.sleep(2000)
     }
 
@@ -273,6 +268,80 @@ class KeywordBlocker : BaseBlocker() {
             AppLogger.logDebug("KeywordBlocker", "Submitted redirect via browser go button")
         }
         return didClickGo
+    }
+
+    private fun rewriteAndSubmitRedirect(
+        rootNode: AccessibilityNodeInfo,
+        editUrlBar: AccessibilityNodeInfo,
+        idPrefixPart: String,
+        urlBarInfo: BrowserUrlBarInfo
+    ): Boolean {
+        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        Thread.sleep(150)
+
+        val didSetText = editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
+            putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, redirectUrl
+            )
+        })
+        Thread.sleep(300)
+
+        if (!didSetText) {
+            return false
+        }
+
+        return submitEditedUrlBar(
+            rootNode = rootNode,
+            editUrlBar = editUrlBar,
+            idPrefixPart = idPrefixPart,
+            urlBarInfo = urlBarInfo
+        )
+    }
+
+    private fun resubmitRedirectFromVisibleEditableFields(
+        idPrefixPart: String,
+        urlBarInfo: BrowserUrlBarInfo
+    ) {
+        val currentRootNode = service.rootInActiveWindow ?: return
+        val editableNodes = mutableListOf<AccessibilityNodeInfo>()
+        findEditableNodes(currentRootNode, editableNodes)
+
+        editableNodes.forEach { node ->
+            val nodeText = node.text?.toString() ?: ""
+            if (!doesNodeTextMatchRedirectUrl(nodeText)) return@forEach
+
+            if (rewriteAndSubmitRedirect(
+                    rootNode = currentRootNode,
+                    editUrlBar = node,
+                    idPrefixPart = idPrefixPart,
+                    urlBarInfo = urlBarInfo
+                )
+            ) {
+                AppLogger.logDebug("KeywordBlocker", "Re-submitted redirect from visible editable field")
+            }
+        }
+    }
+
+    private fun doesNodeTextMatchRedirectUrl(nodeText: String): Boolean {
+        if (nodeText.isBlank()) return false
+        return KeywordBlockerMatchUtils.normalizeBlockedEntry(nodeText) ==
+            KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
+    }
+
+    private fun findEditableNodes(
+        node: AccessibilityNodeInfo?,
+        results: MutableList<AccessibilityNodeInfo>
+    ) {
+        node ?: return
+
+        if (node.isEditable || node.className == "android.widget.EditText") {
+            results.add(node)
+        }
+
+        for (i in 0 until node.childCount) {
+            findEditableNodes(node.getChild(i), results)
+        }
     }
 
     private fun findNodesByClassName(
