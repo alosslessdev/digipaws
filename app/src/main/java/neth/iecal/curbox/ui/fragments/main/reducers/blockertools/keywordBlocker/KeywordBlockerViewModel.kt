@@ -13,6 +13,7 @@ import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.data.models.KeywordBlocker
 import neth.iecal.curbox.utils.DataStoreManager
 import neth.iecal.curbox.utils.BridgeServiceManager
+import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
 
 class KeywordBlockerViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
@@ -46,17 +47,21 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     fun addKeyword(keyword: String) {
         val currentKeywords = _keywordBlockerConfig.value.blockedKeywords.toMutableList()
-        val trimmed = keyword.trim()
-        if (!currentKeywords.contains(trimmed) && trimmed.isNotBlank()) {
-            currentKeywords.add(trimmed)
+        val normalizedKeyword = KeywordBlockerMatchUtils.normalizeBlockedEntry(keyword)
+        val existingKeywords = currentKeywords.map(KeywordBlockerMatchUtils::normalizeBlockedEntry)
+        if (!existingKeywords.contains(normalizedKeyword) && normalizedKeyword.isNotBlank()) {
+            currentKeywords.add(normalizedKeyword)
             updateConfig(_keywordBlockerConfig.value.copy(blockedKeywords = currentKeywords))
         }
     }
 
     fun removeKeyword(keyword: String) {
         val currentKeywords = _keywordBlockerConfig.value.blockedKeywords.toMutableList()
-        if (currentKeywords.contains(keyword)) {
-            currentKeywords.remove(keyword)
+        val normalizedKeyword = KeywordBlockerMatchUtils.normalizeBlockedEntry(keyword)
+        val removed = currentKeywords.removeAll {
+            KeywordBlockerMatchUtils.normalizeBlockedEntry(it) == normalizedKeyword
+        }
+        if (removed) {
             updateConfig(_keywordBlockerConfig.value.copy(blockedKeywords = currentKeywords))
         }
     }
@@ -70,6 +75,10 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     fun setSearchRecursively(enabled: Boolean) {
         updateConfig(_keywordBlockerConfig.value.copy(searchRecursively = enabled))
+    }
+
+    fun setMatchSubstrings(enabled: Boolean) {
+        updateConfig(_keywordBlockerConfig.value.copy(matchSubstrings = enabled))
     }
 
     fun setBlockAllExceptSupported(enabled: Boolean) {

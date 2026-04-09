@@ -100,6 +100,12 @@ class KeywordBlockerFragment : Fragment() {
             }
         }
 
+        binding.cbMatchSubstrings.setOnCheckedChangeListener { _, isChecked ->
+            if (!isUpdatingUi) {
+                viewModel.setMatchSubstrings(isChecked)
+            }
+        }
+
         binding.cbBlockUnsupportedBrowsers.setOnCheckedChangeListener { _, isChecked ->
             if (!isUpdatingUi) {
                 viewModel.setBlockAllExceptSupported(isChecked)
@@ -128,6 +134,10 @@ class KeywordBlockerFragment : Fragment() {
 
                 if (binding.cbSearchRecursively.isChecked != config.searchRecursively) {
                     binding.cbSearchRecursively.isChecked = config.searchRecursively
+                }
+
+                if (binding.cbMatchSubstrings.isChecked != config.matchSubstrings) {
+                    binding.cbMatchSubstrings.isChecked = config.matchSubstrings
                 }
 
                 if (binding.cbBlockUnsupportedBrowsers.isChecked != config.blockAllExceptSupported) {

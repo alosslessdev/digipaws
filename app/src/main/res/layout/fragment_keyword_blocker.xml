@@ -131,6 +131,13 @@
                 android:layout_marginBottom="8dp" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_match_substrings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/also_match_inside_longer_words_and_links"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cb_block_unsupported_browsers"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

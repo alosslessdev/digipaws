@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.services.BaseBlockingService
 import neth.iecal.curbox.utils.AppLogger
-import java.util.Locale
+import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
 
 class KeywordBlocker : BaseBlocker() {
     companion object {
@@ -70,12 +70,11 @@ class KeywordBlocker : BaseBlocker() {
     private lateinit var service : BaseBlockingService
     private lateinit var browserBlocker : BrowserBlocker
 
-    lateinit var blockedKeyword: HashSet<String>
-    lateinit var redirectUrl: String
+    private var blockedKeywords: List<String> = emptyList()
+    private var redirectUrl: String = ""
     var isSearchAllTextFields = false
+    private var isSubstringMatchEnabled = false
     var recursionResultNodes: MutableList<AccessibilityNodeInfo> = mutableListOf()
-
-    private val wordSplitRegex = Regex("[^a-zA-Z0-9]+")
 
     // Caches the results of string evaluations. Max 200 items to prevent memory bloat.
     // Maps the raw text -> The blocked keyword found (or SAFE_STRING_TOKEN if safe)
@@ -90,25 +89,30 @@ class KeywordBlocker : BaseBlocker() {
 
 
     private fun containsBlockedKeyword(url: String): String? {
+        val cacheKey = buildString {
+            append(if (isSubstringMatchEnabled) "1|" else "0|")
+            append(KeywordBlockerMatchUtils.normalizeBlockedEntry(url))
+        }
+
         // Check cache first
-        val cachedResult = detectionCache.get(url)
+        val cachedResult = detectionCache.get(cacheKey)
         if (cachedResult != null) {
             return if (cachedResult == SAFE_STRING_TOKEN) null else cachedResult
         }
         AppLogger.logDebug("KeywordBlocker", "checking $url")
 
-        // If not in cache, process it
-        val keywords = parseTextForKeywords(url)
-        for (word in keywords) {
-            if (blockedKeyword.contains(word)) { // word is already lowercased in parseTextForKeywords
-                // Cache the bad word and return
-                detectionCache.put(url, word)
-                return word
-            }
+        val matchedKeyword = KeywordBlockerMatchUtils.findBlockedEntry(
+            input = url,
+            blockedEntries = blockedKeywords,
+            allowSubstringMatch = isSubstringMatchEnabled
+        )
+        if (matchedKeyword != null) {
+            detectionCache.put(cacheKey, matchedKeyword)
+            return matchedKeyword
         }
 
         // Cache as safe and return null
-        detectionCache.put(url, SAFE_STRING_TOKEN)
+        detectionCache.put(cacheKey, SAFE_STRING_TOKEN)
         return null
     }
     private fun safeRecycle(node: AccessibilityNodeInfo?) {
@@ -118,54 +122,6 @@ class KeywordBlocker : BaseBlocker() {
     private fun safeRecycle(nodes: MutableList<AccessibilityNodeInfo>) {
         nodes.forEach { safeRecycle(it) }
         nodes.clear()
-    }
-    private fun parseTextForKeywords(input: String): Set<String> {
-        fun extractWords(text: String): Set<String> =
-            text.split(wordSplitRegex) // Uses the hoisted regex
-                .filter { it.isNotEmpty() }
-                .map { it.lowercase(Locale.ROOT) }
-                .toSet()
-
-        val words = mutableSetOf<String>()
-
-        try {
-            val uri = java.net.URI(input)
-
-            // If scheme + host exist, treat as URL
-            if (uri.host != null) {
-                val host = uri.host.lowercase(Locale.ROOT)
-
-                // Add full domain: google.com
-                words.add(host)
-
-                // Add main website name: google
-                val parts = host.split(".")
-                if (parts.size >= 2) {
-                    words.add(parts[parts.size - 2])
-                }
-
-                // Add path keywords
-                uri.path?.let { words.addAll(extractWords(it)) }
-
-                // Add query parameters
-                uri.query?.split("&")?.forEach { param ->
-                    val (key, value) = param.split("=", limit = 2).let {
-                        it[0] to it.getOrNull(1)
-                    }
-                    words.addAll(extractWords(key))
-                    value?.let { words.addAll(extractWords(it)) }
-                }
-
-                return words
-            }
-        } catch (_: Exception) {
-            // Not a valid URI → fall back to text
-        }
-
-        // Plain text fallback
-        words.add(input.lowercase(Locale.ROOT))
-        words.addAll(extractWords(input))
-        return words
     }
 
     private var isProcessing = false
@@ -201,7 +157,9 @@ class KeywordBlocker : BaseBlocker() {
             return
         }
 
-        if(isUnsupportedBrowserBlockingOn && browserBlocker!!.isAppBrowser(event)) return pressHome("/ unsupported browser")
+        if (isUnsupportedBrowserBlockingOn && browserBlocker.isAppBrowser(event)) {
+            return pressHome("/ unsupported browser")
+        }
         val rootNode = service.rootInActiveWindow ?: return
         var detectedAdultKeyword: String? = null
 
@@ -345,21 +303,29 @@ class KeywordBlocker : BaseBlocker() {
         settingsJob?.cancel()
         settingsJob = CoroutineScope(Dispatchers.IO).launch {
             service.dataStoreManager.settings.collectLatest { settings ->
-                val updatedIgnoredApps = settings.keywordBlockerConfig.ignoredApps.toHashSet()
-                val shouldClearCache =
-                    blockedKeyword != settings.keywordBlockerConfig.blockedKeywords.toHashSet() ||
-                            isSearchAllTextFields != settings.keywordBlockerConfig.searchRecursively ||
-                            redirectUrl != settings.keywordBlockerConfig.redirectUrl ||
-                            isUnsupportedBrowserBlockingOn != settings.keywordBlockerConfig.blockAllExceptSupported ||
-                            isTurnedOn != settings.keywordBlockerConfig.isActive ||
-                            ignoredApps != updatedIgnoredApps
+                val config = settings.keywordBlockerConfig
+                val normalizedKeywords = config.blockedKeywords
+                    .map(KeywordBlockerMatchUtils::normalizeBlockedEntry)
+                    .filter { it.isNotBlank() }
+                    .distinct()
 
-                blockedKeyword =  settings.keywordBlockerConfig.blockedKeywords.toHashSet()
-                isSearchAllTextFields = settings.keywordBlockerConfig.searchRecursively
-                redirectUrl = settings.keywordBlockerConfig.redirectUrl
-                isUnsupportedBrowserBlockingOn = settings.keywordBlockerConfig.blockAllExceptSupported
-                isTurnedOn = settings.keywordBlockerConfig.isActive
-                ignoredApps = updatedIgnoredApps
+                val shouldClearCache =
+                    normalizedKeywords != blockedKeywords ||
+                            isSearchAllTextFields != config.searchRecursively ||
+                            redirectUrl != config.redirectUrl ||
+                            isSubstringMatchEnabled != config.matchSubstrings ||
+                            isUnsupportedBrowserBlockingOn != config.blockAllExceptSupported ||
+                            isTurnedOn != config.isActive ||
+                            ignoredApps != config.ignoredApps.toHashSet()
+
+                blockedKeywords = normalizedKeywords
+                isSearchAllTextFields = config.searchRecursively
+                redirectUrl = config.redirectUrl
+                isSubstringMatchEnabled = config.matchSubstrings
+                isUnsupportedBrowserBlockingOn = config.blockAllExceptSupported
+                isTurnedOn = config.isActive
+                ignoredApps = config.ignoredApps.toHashSet()
+                browserBlocker.isTurnedOn = isUnsupportedBrowserBlockingOn
 
                 if (shouldClearCache) {
                     detectionCache.evictAll()
