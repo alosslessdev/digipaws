@@ -21,6 +21,7 @@ import android.util.LruCache
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CoroutineScope
@@ -82,6 +83,7 @@ class KeywordBlocker : BaseBlocker() {
     private var isTurnedOn = false
     private var isUnsupportedBrowserBlockingOn = false
     private var ignoredApps: HashSet<String> = hashSetOf()
+    private var settingsJob: Job? = null
 
     private var lastEventTimeStamp = 0L
     private var refreshCooldown : Int = 2000
@@ -340,14 +342,28 @@ class KeywordBlocker : BaseBlocker() {
         this.service = service
         this.browserBlocker = BrowserBlocker(service)
         AppLogger.logDebug("KeywordBlocker", "Setting up kw blocker")
-        CoroutineScope(Dispatchers.IO).launch {
+        settingsJob?.cancel()
+        settingsJob = CoroutineScope(Dispatchers.IO).launch {
             service.dataStoreManager.settings.collectLatest { settings ->
+                val updatedIgnoredApps = settings.keywordBlockerConfig.ignoredApps.toHashSet()
+                val shouldClearCache =
+                    blockedKeyword != settings.keywordBlockerConfig.blockedKeywords.toHashSet() ||
+                            isSearchAllTextFields != settings.keywordBlockerConfig.searchRecursively ||
+                            redirectUrl != settings.keywordBlockerConfig.redirectUrl ||
+                            isUnsupportedBrowserBlockingOn != settings.keywordBlockerConfig.blockAllExceptSupported ||
+                            isTurnedOn != settings.keywordBlockerConfig.isActive ||
+                            ignoredApps != updatedIgnoredApps
+
                 blockedKeyword =  settings.keywordBlockerConfig.blockedKeywords.toHashSet()
                 isSearchAllTextFields = settings.keywordBlockerConfig.searchRecursively
                 redirectUrl = settings.keywordBlockerConfig.redirectUrl
                 isUnsupportedBrowserBlockingOn = settings.keywordBlockerConfig.blockAllExceptSupported
                 isTurnedOn = settings.keywordBlockerConfig.isActive
-                ignoredApps = settings.keywordBlockerConfig.ignoredApps.toHashSet()
+                ignoredApps = updatedIgnoredApps
+
+                if (shouldClearCache) {
+                    detectionCache.evictAll()
+                }
             }
         }
 
@@ -373,7 +389,10 @@ class KeywordBlocker : BaseBlocker() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent == null) return
             when (intent.action) {
-                INTENT_ACTION_REFRESH_CONFIG -> setupBlocker(service)
+                INTENT_ACTION_REFRESH_CONFIG -> {
+                    detectionCache.evictAll()
+                    setupBlocker(service)
+                }
             }
         }
     }
