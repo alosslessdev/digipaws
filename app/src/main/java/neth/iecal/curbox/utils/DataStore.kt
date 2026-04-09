@@ -101,6 +101,10 @@ class DataStoreManager(private val context: Context) {
         settingsDataStore.updateData { it.copy(usageTrackerIgnoredApps = newApps) }
     }
 
+    suspend fun updateKeepUninstalledUsageUntilNextDay(enabled: Boolean) {
+        settingsDataStore.updateData { it.copy(keepUninstalledUsageUntilNextDay = enabled) }
+    }
+
     suspend fun updateMindfulMessageConfig(config: neth.iecal.curbox.data.models.MindfulMessageConfig) {
         settingsDataStore.updateData { it.copy(mindfulMessageConfig = config) }
     }

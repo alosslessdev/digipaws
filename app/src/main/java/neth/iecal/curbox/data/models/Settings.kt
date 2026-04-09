@@ -16,6 +16,7 @@ data class Settings(
     val isReelCounterOn: Boolean = true,
     val grayscaleGroups: List<GrayscaleGroup> = listOf(),
     val usageTrackerIgnoredApps: List<String> = listOf(),
+    val keepUninstalledUsageUntilNextDay: Boolean = true,
     val mindfulMessageConfig: MindfulMessageConfig = MindfulMessageConfig(),
     val viewBlockerConfig: ViewBlockerConfig = ViewBlockerConfig(),
     val appBlockerCooldowns: Map<String, Long> = mapOf()

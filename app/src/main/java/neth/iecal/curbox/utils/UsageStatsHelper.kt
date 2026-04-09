@@ -4,8 +4,8 @@ import android.app.ActivityManager
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import neth.iecal.curbox.ui.fragments.usage.AllAppsUsageFragment
 import java.time.Instant
 import java.time.LocalDate
@@ -17,6 +17,9 @@ class UsageStatsHelper(private val context: Context) {
 
     private val usageStatsManager =
         context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    private val dataStoreManager = DataStoreManager(context)
+    private val snapshotStore = UsageStatsSnapshotStore(context)
+    private val zoneId = ZoneId.systemDefault()
 
     private val guardian = UnmatchedCloseEventGuardian()
 
@@ -25,12 +28,17 @@ class UsageStatsHelper(private val context: Context) {
         val cachedAt: Long
     )
 
-    private data class RangeKey(val start: Long, val end: Long)
+    private data class RangeKey(
+        val start: Long,
+        val end: Long,
+        val keepUninstalledUsageUntilNextDay: Boolean
+    )
 
     private val rangeCache = ConcurrentHashMap<RangeKey, CachedRange>()
 
     fun getForegroundStatsByTimestamps(start: Long, end: Long): List<AllAppsUsageFragment.Stat> {
-        val rangeKey = RangeKey(start, end)
+        val keepUninstalledUsageUntilNextDay = isKeepUninstalledUsageUntilNextDayEnabled()
+        val rangeKey = RangeKey(start, end, keepUninstalledUsageUntilNextDay)
         val now = System.currentTimeMillis()
         rangeCache[rangeKey]?.let { cached ->
             if (isCacheValid(rangeKey, cached.cachedAt, now)) {
@@ -149,7 +157,16 @@ class UsageStatsHelper(private val context: Context) {
         }
 
         // Aggregate the foreground stats into usage stats
-        return aggregateForegroundStats(componentForegroundStats).also { stats ->
+        val liveStats = aggregateForegroundStats(componentForegroundStats)
+        val queryDate = getSingleDay(start, end)
+        val mergedStats = queryDate?.let { snapshotStore.mergeAndPersist(it, liveStats) }
+        val statsToReturn = if (queryDate != null && keepUninstalledUsageUntilNextDay) {
+            mergedStats ?: liveStats
+        } else {
+            liveStats
+        }
+
+        return statsToReturn.also { stats ->
             rangeCache[rangeKey] = CachedRange(stats, now)
             pruneCache()
         }
@@ -194,6 +211,20 @@ class UsageStatsHelper(private val context: Context) {
 
         val overflow = rangeCache.size - 32
         entriesByAge.take(overflow).forEach { rangeCache.remove(it.key) }
+    }
+
+    private fun getSingleDay(start: Long, end: Long): LocalDate? {
+        if (end <= start) return null
+
+        val startDate = Instant.ofEpochMilli(start).atZone(zoneId).toLocalDate()
+        val endDate = Instant.ofEpochMilli(end - 1).atZone(zoneId).toLocalDate()
+        return startDate.takeIf { it == endDate }
+    }
+
+    private fun isKeepUninstalledUsageUntilNextDayEnabled(): Boolean {
+        return runBlocking {
+            dataStoreManager.settings.first().keepUninstalledUsageUntilNextDay
+        }
     }
 
     private fun aggregateForegroundStats(foregroundStats: List<ComponentForegroundStat>): List<AllAppsUsageFragment.Stat> {

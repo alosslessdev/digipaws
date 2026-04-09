@@ -31,6 +31,7 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
 
     private val dayStatsCache = ConcurrentHashMap<LocalDate, List<AllAppsUsageFragment.Stat>>()
     private val appMetadataCache = ConcurrentHashMap<String, AppMetadata>()
+    private val snapshotMetadataCache = ConcurrentHashMap<String, AppMetadata>()
 
     data class AppMetadata(
         val label: CharSequence,
@@ -89,6 +90,7 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
             }
             val datastore = neth.iecal.curbox.utils.DataStoreManager(getApplication())
             ignoredPackages.addAll(datastore.settings.first().usageTrackerIgnoredApps)
+            invalidateDynamicDayCache()
             loadWeekData()
         }
     }
@@ -124,6 +126,7 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
 
     fun reload() {
         viewModelScope.launch(Dispatchers.IO) {
+            invalidateDynamicDayCache()
             loadWeekData()
         }
     }
@@ -187,6 +190,7 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
 
     private suspend fun loadDayStats(date: LocalDate) {
         val stats = getFilteredStatsForDay(date)
+        rememberSnapshotMetadata(stats)
         preloadAppMetadata(stats.map { it.packageName })
         val total = stats.sumOf { it.totalTime }
         val today = LocalDate.now()
@@ -248,6 +252,15 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
     }
 
     private fun getStatsForDay(date: LocalDate): List<AllAppsUsageFragment.Stat> {
+        val today = LocalDate.now()
+        val shouldBypassLongCache = !date.isBefore(today.minusDays(1))
+
+        if (shouldBypassLongCache) {
+            return usageStatsHelper.getForegroundStatsByDay(date).also {
+                dayStatsCache[date] = it
+            }
+        }
+
         return dayStatsCache.computeIfAbsent(date) {
             usageStatsHelper.getForegroundStatsByDay(it)
         }
@@ -267,44 +280,71 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun getAppMetadata(packageName: String): AppMetadata {
-        return appMetadataCache.computeIfAbsent(packageName) {
-            try {
-                val appInfo = packageManager.getApplicationInfo(it, 0)
-                val packageInfo = packageManager.getPackageInfo(it, 0)
-                val category = when (appInfo.category) {
-                    ApplicationInfo.CATEGORY_GAME -> "GAME"
-                    ApplicationInfo.CATEGORY_SOCIAL -> "SOCIAL NETWORKING"
-                    ApplicationInfo.CATEGORY_PRODUCTIVITY -> "PRODUCTIVITY"
-                    ApplicationInfo.CATEGORY_VIDEO -> "VIDEO"
-                    ApplicationInfo.CATEGORY_AUDIO -> "AUDIO"
-                    ApplicationInfo.CATEGORY_NEWS -> "NEWS"
-                    ApplicationInfo.CATEGORY_IMAGE -> "IMAGE"
-                    ApplicationInfo.CATEGORY_MAPS -> "MAPS"
-                    else -> "APP"
-                }
-
-                AppMetadata(
-                    label = appInfo.loadLabel(packageManager),
-                    category = category,
-                    isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                    installDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                        .format(java.util.Date(packageInfo.firstInstallTime)),
-                    lastUpdate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                        .format(java.util.Date(packageInfo.lastUpdateTime)),
-                    icon = appInfo.loadIcon(packageManager)
-                )
-            } catch (e: Exception) {
-                AppMetadata(
-                    label = packageName,
-                    category = "APP",
-                    isSystemApp = false,
-                    installDate = "N/A",
-                    lastUpdate = "N/A",
-                    icon = null
-                )
+    private fun rememberSnapshotMetadata(stats: Collection<AllAppsUsageFragment.Stat>) {
+        stats.forEach { stat ->
+            if (stat.snapshotLabel.isNullOrBlank() && stat.snapshotCategory.isNullOrBlank()) {
+                return@forEach
             }
+
+            snapshotMetadataCache[stat.packageName] = AppMetadata(
+                label = stat.snapshotLabel ?: stat.packageName,
+                category = stat.snapshotCategory ?: "APP",
+                isSystemApp = false,
+                installDate = "N/A",
+                lastUpdate = "N/A",
+                icon = null
+            )
+            appMetadataCache.remove(stat.packageName)
         }
+    }
+
+    private fun invalidateDynamicDayCache() {
+        val today = LocalDate.now()
+        dayStatsCache.remove(today)
+        dayStatsCache.remove(today.minusDays(1))
+    }
+
+    fun getAppMetadata(packageName: String): AppMetadata {
+        appMetadataCache[packageName]?.let { return it }
+
+        val metadata = try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            val category = when (appInfo.category) {
+                ApplicationInfo.CATEGORY_GAME -> "GAME"
+                ApplicationInfo.CATEGORY_SOCIAL -> "SOCIAL NETWORKING"
+                ApplicationInfo.CATEGORY_PRODUCTIVITY -> "PRODUCTIVITY"
+                ApplicationInfo.CATEGORY_VIDEO -> "VIDEO"
+                ApplicationInfo.CATEGORY_AUDIO -> "AUDIO"
+                ApplicationInfo.CATEGORY_NEWS -> "NEWS"
+                ApplicationInfo.CATEGORY_IMAGE -> "IMAGE"
+                ApplicationInfo.CATEGORY_MAPS -> "MAPS"
+                else -> "APP"
+            }
+
+            AppMetadata(
+                label = appInfo.loadLabel(packageManager),
+                category = category,
+                isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                installDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    .format(java.util.Date(packageInfo.firstInstallTime)),
+                lastUpdate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                    .format(java.util.Date(packageInfo.lastUpdateTime)),
+                icon = appInfo.loadIcon(packageManager)
+            )
+        } catch (_: Exception) {
+            snapshotMetadataCache[packageName] ?: AppMetadata(
+                label = packageName,
+                category = "APP",
+                isSystemApp = false,
+                installDate = "N/A",
+                lastUpdate = "N/A",
+                icon = null
+            )
+        }
+
+        appMetadataCache[packageName] = metadata
+        return metadata
     }
 
     fun getAppCategory(packageName: String): String {

@@ -160,6 +160,7 @@
     <string name="also_match_inside_longer_words_and_links">Also match inside longer words and links after exact matches (example: youtube.com matches m.youtube.com)</string>
     <string name="block_all_browsers_except_supported_ones">Block all browsers except supported ones</string>
     <string name="select_ignored_apps">Select Ignored Apps</string>
+    <string name="keep_uninstalled_app_usage_until_tomorrow">Keep uninstalled app usage until tomorrow</string>
     <string name="activity_powered_by">POWERED BY CURBOX</string>
     <string name="your_digital_wellbeing">Your Digital Well-being</string>
     <string name="total_today">TOTAL TODAY</string>

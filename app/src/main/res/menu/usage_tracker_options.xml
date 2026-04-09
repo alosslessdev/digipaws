@@ -4,6 +4,10 @@
         android:id="@+id/select_ignored"
         android:title="@string/select_ignored_apps" />
     <item
+        android:id="@+id/toggle_keep_uninstalled_usage"
+        android:checkable="true"
+        android:title="@string/keep_uninstalled_app_usage_until_tomorrow" />
+    <item
         android:id="@+id/add_widget_usage_tracker"
         android:title="@string/add_widget_to_homescreen" />
 

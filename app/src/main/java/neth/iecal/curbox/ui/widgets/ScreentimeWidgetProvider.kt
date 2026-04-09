@@ -135,9 +135,13 @@ class ScreentimeWidgetProvider : AppWidgetProvider() {
         val item = list.getOrNull(index) // Safely get the item
         if (item != null) {
             val usage =  (TimeTools.formatTimeForWidget(item.totalTime))
-            val appName = context.packageManager.getApplicationLabel(
-                context.packageManager.getApplicationInfo(item.packageName, 0)
-            )
+            val appName = try {
+                context.packageManager.getApplicationLabel(
+                    context.packageManager.getApplicationInfo(item.packageName, 0)
+                )
+            } catch (_: Exception) {
+                item.snapshotLabel ?: item.packageName
+            }
             remoteViews.setTextViewText(textViewId, "$usage : $appName")
         } else {
             remoteViews.setTextViewText(textViewId, "") // Handle missing items

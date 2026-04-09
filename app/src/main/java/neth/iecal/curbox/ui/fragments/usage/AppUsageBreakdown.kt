@@ -49,6 +49,7 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
         super.onViewCreated(view, savedInstanceState)
         setupLineChart(binding.lineChart)
         plotUsageData()
+        binding.appName.text = stat.snapshotLabel ?: stat.packageName
 
         try {
             val appInfo = requireContext().packageManager.getApplicationInfo(stat.packageName, 0)

@@ -174,6 +174,15 @@ class AllAppsUsageFragment : Fragment() {
         binding.openMenu.setOnClickListener {
             val popupMenu = PopupMenu(requireContext(), binding.openMenu)
             popupMenu.menuInflater.inflate(R.menu.usage_tracker_options, popupMenu.menu)
+            lifecycleScope.launch(Dispatchers.IO) {
+                val dataStore = neth.iecal.curbox.utils.DataStoreManager(requireContext())
+                val keepUninstalledUsage = dataStore.settings.first().keepUninstalledUsageUntilNextDay
+
+                withContext(Dispatchers.Main) {
+                    popupMenu.menu.findItem(R.id.toggle_keep_uninstalled_usage)?.isChecked =
+                        keepUninstalledUsage
+                }
+            }
 
             popupMenu.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -194,6 +203,19 @@ class AllAppsUsageFragment : Fragment() {
                                         R.anim.fade_out
                                     )
                                 )
+                            }
+                        }
+                        true
+                    }
+
+                    R.id.toggle_keep_uninstalled_usage -> {
+                        val newValue = !item.isChecked
+                        item.isChecked = newValue
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val dataStore = neth.iecal.curbox.utils.DataStoreManager(requireContext())
+                            dataStore.updateKeepUninstalledUsageUntilNextDay(newValue)
+                            withContext(Dispatchers.Main) {
+                                viewModel.reload()
                             }
                         }
                         true
@@ -631,7 +653,9 @@ class AllAppsUsageFragment : Fragment() {
         val packageName: String,
         val totalTime: Long,
         val startTimes: List<ZonedDateTime>,
-        val hourlyUsage: LongArray = LongArray(24)
+        val hourlyUsage: LongArray = LongArray(24),
+        val snapshotLabel: String? = null,
+        val snapshotCategory: String? = null
     )
 
     override fun onDestroyView() {
