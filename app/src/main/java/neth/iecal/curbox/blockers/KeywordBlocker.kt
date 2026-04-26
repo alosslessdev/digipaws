@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import neth.iecal.curbox.services.BaseBlockingService
 import neth.iecal.curbox.utils.AppLogger
 import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
+import neth.iecal.curbox.utils.KeywordUsageTracker
 
 class KeywordBlocker : BaseBlocker() {
     companion object {
@@ -84,6 +85,16 @@ class KeywordBlocker : BaseBlocker() {
 
     private var lastEventTimeStamp = 0L
     private var refreshCooldown : Int = 2000
+
+    // Time tracking
+    private var isTimeTrackingEnabled = false
+    private var keywordTimeLimits: Map<String, Int> = emptyMap()
+    private var keywordReminderIntervals: Map<String, Int> = emptyMap()
+    private var clusteringThresholdMinutes = 5
+    private var usageTracker: KeywordUsageTracker? = null
+    private var lastDetectedKeyword: String? = null
+    private var lastReminderTime: Long = 0L
+    private var lastReminderKeyword: String? = null
 
 
     private fun containsBlockedKeyword(url: String): String? {
@@ -196,6 +207,11 @@ class KeywordBlocker : BaseBlocker() {
             detectedAdultKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
                 containsBlockedKeyword(displayText)
             else null) ?: return
+        }
+
+        if (isTimeTrackingEnabled && detectedAdultKeyword != null) {
+            val packageName = event.packageName?.toString() ?: ""
+            handleKeywordDetected(detectedAdultKeyword, packageName)
         }
 
         performSmallUpwardScroll()
@@ -319,6 +335,7 @@ class KeywordBlocker : BaseBlocker() {
     fun setupBlocker(service: BaseBlockingService){
         this.service = service
         this.browserBlocker = BrowserBlocker(service)
+        this.usageTracker = KeywordUsageTracker(service)
         AppLogger.logDebug("KeywordBlocker", "Setting up kw blocker")
         settingsJob?.cancel()
         settingsJob = CoroutineScope(Dispatchers.IO).launch {
@@ -345,6 +362,10 @@ class KeywordBlocker : BaseBlocker() {
                 isUnsupportedBrowserBlockingOn = config.blockAllExceptSupported
                 isTurnedOn = config.isActive
                 ignoredApps = config.ignoredApps.toHashSet()
+                isTimeTrackingEnabled = config.isTimeTrackingEnabled
+                keywordTimeLimits = config.keywordTimeLimits
+                keywordReminderIntervals = config.keywordReminderIntervals
+                clusteringThresholdMinutes = config.clusteringThresholdMinutes
                 browserBlocker.isTurnedOn = isUnsupportedBrowserBlockingOn
 
                 if (shouldClearCache) {
@@ -389,4 +410,66 @@ class KeywordBlocker : BaseBlocker() {
         val suggestionBoxIndexOfGoBtn: Int = 0,
         val isSuggestionEqualToGo: Boolean = false
     )
+
+    private fun handleKeywordDetected(keyword: String, packageName: String) {
+        val tracker = usageTracker ?: return
+
+        tracker.recordDetection(keyword, packageName)
+        lastDetectedKeyword = keyword
+
+        val timeLimit = keywordTimeLimits[keyword] ?: 0
+        val reminderInterval = keywordReminderIntervals[keyword] ?: 5
+
+        if (timeLimit > 0) {
+            val clusteringThresholdMs = clusteringThresholdMinutes * 60 * 1000L
+            val currentUsageSeconds = tracker.calculateTotalUsageTimeForToday(keyword, clusteringThresholdMs)
+            val usageMinutes = currentUsageSeconds / 60.0
+
+            if (usageMinutes >= timeLimit) {
+                AppLogger.logDebug("KeywordBlocker", "Time limit reached for keyword: $keyword ($usageMinutes min)")
+                return
+            }
+
+            if (reminderInterval > 0 && reminderInterval < timeLimit) {
+                checkAndShowReminder(keyword, usageMinutes, reminderInterval)
+            }
+        }
+    }
+
+    private fun checkAndShowReminder(keyword: String, currentUsageMinutes: Double, reminderInterval: Int) {
+        val currentTime = System.currentTimeMillis()
+        val reminderIntervalMs = reminderInterval * 60 * 1000L
+
+        if (lastReminderKeyword == keyword &&
+            currentTime - lastReminderTime < reminderIntervalMs
+        ) {
+            return
+        }
+
+        Handler(Looper.getMainLooper()).post {
+            val message = "You've been using blocked keyword '$keyword' for ${currentUsageMinutes.toLong()} minutes"
+            Toast.makeText(service, message, Toast.LENGTH_LONG).show()
+        }
+
+        lastReminderTime = currentTime
+        lastReminderKeyword = keyword
+    }
+
+    fun getTodayUsageMinutes(keyword: String): Double {
+        val tracker = usageTracker ?: return 0.0
+        val clusteringThresholdMs = clusteringThresholdMinutes * 60 * 1000L
+        return tracker.calculateTotalUsageMinutesForToday(keyword, clusteringThresholdMs)
+    }
+
+    fun getTimeLimitForKeyword(keyword: String): Int {
+        return keywordTimeLimits[keyword] ?: 0
+    }
+
+    fun isTimeLimitReached(keyword: String): Boolean {
+        val timeLimit = keywordTimeLimits[keyword] ?: 0
+        if (timeLimit <= 0) return false
+
+        val currentUsage = getTodayUsageMinutes(keyword)
+        return currentUsage >= timeLimit
+    }
 }

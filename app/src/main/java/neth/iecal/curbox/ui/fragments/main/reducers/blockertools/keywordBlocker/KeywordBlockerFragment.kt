@@ -11,6 +11,7 @@ import android.util.Patterns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -120,6 +121,24 @@ class KeywordBlockerFragment : Fragment() {
             intent.putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(selectedApps))
             selectAppsLauncher.launch(intent)
         }
+
+        binding.switchTimeTracking.setOnCheckedChangeListener { _, isChecked ->
+            if (!isUpdatingUi) {
+                viewModel.setTimeTrackingEnabled(isChecked)
+                binding.layoutTimeTrackingSettings.visibility = if (isChecked) View.VISIBLE else View.GONE
+            }
+        }
+
+        binding.etClusteringThreshold.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (!isUpdatingUi) {
+                    val threshold = s.toString().toIntOrNull() ?: 5
+                    viewModel.setClusteringThreshold(threshold)
+                }
+            }
+        })
     }
 
     private fun observeViewModel() {
@@ -148,6 +167,16 @@ class KeywordBlockerFragment : Fragment() {
                 }
                 selectedApps = config.ignoredApps
 
+                if (binding.switchTimeTracking.isChecked != config.isTimeTrackingEnabled) {
+                    binding.switchTimeTracking.isChecked = config.isTimeTrackingEnabled
+                    binding.layoutTimeTrackingSettings.visibility = if (config.isTimeTrackingEnabled) View.VISIBLE else View.GONE
+                }
+
+                val currentThreshold = binding.etClusteringThreshold.text.toString().toIntOrNull() ?: 5
+                if (currentThreshold != config.clusteringThresholdMinutes) {
+                    binding.etClusteringThreshold.setText(config.clusteringThresholdMinutes.toString())
+                }
+
                 updateKeywordsList(config.blockedKeywords)
 
                 isUpdatingUi = false
@@ -164,9 +193,52 @@ class KeywordBlockerFragment : Fragment() {
                 setOnCloseIconClickListener {
                     showRemoveConfirmation(keyword)
                 }
+                setOnClickListener {
+                    showKeywordTimeSettings(keyword)
+                }
             }
             binding.cgKeywords.addView(chip)
         }
+    }
+
+    private fun showKeywordTimeSettings(keyword: String) {
+        val config = viewModel.keywordBlockerConfig.value
+        val timeLimit = config.keywordTimeLimits[keyword] ?: 0
+        val reminderInterval = config.keywordReminderIntervals[keyword] ?: 5
+        val currentUsage = viewModel.getKeywordUsageMinutes(keyword)
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_keyword_time_settings, null)
+        val etTimeLimit = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_time_limit)
+        val etReminderInterval = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_reminder_interval)
+        val tvCurrentUsage = dialogView.findViewById<TextView>(R.id.tv_current_usage)
+
+        etTimeLimit.setText(if (timeLimit > 0) timeLimit.toString() else "")
+        etReminderInterval.setText(reminderInterval.toString())
+        tvCurrentUsage.text = getString(R.string.current_usage_today) + ": ${currentUsage.toLong()} min"
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(keyword)
+            .setView(dialogView)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val newTimeLimit = etTimeLimit.text.toString().toIntOrNull() ?: 0
+                var newReminderInterval = etReminderInterval.text.toString().toIntOrNull() ?: 5
+
+                if (newTimeLimit in 1..4) {
+                    newReminderInterval = 0
+                }
+
+                if (newTimeLimit != timeLimit) {
+                    viewModel.setKeywordTimeLimit(keyword, newTimeLimit)
+                }
+                if (newReminderInterval != reminderInterval) {
+                    viewModel.setKeywordReminderInterval(keyword, newReminderInterval)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton(R.string.clear_usage) { _, _ ->
+                viewModel.clearKeywordUsage(keyword)
+            }
+            .show()
     }
 
     private fun showRemoveConfirmation(keyword: String) {

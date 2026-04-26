@@ -14,10 +14,12 @@ import neth.iecal.curbox.data.models.KeywordBlocker
 import neth.iecal.curbox.utils.DataStoreManager
 import neth.iecal.curbox.utils.BridgeServiceManager
 import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
+import neth.iecal.curbox.utils.KeywordUsageTracker
 
 class KeywordBlockerViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
-    
+    private val usageTracker = KeywordUsageTracker(application)
+
     private val _keywordBlockerConfig = MutableStateFlow(KeywordBlocker())
     val keywordBlockerConfig: StateFlow<KeywordBlocker> = _keywordBlockerConfig
 
@@ -83,5 +85,46 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     fun setBlockAllExceptSupported(enabled: Boolean) {
         updateConfig(_keywordBlockerConfig.value.copy(blockAllExceptSupported = enabled))
+    }
+
+    fun setTimeTrackingEnabled(enabled: Boolean) {
+        updateConfig(_keywordBlockerConfig.value.copy(isTimeTrackingEnabled = enabled))
+    }
+
+    fun setClusteringThreshold(minutes: Int) {
+        updateConfig(_keywordBlockerConfig.value.copy(clusteringThresholdMinutes = minutes))
+    }
+
+    fun setKeywordTimeLimit(keyword: String, minutes: Int) {
+        val currentLimits = _keywordBlockerConfig.value.keywordTimeLimits.toMutableMap()
+        if (minutes > 0) {
+            currentLimits[keyword] = minutes
+        } else {
+            currentLimits.remove(keyword)
+        }
+        updateConfig(_keywordBlockerConfig.value.copy(keywordTimeLimits = currentLimits))
+    }
+
+    fun setKeywordReminderInterval(keyword: String, minutes: Int) {
+        val currentIntervals = _keywordBlockerConfig.value.keywordReminderIntervals.toMutableMap()
+        if (minutes > 0) {
+            currentIntervals[keyword] = minutes
+        } else {
+            currentIntervals.remove(keyword)
+        }
+        updateConfig(_keywordBlockerConfig.value.copy(keywordReminderIntervals = currentIntervals))
+    }
+
+    fun getKeywordUsageMinutes(keyword: String): Double {
+        val clusteringThresholdMs = _keywordBlockerConfig.value.clusteringThresholdMinutes * 60 * 1000L
+        return usageTracker.calculateTotalUsageMinutesForToday(keyword, clusteringThresholdMs)
+    }
+
+    fun clearKeywordUsage(keyword: String) {
+        usageTracker.clearDetectionsForKeyword(keyword)
+    }
+
+    fun clearAllUsage() {
+        usageTracker.clearAllDetections()
     }
 }
