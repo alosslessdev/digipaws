@@ -265,7 +265,7 @@
     <string name="remove_entry_confirmation">Are you sure you want to remove \"%1$s\"?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="yes_in_seconds">Yes (%1$ss)</string>
+    <string name="yes_in_seconds">Yes (%1$ds)</string>
     <string name="active_reducers">Active Reducers</string>
     <string name="add_a_reducer">Add a Reducer</string>
     <string name="mindful_messages">Mindful Messages</string>
@@ -301,4 +301,5 @@
     <string name="everyday">Everyday</string>
     <string name="no_recurring_intervals">No time intervals set</string>
     <string name="recurring_focus_active">Recurring focus active</string>
+    <string name="apps_optional_keyword_only">Apps are optional — leave empty for keyword-only groups</string>
 </resources>

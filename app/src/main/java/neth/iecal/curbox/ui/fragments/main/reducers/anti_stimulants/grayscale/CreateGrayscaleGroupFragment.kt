@@ -124,11 +124,6 @@ class CreateGrayscaleGroupFragment : Fragment() {
                 binding.etGroupName.error = "Please enter a group name"
                 return@setOnClickListener
             }
-            
-            if (selectedApps.isEmpty()) {
-                Toast.makeText(requireContext(), getString(R.string.please_select_at_least_one_app), Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
 
             val savedGroupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
             val isEditingRecord = savedGroupId != null

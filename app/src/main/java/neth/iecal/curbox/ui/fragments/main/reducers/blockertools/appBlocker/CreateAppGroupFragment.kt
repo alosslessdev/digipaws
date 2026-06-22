@@ -154,11 +154,6 @@ class CreateAppGroupFragment : Fragment() {
             return
         }
 
-        if (selectedApps.isEmpty()) {
-            Toast.makeText(requireContext(), getString(R.string.please_select_at_least_one_app), Toast.LENGTH_SHORT).show()
-            return
-        }
-
         val isUsageBased = binding.rgBlockingType.checkedRadioButtonId == R.id.rb_usage_based
         val blockingType = if (isUsageBased) AppBlockingType.Usage else AppBlockingType.Timed
 

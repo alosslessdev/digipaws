@@ -147,11 +147,6 @@ class CreateAutoFocusGroupFragment : Fragment() {
                 binding.etGroupName.error = "Please enter a group name"
                 return@setOnClickListener
             }
-            
-            if (selectedApps.isEmpty()) {
-                Toast.makeText(requireContext(), getString(R.string.please_select_at_least_one_app), Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
 
             val isBlockSelected = binding.rgBlockingType.checkedRadioButtonId == R.id.rb_block_selected
             val blockMode = if (isBlockSelected) FocusBlockMode.BLOCK_SELECTED else FocusBlockMode.BLOCK_ALL_EXCEPT_SELECTED

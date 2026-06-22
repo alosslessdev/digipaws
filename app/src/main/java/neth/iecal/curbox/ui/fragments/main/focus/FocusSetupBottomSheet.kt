@@ -40,6 +40,7 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             val selectedApps = result.data?.getStringArrayListExtra("SELECTED_APPS") ?: return@registerForActivityResult
             viewModel.newGroupSelectedApps = HashSet(selectedApps)
             binding.selectedAppCount.text = "Selected: " + selectedApps.size
+            updateBlockModeVisibility()
         }
 
     override fun onCreateView(
@@ -66,6 +67,7 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             binding.recurringToggle.isChecked = false
             binding.recurringSettings.visibility = View.GONE
             binding.recurringIntervalsContainer.removeAllViews()
+            updateBlockModeVisibility()
             
             binding.createGroup.visibility = View.VISIBLE
             binding.selectGrouo.visibility = View.GONE
@@ -93,6 +95,7 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             binding.groupName.setText(group.groupName)
             viewModel.newGroupSelectedApps = HashSet(group.packages)
             binding.selectedAppCount.text = "Selected: ${group.packages.size}"
+            updateBlockModeVisibility()
             if (group.blockMode == FocusBlockMode.BLOCK_SELECTED) {
                 binding.selectedBlockAction.check(R.id.btn_selected)
             } else {
@@ -161,6 +164,12 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
 
         binding.saveGroup.setOnClickListener {
             val isEditing = viewModel.selectedGroup != null
+            val name = binding.groupName.text.toString().trim()
+            if (name.isEmpty()) {
+                binding.groupName.error = "Please enter a group name"
+                return@setOnClickListener
+            }
+
             val dailyIntervals = if (binding.recurringToggle.isChecked) {
                 collectDailyIntervals()
             } else {
@@ -168,9 +177,10 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             }
             val newGroup = ManualFocusGroup(
                 groupId = if (isEditing) viewModel.selectedGroup!!.groupId else java.util.UUID.randomUUID().toString(),
-                groupName = binding.groupName.text.toString(),
+                groupName = name,
                 packages = viewModel.newGroupSelectedApps,
-                blockMode = if(binding.selectedBlockAction.checkedButtonId == R.id.btn_selected) FocusBlockMode.BLOCK_SELECTED else FocusBlockMode.BLOCK_ALL_EXCEPT_SELECTED,
+                blockMode = if (viewModel.newGroupSelectedApps.isNotEmpty() && binding.selectedBlockAction.checkedButtonId == R.id.btn_block_all_excpt_selected)
+                    FocusBlockMode.BLOCK_ALL_EXCEPT_SELECTED else FocusBlockMode.BLOCK_SELECTED,
                 exitable = binding.exitable.isChecked,
                 autoTurnOnDnd = binding.autoTurnOnDnd.isChecked,
                 isRecurring = binding.recurringToggle.isChecked,
@@ -195,6 +205,12 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
         binding.selectedBlockAction.checkedButtonId
     }
 
+
+    private fun updateBlockModeVisibility() {
+        val hasApps = viewModel.newGroupSelectedApps.isNotEmpty()
+        binding.selectedBlockAction.visibility = if (hasApps) View.VISIBLE else View.GONE
+        binding.textView32.visibility = if (hasApps) View.VISIBLE else View.GONE
+    }
 
     private fun addRecurringIntervalRow(startHour: Int = 9, startMinute: Int = 0, endHour: Int = 17, endMinute: Int = 0) {
         var startHour = startHour

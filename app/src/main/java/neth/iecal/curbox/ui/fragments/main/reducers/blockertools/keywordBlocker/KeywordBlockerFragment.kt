@@ -42,7 +42,7 @@ class KeywordBlockerFragment : Fragment() {
             val apps = result.data?.getStringArrayListExtra("SELECTED_APPS")
             if (apps != null) {
                 viewModel.setIgnoredApps(apps)
-                binding.btnSelectIgnoredApps.text = "Select Ignored Apps (${apps.size})"
+                binding.btnSelectIgnoredApps.text = getString(R.string.select_ignored_apps) + " (${apps.size})"
                 selectedApps = apps
             }
         }
@@ -167,6 +167,7 @@ class KeywordBlockerFragment : Fragment() {
                     binding.cbBlockUnsupportedBrowsers.isChecked = config.blockAllExceptSupported
                 }
                 selectedApps = config.ignoredApps
+                binding.btnSelectIgnoredApps.text = getString(R.string.select_ignored_apps) + " (${selectedApps.size})"
 
                 if (binding.switchTimeTracking.isChecked != config.isTimeTrackingEnabled) {
                     binding.switchTimeTracking.isChecked = config.isTimeTrackingEnabled
@@ -263,11 +264,11 @@ class KeywordBlockerFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(keyword)
             .setView(dialogView)
-            .setPositiveButton(R.string.save) { dialog, which ->
+            .setPositiveButton(R.string.save) { _, _ ->
                 val newTimeLimit = etTimeLimit.text.toString().toIntOrNull() ?: 0
                 var newReminderInterval = etReminderInterval.text.toString().toIntOrNull() ?: 5
 
-                if (newTimeLimit in 1..4) {
+                if (newTimeLimit in (1..4)) {
                     newReminderInterval = 0
                 }
 
@@ -279,7 +280,7 @@ class KeywordBlockerFragment : Fragment() {
                 }
             }
             .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton(R.string.clear_usage) { dialog, which ->
+            .setNeutralButton(R.string.clear_usage) { _, _ ->
                 viewModel.clearKeywordUsage(keyword)
             }
             .show()
