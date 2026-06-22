@@ -85,6 +85,7 @@ class KeywordBlockerFragment : Fragment() {
                 }
                 viewModel.addKeyword(keyword)
                 binding.etKeyword.setText("")
+                showFocusGroupPicker(keyword)
             }
         }
 
@@ -186,9 +187,19 @@ class KeywordBlockerFragment : Fragment() {
 
     private fun updateKeywordsList(keywords: List<String>) {
         binding.cgKeywords.removeAllViews()
+        val config = viewModel.keywordBlockerConfig.value
         for (keyword in keywords) {
+            val focusGroupIds = config.keywordFocusGroups[keyword] ?: emptyList()
             val chip = Chip(requireContext()).apply {
-                text = keyword
+                text = if (focusGroupIds.isNotEmpty()) {
+                    val groupNames = focusGroupIds.mapNotNull { id ->
+                        viewModel.focusGroups.value.find { it.groupId == id }?.groupName
+                            ?: viewModel.autoFocusGroups.value.find { it.groupId == id }?.groupName
+                    }
+                    if (groupNames.isNotEmpty()) "$keyword (${groupNames.joinToString(", ")})" else keyword
+                } else {
+                    keyword
+                }
                 isCloseIconVisible = true
                 setOnCloseIconClickListener {
                     showRemoveConfirmation(keyword)
@@ -196,9 +207,42 @@ class KeywordBlockerFragment : Fragment() {
                 setOnClickListener {
                     showKeywordTimeSettings(keyword)
                 }
+                setOnLongClickListener {
+                    showFocusGroupPicker(keyword)
+                    true
+                }
             }
             binding.cgKeywords.addView(chip)
         }
+    }
+
+    private fun showFocusGroupPicker(keyword: String) {
+        val selectedGroupIds = viewModel.getKeywordFocusGroups(keyword).toMutableSet()
+        val allGroups: List<neth.iecal.curbox.data.models.FocusGroup> = viewModel.focusGroups.value + viewModel.autoFocusGroups.value
+
+        val groupNames = allGroups.map { it.groupName }.toTypedArray()
+        val checkedItems = BooleanArray(allGroups.size) { i ->
+            selectedGroupIds.contains(allGroups[i].groupId)
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Focus Groups for: $keyword")
+            .setMultiChoiceItems(groupNames, checkedItems) { _, which, isChecked ->
+                val groupId = allGroups[which].groupId
+                if (isChecked) {
+                    selectedGroupIds.add(groupId)
+                } else {
+                    selectedGroupIds.remove(groupId)
+                }
+            }
+            .setPositiveButton(R.string.save) { _, _ ->
+                viewModel.setKeywordFocusGroups(keyword, selectedGroupIds.toList())
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton("Clear") { _, _ ->
+                viewModel.removeKeywordFocusGroup(keyword)
+            }
+            .show()
     }
 
     private fun showKeywordTimeSettings(keyword: String) {
@@ -219,7 +263,7 @@ class KeywordBlockerFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(keyword)
             .setView(dialogView)
-            .setPositiveButton(R.string.save) { _, _ ->
+            .setPositiveButton(R.string.save) { dialog, which ->
                 val newTimeLimit = etTimeLimit.text.toString().toIntOrNull() ?: 0
                 var newReminderInterval = etReminderInterval.text.toString().toIntOrNull() ?: 5
 
@@ -235,7 +279,7 @@ class KeywordBlockerFragment : Fragment() {
                 }
             }
             .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton(R.string.clear_usage) { _, _ ->
+            .setNeutralButton(R.string.clear_usage) { dialog, which ->
                 viewModel.clearKeywordUsage(keyword)
             }
             .show()

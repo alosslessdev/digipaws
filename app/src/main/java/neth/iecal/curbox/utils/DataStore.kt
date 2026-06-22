@@ -116,8 +116,4 @@ class DataStoreManager(private val context: Context) {
     suspend fun updateAppBlockerCooldowns(cooldowns: Map<String, Long>) {
         settingsDataStore.updateData { it.copy(appBlockerCooldowns = cooldowns) }
     }
-
-    suspend fun updateWebApps(newWebApps: List<neth.iecal.curbox.data.models.WebApp>) {
-        settingsDataStore.updateData { it.copy(webApps = newWebApps) }
-    }
 }

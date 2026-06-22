@@ -294,20 +294,6 @@
     <string name="picker_active_text">Tap elements on screen to select them</string>
     <string name="communication_bridge_desc">Maintains communication with accessibility services</string>
     
-    <!-- Web Apps -->
-    <string name="web_apps">Web Apps</string>
-    <string name="add_websites_to_block_like_apps">Add websites and block them like apps</string>
-    <string name="add_web_app">Add Web App</string>
-    <string name="edit_web_app">Edit Web App</string>
-    <string name="delete_web_app">Delete Web App</string>
-    <string name="no_web_apps_yet">No web apps yet. Tap + to add one.</string>
-    <string name="web_app_name_hint">App Name (e.g. Instagram)</string>
-    <string name="web_app_url_hint">Website URL (e.g. instagram.com)</string>
-    <string name="web_app_url_helper">Enter the domain or full URL to block</string>
-    <string name="web_app_saved">Web app saved</string>
-    <string name="name_required">Name is required</string>
-    <string name="url_required">URL is required</string>
-    
     <!-- Recurring Focus -->
     <string name="recurring">Recurring</string>
     <string name="enable_recurring_schedule">Enable recurring schedule</string>

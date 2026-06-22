@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.data.models.KeywordBlocker
+import neth.iecal.curbox.data.models.ManualFocusGroup
+import neth.iecal.curbox.data.models.AutoFocusGroup
 import neth.iecal.curbox.utils.DataStoreManager
 import neth.iecal.curbox.utils.BridgeServiceManager
 import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
@@ -23,10 +25,18 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
     private val _keywordBlockerConfig = MutableStateFlow(KeywordBlocker())
     val keywordBlockerConfig: StateFlow<KeywordBlocker> = _keywordBlockerConfig
 
+    private val _focusGroups = MutableStateFlow<List<ManualFocusGroup>>(emptyList())
+    val focusGroups: StateFlow<List<ManualFocusGroup>> = _focusGroups
+
+    private val _autoFocusGroups = MutableStateFlow<List<AutoFocusGroup>>(emptyList())
+    val autoFocusGroups: StateFlow<List<AutoFocusGroup>> = _autoFocusGroups
+
     init {
         viewModelScope.launch {
             dataStoreManager.settings.collectLatest { settings ->
                 _keywordBlockerConfig.value = settings.keywordBlockerConfig
+                _focusGroups.value = settings.manualFocusGroups
+                _autoFocusGroups.value = settings.autoFocusGroups
             }
         }
     }
@@ -126,5 +136,25 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     fun clearAllUsage() {
         usageTracker.clearAllDetections()
+    }
+
+    fun setKeywordFocusGroups(keyword: String, groupIds: List<String>) {
+        val currentMap = _keywordBlockerConfig.value.keywordFocusGroups.toMutableMap()
+        if (groupIds.isEmpty()) {
+            currentMap.remove(keyword)
+        } else {
+            currentMap[keyword] = groupIds
+        }
+        updateConfig(_keywordBlockerConfig.value.copy(keywordFocusGroups = currentMap))
+    }
+
+    fun getKeywordFocusGroups(keyword: String): List<String> {
+        return _keywordBlockerConfig.value.keywordFocusGroups[keyword] ?: emptyList()
+    }
+
+    fun removeKeywordFocusGroup(keyword: String) {
+        val currentMap = _keywordBlockerConfig.value.keywordFocusGroups.toMutableMap()
+        currentMap.remove(keyword)
+        updateConfig(_keywordBlockerConfig.value.copy(keywordFocusGroups = currentMap))
     }
 }

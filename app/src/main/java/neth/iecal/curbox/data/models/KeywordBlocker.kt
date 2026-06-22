@@ -11,7 +11,8 @@ data class KeywordBlocker(
     val isTimeTrackingEnabled: Boolean = false,
     val keywordTimeLimits: Map<String, Int> = emptyMap(),
     val keywordReminderIntervals: Map<String, Int> = emptyMap(),
-    val clusteringThresholdMinutes: Int = 5
+    val clusteringThresholdMinutes: Int = 5,
+    val keywordFocusGroups: Map<String, List<String>> = emptyMap()
 )
 
 data class KeywordDetection(

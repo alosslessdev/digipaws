@@ -30,6 +30,7 @@ import neth.iecal.curbox.services.BaseBlockingService
 import neth.iecal.curbox.utils.AppLogger
 import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
 import neth.iecal.curbox.utils.KeywordUsageTracker
+import java.util.Calendar
 
 class KeywordBlocker : BaseBlocker() {
     companion object {
@@ -70,6 +71,8 @@ class KeywordBlocker : BaseBlocker() {
     private lateinit var browserBlocker : BrowserBlocker
 
     private var blockedKeywords: List<String> = emptyList()
+    private var keywordFocusGroups: Map<String, List<String>> = emptyMap()
+    private var activeFocusGroupIds: Set<String> = emptySet()
     private var redirectUrl: String = ""
     var isSearchAllTextFields = false
     private var isSubstringMatchEnabled = false
@@ -178,7 +181,7 @@ class KeywordBlocker : BaseBlocker() {
                     val nodeText = node.text?.toString() ?: ""
                     if (nodeText.isEmpty()) continue
                     val word = containsBlockedKeyword(nodeText)
-                    if (word != null) {
+                    if (word != null && isKeywordActiveInFocusGroup(word)) {
                         detectedAdultKeyword = word
                         break // correctly breaks from the loop
                     }
@@ -204,9 +207,19 @@ class KeywordBlocker : BaseBlocker() {
             val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
             val displayText = displayUrlTextNode?.text?.toString() ?: ""
 
-            detectedAdultKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
+            val urlMatch = if (displayText.isNotEmpty())
                 containsBlockedKeyword(displayText)
-            else null) ?: return
+            else null
+    
+            val urlBlocked = if (urlMatch != null) {
+                if (isKeywordActiveInFocusGroup(urlMatch)) urlMatch else null
+            } else null
+    
+            val webViewBlocked = if (webViewKeyword != null) {
+                if (isKeywordActiveInFocusGroup(webViewKeyword)) webViewKeyword else null
+            } else null
+    
+            detectedAdultKeyword = urlBlocked ?: webViewBlocked ?: return
         }
 
         val finalDetectedKeyword = detectedAdultKeyword
@@ -346,15 +359,6 @@ class KeywordBlocker : BaseBlocker() {
                     .map(KeywordBlockerMatchUtils::normalizeBlockedEntry)
                     .filter { it.isNotBlank() }
                     .distinct()
-                    .toMutableList()
-
-                // Also add web app URLs to blocked keywords
-                settings.webApps.forEach { webApp ->
-                    val normalizedUrl = KeywordBlockerMatchUtils.normalizeBlockedEntry(webApp.url)
-                    if (normalizedUrl.isNotBlank() && normalizedUrl !in normalizedKeywords) {
-                        normalizedKeywords.add(normalizedUrl)
-                    }
-                }
 
                 val shouldClearCache =
                     normalizedKeywords != blockedKeywords ||
@@ -366,6 +370,8 @@ class KeywordBlocker : BaseBlocker() {
                             ignoredApps != config.ignoredApps.toHashSet()
 
                 blockedKeywords = normalizedKeywords
+                keywordFocusGroups = config.keywordFocusGroups
+                activeFocusGroupIds = computeActiveFocusGroupIds(settings)
                 isSearchAllTextFields = config.searchRecursively
                 redirectUrl = config.redirectUrl
                 isSubstringMatchEnabled = config.matchSubstrings
@@ -384,6 +390,53 @@ class KeywordBlocker : BaseBlocker() {
             }
         }
 
+    }
+
+    private fun isKeywordActiveInFocusGroup(keyword: String): Boolean {
+        val groupIds = keywordFocusGroups[keyword]
+        if (groupIds.isNullOrEmpty()) return true
+        return groupIds.any { it in activeFocusGroupIds }
+    }
+
+    private fun computeActiveFocusGroupIds(settings: neth.iecal.curbox.data.models.Settings): Set<String> {
+        val active = mutableSetOf<String>()
+
+        val (groupId, endTime) = settings.activeManualFocusGroupId
+        if (groupId != null && endTime > System.currentTimeMillis()) {
+            active.add(groupId)
+        }
+
+        val now = Calendar.getInstance()
+        val calDay = now.get(Calendar.DAY_OF_WEEK)
+        val currentDay = if (calDay == Calendar.SUNDAY) 6 else calDay - 2
+        val currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+
+        for (group in settings.autoFocusGroups) {
+            val intervals = group.dailyIntervals[currentDay] ?: continue
+            if (intervals.any { isWithinInterval(currentMinutes, it) }) {
+                active.add(group.groupId)
+            }
+        }
+
+        for (group in settings.manualFocusGroups) {
+            if (!group.isRecurring) continue
+            val intervals = group.dailyIntervals[currentDay] ?: continue
+            if (intervals.any { isWithinInterval(currentMinutes, it) }) {
+                active.add(group.groupId)
+            }
+        }
+
+        return active
+    }
+
+    private fun isWithinInterval(currentMinutes: Int, interval: neth.iecal.curbox.data.models.TimeInterval): Boolean {
+        val start = interval.startHour * 60 + interval.startMinute
+        val end = interval.endHour * 60 + interval.endMinute
+        return if (start <= end) {
+            currentMinutes in start until end
+        } else {
+            currentMinutes >= start || currentMinutes < end
+        }
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
