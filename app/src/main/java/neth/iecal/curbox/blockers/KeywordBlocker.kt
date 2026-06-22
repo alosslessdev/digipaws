@@ -174,13 +174,13 @@ class KeywordBlocker : BaseBlocker() {
             findNodesByClassName(rootNode, "android.widget.TextView", false)
 
             try {
-                recursionResultNodes.forEach { node ->
+                for (node in recursionResultNodes) {
                     val nodeText = node.text?.toString() ?: ""
-                    if (nodeText.isEmpty()) return@forEach
+                    if (nodeText.isEmpty()) continue
                     val word = containsBlockedKeyword(nodeText)
                     if (word != null) {
                         detectedAdultKeyword = word
-                        return@forEach // breaks from the forEach loop
+                        break // correctly breaks from the loop
                     }
                 }
             } catch (e: Exception) {
@@ -190,7 +190,7 @@ class KeywordBlocker : BaseBlocker() {
 
         val urlBarInfo = URL_BAR_ID_LIST[event.packageName]
         if (urlBarInfo == null && detectedAdultKeyword != null) {
-            pressHome(detectedAdultKeyword!!)
+            pressHome(detectedAdultKeyword)
             return
         }
 
@@ -209,9 +209,10 @@ class KeywordBlocker : BaseBlocker() {
             else null) ?: return
         }
 
-        if (isTimeTrackingEnabled && detectedAdultKeyword != null) {
+        val finalDetectedKeyword = detectedAdultKeyword
+        if (isTimeTrackingEnabled && finalDetectedKeyword != null) {
             val packageName = event.packageName?.toString() ?: ""
-            handleKeywordDetected(detectedAdultKeyword, packageName)
+            handleKeywordDetected(finalDetectedKeyword, packageName)
         }
 
         performSmallUpwardScroll()
@@ -221,7 +222,7 @@ class KeywordBlocker : BaseBlocker() {
 
         val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
         val editUrlBar = ReelBlocker.findElementById(rootNode, idPrefixPart + editUrlBarId)
-            ?: return pressHome(detectedAdultKeyword!!)
+            ?: return pressHome(detectedAdultKeyword)
 
         editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
             putCharSequence(
@@ -237,7 +238,7 @@ class KeywordBlocker : BaseBlocker() {
             urlBarInfo = urlBarInfo
         )
         if (!didSubmitRedirect) {
-            return pressHome(detectedAdultKeyword!!)
+            return pressHome(detectedAdultKeyword)
         }
 
         Thread.sleep(2000)
@@ -345,6 +346,15 @@ class KeywordBlocker : BaseBlocker() {
                     .map(KeywordBlockerMatchUtils::normalizeBlockedEntry)
                     .filter { it.isNotBlank() }
                     .distinct()
+                    .toMutableList()
+
+                // Also add web app URLs to blocked keywords
+                settings.webApps.forEach { webApp ->
+                    val normalizedUrl = KeywordBlockerMatchUtils.normalizeBlockedEntry(webApp.url)
+                    if (normalizedUrl.isNotBlank() && normalizedUrl !in normalizedKeywords) {
+                        normalizedKeywords.add(normalizedUrl)
+                    }
+                }
 
                 val shouldClearCache =
                     normalizedKeywords != blockedKeywords ||

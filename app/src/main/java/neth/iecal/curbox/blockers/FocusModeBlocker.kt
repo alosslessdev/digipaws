@@ -53,6 +53,7 @@ class FocusModeBlocker : BaseBlocker() {
     private lateinit var notificationManager: TimerNotification
 
     private var autoFocusGroups: List<AutoFocusGroup> = emptyList()
+    private var manualFocusGroups: List<ManualFocusGroup> = emptyList()
     private val dismissedAutoFocusGroupIds = mutableSetOf<String>()
     private var autoFocusNotificationShown = false
     private var essentialPackages: Set<String> = emptySet()
@@ -82,6 +83,19 @@ class FocusModeBlocker : BaseBlocker() {
             val intervals = group.dailyIntervals[currentDay] ?: continue
             val isInInterval = intervals.any { isWithinInterval(currentMinutes, it) }
                         if (isInInterval) {
+                if (group.autoTurnOnDnd) shouldDndBeOn = true
+                newSuspendedPackages.addAll(
+                    AppSuspendHelper.getPackagesToSuspend(serviceContext, group.blockMode, group.packages, essentialPackages)
+                )
+            }
+        }
+
+        // Also check manual focus groups with recurring schedules
+        for (group in manualFocusGroups) {
+            if (!group.isRecurring) continue
+            val intervals = group.dailyIntervals[currentDay] ?: continue
+            val isInInterval = intervals.any { isWithinInterval(currentMinutes, it) }
+            if (isInInterval) {
                 if (group.autoTurnOnDnd) shouldDndBeOn = true
                 newSuspendedPackages.addAll(
                     AppSuspendHelper.getPackagesToSuspend(serviceContext, group.blockMode, group.packages, essentialPackages)
@@ -366,6 +380,7 @@ class FocusModeBlocker : BaseBlocker() {
                 }
 
                 autoFocusGroups = settings.autoFocusGroups
+                manualFocusGroups = settings.manualFocusGroups
                 dismissedAutoFocusGroupIds.clear()
                 updateSuspendedPackages(service)
             }

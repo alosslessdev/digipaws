@@ -99,6 +99,38 @@ class FocusFragment : Fragment() {
                             binding.cvActiveAutoFocus.visibility = View.GONE
                             binding.textHeader.visibility = View.VISIBLE
                         }
+
+                        // Show active recurring manual focus groups
+                        val now = java.util.Calendar.getInstance()
+                        val calDay = now.get(java.util.Calendar.DAY_OF_WEEK)
+                        val currentDay = if (calDay == java.util.Calendar.SUNDAY) 6 else calDay - 2
+                        val currentMinutes = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
+
+                        val activeRecurringGroups = viewModel.groups.value.filter { group ->
+                            group.isRecurring && group.dailyIntervals[currentDay]?.any { interval ->
+                                val start = interval.startHour * 60 + interval.startMinute
+                                val end = interval.endHour * 60 + interval.endMinute
+                                if (start <= end) currentMinutes in start until end
+                                else currentMinutes >= start || currentMinutes < end
+                            } == true
+                        }
+
+                        if (activeRecurringGroups.isNotEmpty()) {
+                            binding.cvActiveRecurring.visibility = View.VISIBLE
+                            val infoText = activeRecurringGroups.joinToString("\n") { group ->
+                                val interval = group.dailyIntervals[currentDay]?.firstOrNull()
+                                if (interval != null) {
+                                    val startStr = String.format("%02d:%02d", interval.startHour, interval.startMinute)
+                                    val endStr = String.format("%02d:%02d", interval.endHour, interval.endMinute)
+                                    "${group.groupName} (${startStr} - ${endStr})"
+                                } else {
+                                    group.groupName
+                                }
+                            }
+                            binding.tvRecurringGroupsInfo.text = infoText
+                        } else {
+                            binding.cvActiveRecurring.visibility = View.GONE
+                        }
                     }
                 }
 

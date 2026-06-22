@@ -19,5 +19,6 @@ data class Settings(
     val keepUninstalledUsageUntilNextDay: Boolean = true,
     val mindfulMessageConfig: MindfulMessageConfig = MindfulMessageConfig(),
     val viewBlockerConfig: ViewBlockerConfig = ViewBlockerConfig(),
-    val appBlockerCooldowns: Map<String, Long> = mapOf()
+    val appBlockerCooldowns: Map<String, Long> = mapOf(),
+    val webApps: List<WebApp> = listOf()
 )

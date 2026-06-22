@@ -25,13 +25,13 @@ class KeywordUsageTracker(private val context: Context) {
             if (detectionsFile.exists()) {
                 val json = detectionsFile.readText()
                 val type = object : TypeToken<MutableMap<String, MutableList<KeywordDetection>>>() {}.type
-                gson.fromJson(json, type) ?: mutableMapOf()
+                gson.fromJson(json, type) ?: mutableMapOf<String, MutableList<KeywordDetection>>()
             } else {
-                mutableMapOf()
+                mutableMapOf<String, MutableList<KeywordDetection>>()
             }
         } catch (e: Exception) {
             AppLogger.functionError("KeywordUsageTracker", "loadDetections", e)
-            mutableMapOf()
+            mutableMapOf<String, MutableList<KeywordDetection>>()
         }.also { cachedDetections = it }
     }
 

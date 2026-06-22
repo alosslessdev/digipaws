@@ -219,6 +219,55 @@
                     android:checked="false"
                     android:text="Turn on Do Not Disturb automatically" />
 
+                <CheckBox
+                    android:id="@+id/recurringToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:checked="false"
+                    android:text="@string/recurring" />
+
+                <LinearLayout
+                    android:id="@+id/recurringSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="8dp">
+
+                    <CheckBox
+                        android:id="@+id/everydayToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/everyday" />
+
+                    <TextView
+                        android:id="@+id/tvRecurringIntervalsLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Time Intervals"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <LinearLayout
+                        android:id="@+id/recurringIntervalsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="4dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddRecurringInterval"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/add_time_interval"
+                        android:layout_marginTop="4dp" />
+
+                </LinearLayout>
+
                 <Button
                     android:id="@+id/save_group"
                     android:layout_width="match_parent"

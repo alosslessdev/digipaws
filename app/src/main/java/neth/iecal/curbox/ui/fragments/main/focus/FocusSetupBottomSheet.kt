@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.FocusBlockMode
 import neth.iecal.curbox.data.models.ManualFocusGroup
+import neth.iecal.curbox.data.models.TimeInterval
 import neth.iecal.curbox.databinding.DialogFocusSessionConfigBinding
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
 
@@ -62,6 +63,9 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             binding.selectedAppCount.text = "Selected: 0"
             binding.exitable.isChecked = true
             binding.autoTurnOnDnd.isChecked = false
+            binding.recurringToggle.isChecked = false
+            binding.recurringSettings.visibility = View.GONE
+            binding.recurringIntervalsContainer.removeAllViews()
             
             binding.createGroup.visibility = View.VISIBLE
             binding.selectGrouo.visibility = View.GONE
@@ -97,6 +101,18 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             binding.exitable.isChecked = group.exitable
             binding.autoTurnOnDnd.isChecked = group.autoTurnOnDnd
             
+            // Pre-fill recurring settings
+            binding.recurringToggle.isChecked = group.isRecurring
+            binding.recurringSettings.visibility = if (group.isRecurring) View.VISIBLE else View.GONE
+            binding.recurringIntervalsContainer.removeAllViews()
+            if (group.isRecurring && group.dailyIntervals.isNotEmpty()) {
+                val firstDayIntervals = group.dailyIntervals.values.firstOrNull() ?: emptyList()
+                val dayKeys = group.dailyIntervals.keys.toList()
+                binding.everydayToggle.isChecked = dayKeys.size >= 7
+                for (interval in firstDayIntervals) {
+                    addRecurringIntervalRow(interval.startHour, interval.startMinute, interval.endHour, interval.endMinute)
+                }
+            }
             // Note: we can either save as new or overwrite
             // To overwrite, we delete the old group before saving
         }
@@ -115,6 +131,15 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
+        }
+
+        // Recurring toggle
+        binding.recurringToggle.setOnCheckedChangeListener { _, isChecked ->
+            binding.recurringSettings.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+        binding.btnAddRecurringInterval.setOnClickListener {
+            addRecurringIntervalRow()
         }
 
         // code dealing with new group creation
@@ -136,13 +161,20 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
 
         binding.saveGroup.setOnClickListener {
             val isEditing = viewModel.selectedGroup != null
+            val dailyIntervals = if (binding.recurringToggle.isChecked) {
+                collectDailyIntervals()
+            } else {
+                mutableMapOf()
+            }
             val newGroup = ManualFocusGroup(
                 groupId = if (isEditing) viewModel.selectedGroup!!.groupId else java.util.UUID.randomUUID().toString(),
                 groupName = binding.groupName.text.toString(),
                 packages = viewModel.newGroupSelectedApps,
                 blockMode = if(binding.selectedBlockAction.checkedButtonId == R.id.btn_selected) FocusBlockMode.BLOCK_SELECTED else FocusBlockMode.BLOCK_ALL_EXCEPT_SELECTED,
                 exitable = binding.exitable.isChecked,
-                autoTurnOnDnd = binding.autoTurnOnDnd.isChecked
+                autoTurnOnDnd = binding.autoTurnOnDnd.isChecked,
+                isRecurring = binding.recurringToggle.isChecked,
+                dailyIntervals = dailyIntervals
             )
             
             if (isEditing) {
@@ -163,6 +195,89 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
         binding.selectedBlockAction.checkedButtonId
     }
 
+
+    private fun addRecurringIntervalRow(startHour: Int = 9, startMinute: Int = 0, endHour: Int = 17, endMinute: Int = 0) {
+        var startHour = startHour
+        var startMinute = startMinute
+        var endHour = endHour
+        var endMinute = endMinute
+        val row = layoutInflater.inflate(R.layout.item_time_range_interval, binding.recurringIntervalsContainer, false)
+        val rowBinding = neth.iecal.curbox.databinding.ItemTimeRangeIntervalBinding.bind(row)
+
+        fun updateTexts() {
+            rowBinding.llStartTime.text = String.format("%02d:%02d", startHour, startMinute)
+            rowBinding.llEndTime.text = String.format("%02d:%02d", endHour, endMinute)
+        }
+
+        updateTexts()
+
+        rowBinding.llStartTime.setOnClickListener {
+            showTimePicker { hour, minute ->
+                startHour = hour
+                startMinute = minute
+                updateTexts()
+            }
+        }
+
+        rowBinding.llEndTime.setOnClickListener {
+            showTimePicker { hour, minute ->
+                endHour = hour
+                endMinute = minute
+                updateTexts()
+            }
+        }
+
+        rowBinding.btnRemove.setOnClickListener {
+            binding.recurringIntervalsContainer.removeView(row)
+        }
+
+        binding.recurringIntervalsContainer.addView(row)
+    }
+
+    private fun showTimePicker(onTimeSelected: (Int, Int) -> Unit) {
+        val picker = com.google.android.material.timepicker.MaterialTimePicker.Builder()
+            .setTimeFormat(com.google.android.material.timepicker.TimeFormat.CLOCK_24H)
+            .setHour(12)
+            .setMinute(0)
+            .setTitleText("Select Time")
+            .build()
+        picker.addOnPositiveButtonClickListener {
+            onTimeSelected(picker.hour, picker.minute)
+        }
+        picker.show(parentFragmentManager, "time_picker")
+    }
+
+    private fun collectDailyIntervals(): MutableMap<Int, MutableList<TimeInterval>> {
+        val result = mutableMapOf<Int, MutableList<TimeInterval>>()
+        val intervals = mutableListOf<TimeInterval>()
+
+        for (i in 0 until binding.recurringIntervalsContainer.childCount) {
+            val row = binding.recurringIntervalsContainer.getChildAt(i)
+            val rowBinding = neth.iecal.curbox.databinding.ItemTimeRangeIntervalBinding.bind(row)
+            val startParts = rowBinding.llStartTime.text.toString().split(":")
+            val endParts = rowBinding.llEndTime.text.toString().split(":")
+            if (startParts.size == 2 && endParts.size == 2) {
+                intervals.add(TimeInterval(
+                    startHour = startParts[0].toIntOrNull() ?: 9,
+                    startMinute = startParts[1].toIntOrNull() ?: 0,
+                    endHour = endParts[0].toIntOrNull() ?: 17,
+                    endMinute = endParts[1].toIntOrNull() ?: 0
+                ))
+            }
+        }
+
+        if (intervals.isNotEmpty()) {
+            if (binding.everydayToggle.isChecked) {
+                for (day in 0..6) {
+                    result[day] = intervals.toMutableList()
+                }
+            } else {
+                result[0] = intervals.toMutableList()
+            }
+        }
+
+        return result
+    }
 
     private fun setupGroupSelectionDropdown() {
         autoCompleteAdapter = ArrayAdapter(

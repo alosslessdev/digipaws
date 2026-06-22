@@ -8,7 +8,9 @@ data class ManualFocusGroup(
     val packages: HashSet<String>,
     val blockMode: FocusBlockMode,
     val exitable: Boolean = true,
-    val autoTurnOnDnd: Boolean = false
+    val autoTurnOnDnd: Boolean = false,
+    val isRecurring: Boolean = false,
+    var dailyIntervals: MutableMap<Int, MutableList<TimeInterval>> = mutableMapOf()
 ){
     override fun toString(): String {
         return "$groupName (${packages.size} ${
