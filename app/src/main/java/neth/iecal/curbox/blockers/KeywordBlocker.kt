@@ -260,7 +260,6 @@ class KeywordBlocker : BaseBlocker() {
 
     private fun pressHome(word: String) {
         showMessage(word)
-        Thread.sleep(1000)
         service.pressHome()
     }
 
@@ -365,14 +364,17 @@ class KeywordBlocker : BaseBlocker() {
                 return
             }
 
+        Thread.sleep(50)
+        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        Thread.sleep(50)
         editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
             putCharSequence(
                 AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, redirectUrl
             )
         })
-        Thread.sleep(300)
-
-        val didSubmitRedirect = submitEditedUrlBar(
+        Thread.sleep(50)
+        
+        submitEditedUrlBar(
             rootNode = rootNode,
             editUrlBar = editUrlBar,
             idPrefixPart = idPrefixPart,
@@ -383,11 +385,8 @@ class KeywordBlocker : BaseBlocker() {
         safeRecycle(displayUrlTextNode)
         safeRecycle(recursionResultNodes)
 
-        if (!didSubmitRedirect) {
-            return pressHome(detectedAdultKeyword)
-        }
-
-        Thread.sleep(2000)
+        Thread.sleep(300)
+        pressHome(detectedAdultKeyword)
     }
 
     private fun searchKeywordsInWebViewTitle(rootNode: AccessibilityNodeInfo): String? {
@@ -417,19 +416,25 @@ class KeywordBlocker : BaseBlocker() {
         idPrefixPart: String,
         urlBarInfo: BrowserUrlBarInfo
     ): Boolean {
+        Thread.sleep(50)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val imeEnterActionId = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id
             val supportsImeEnter = editUrlBar.actionList.any { it.id == imeEnterActionId }
-            if (supportsImeEnter && editUrlBar.performAction(imeEnterActionId)) {
-                return true
+            if (supportsImeEnter) {
+                Thread.sleep(50)
+                if (editUrlBar.performAction(imeEnterActionId)) {
+                    return true
+                }
             }
         }
 
+        Thread.sleep(200)
         val currentRootNode = service.rootInActiveWindow ?: rootNode
         val goBtnNode =
             ReelBlocker.findElementById(currentRootNode, idPrefixPart + urlBarInfo.browserSugggestionBoxId)
                 ?: return false
 
+        Thread.sleep(50)
         val didClickGo = if (urlBarInfo.isSuggestionEqualToGo) {
             goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         } else {
