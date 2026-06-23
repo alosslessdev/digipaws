@@ -1,30 +1,16 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-<<<<<<< HEAD
-import android.os.CountDownTimer
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Patterns
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
-<<<<<<< HEAD
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
-import com.google.android.material.chip.Chip
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-=======
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -32,7 +18,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.switchmaterial.SwitchMaterial
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.R
@@ -40,6 +25,7 @@ import neth.iecal.curbox.data.models.AppBlockingType
 import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.databinding.FragmentKeywordBlockerBinding
 import neth.iecal.curbox.ui.activity.FragmentActivity
+import neth.iecal.curbox.ui.activity.SelectAppsActivity
 
 class KeywordBlockerFragment : Fragment() {
 
@@ -48,6 +34,17 @@ class KeywordBlockerFragment : Fragment() {
 
     private val viewModel: KeywordBlockerViewModel by activityViewModels()
     private var isUpdatingUi = false
+    private var selectedApps: List<String> = emptyList()
+
+    private val selectAppsLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val apps = result.data?.getStringArrayListExtra("SELECTED_APPS")
+                if (apps != null) {
+                    viewModel.setIgnoredApps(apps)
+                }
+            }
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -78,37 +75,22 @@ class KeywordBlockerFragment : Fragment() {
             }
             startActivity(intent)
         }
-    }
 
-    private fun showPopupMenu(view: View) {
-        val popup = PopupMenu(requireContext(), view)
-        popup.menuInflater.inflate(R.menu.menu_keyword_blocker, popup.menu)
-
-        val config = viewModel.keywordBlockerConfig.value
-        popup.menu.findItem(R.id.menu_block_unsupported_browsers).isChecked = config.blockAllExceptSupported
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.menu_block_unsupported_browsers -> {
-                    val newValue = !item.isChecked
-                    item.isChecked = newValue
-                    viewModel.setBlockAllExceptSupported(newValue)
-                    true
+        binding.etRedirectUrl.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (!isUpdatingUi) {
+                    viewModel.setRedirectUrl(s.toString())
                 }
-                R.id.menu_help -> {
-                    val url = "https://curbox.app/docs/reducers/keyword-blocker/"
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        startActivity(intent)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    true
-                }
-                else -> false
+            }
+        })
+
+        binding.cbSearchRecursively.setOnCheckedChangeListener { _, isChecked ->
+            if (!isUpdatingUi) {
+                viewModel.setSearchRecursively(isChecked)
             }
         }
-<<<<<<< HEAD
 
         binding.cbMatchSubstrings.setOnCheckedChangeListener { _, isChecked ->
             if (!isUpdatingUi) {
@@ -145,9 +127,28 @@ class KeywordBlockerFragment : Fragment() {
                 }
             }
         })
-=======
+    }
+
+    private fun showPopupMenu(view: View) {
+        val popup = PopupMenu(requireContext(), view)
+        popup.menuInflater.inflate(R.menu.menu_keyword_blocker, popup.menu)
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.menu_help -> {
+                    val url = "https://curbox.app/docs/reducers/keyword-blocker/"
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
         popup.show()
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     }
 
     private fun observeViewModel() {
@@ -163,7 +164,6 @@ class KeywordBlockerFragment : Fragment() {
                     binding.rvKeywordGroups.visibility = View.VISIBLE
                     binding.rvKeywordGroups.adapter = KeywordGroupAdapter(config.keywordGroups)
                 }
-<<<<<<< HEAD
 
                 if (binding.etRedirectUrl.text.toString() != config.redirectUrl) {
                     binding.etRedirectUrl.setText(config.redirectUrl)
@@ -180,6 +180,7 @@ class KeywordBlockerFragment : Fragment() {
                 if (binding.cbBlockUnsupportedBrowsers.isChecked != config.blockAllExceptSupported) {
                     binding.cbBlockUnsupportedBrowsers.isChecked = config.blockAllExceptSupported
                 }
+                
                 selectedApps = config.ignoredApps
 
                 if (binding.switchTimeTracking.isChecked != config.isTimeTrackingEnabled) {
@@ -192,31 +193,11 @@ class KeywordBlockerFragment : Fragment() {
                     binding.etClusteringThreshold.setText(config.clusteringThresholdMinutes.toString())
                 }
 
-                updateKeywordsList(config.blockedKeywords)
-
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
                 isUpdatingUi = false
             }
         }
     }
 
-<<<<<<< HEAD
-    private fun updateKeywordsList(keywords: List<String>) {
-        binding.cgKeywords.removeAllViews()
-        for (keyword in keywords) {
-            val chip = Chip(requireContext()).apply {
-                text = keyword
-                isCloseIconVisible = true
-                setOnCloseIconClickListener {
-                    showRemoveConfirmation(keyword)
-                }
-                setOnClickListener {
-                    showKeywordTimeSettings(keyword)
-                }
-            }
-            binding.cgKeywords.addView(chip)
-=======
     inner class KeywordGroupAdapter(private val groupList: List<KeywordGroup>) :
         RecyclerView.Adapter<KeywordGroupAdapter.ViewHolder>() {
 
@@ -224,7 +205,6 @@ class KeywordBlockerFragment : Fragment() {
             val tvName: TextView = view.findViewById(R.id.tv_group_name)
             val tvDetails: TextView = view.findViewById(R.id.tv_group_details)
             val switchActive: SwitchMaterial = view.findViewById(R.id.switch_group_active)
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -255,85 +235,6 @@ class KeywordBlockerFragment : Fragment() {
         }
 
         override fun getItemCount() = groupList.size
-    }
-
-    private fun showKeywordTimeSettings(keyword: String) {
-        val config = viewModel.keywordBlockerConfig.value
-        val timeLimit = config.keywordTimeLimits[keyword] ?: 0
-        val reminderInterval = config.keywordReminderIntervals[keyword] ?: 5
-        val currentUsage = viewModel.getKeywordUsageMinutes(keyword)
-
-        val dialogView = layoutInflater.inflate(R.layout.dialog_keyword_time_settings, null)
-        val etTimeLimit = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_time_limit)
-        val etReminderInterval = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_reminder_interval)
-        val tvCurrentUsage = dialogView.findViewById<TextView>(R.id.tv_current_usage)
-
-        etTimeLimit.setText(if (timeLimit > 0) timeLimit.toString() else "")
-        etReminderInterval.setText(reminderInterval.toString())
-        tvCurrentUsage.text = getString(R.string.current_usage_today) + ": ${currentUsage.toLong()} min"
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(keyword)
-            .setView(dialogView)
-            .setPositiveButton(R.string.save) { _, _ ->
-                val newTimeLimit = etTimeLimit.text.toString().toIntOrNull() ?: 0
-                var newReminderInterval = etReminderInterval.text.toString().toIntOrNull() ?: 5
-
-                if (newTimeLimit in 1..4) {
-                    newReminderInterval = 0
-                }
-
-                if (newTimeLimit != timeLimit) {
-                    viewModel.setKeywordTimeLimit(keyword, newTimeLimit)
-                }
-                if (newReminderInterval != reminderInterval) {
-                    viewModel.setKeywordReminderInterval(keyword, newReminderInterval)
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton(R.string.clear_usage) { _, _ ->
-                viewModel.clearKeywordUsage(keyword)
-            }
-            .show()
-    }
-
-    private fun showRemoveConfirmation(keyword: String) {
-        var countdownTimer: CountDownTimer? = null
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.remove_entry)
-            .setMessage(getString(R.string.remove_entry_confirmation, keyword))
-            .setPositiveButton(R.string.yes, null)
-            .setNegativeButton(R.string.no, null)
-            .create()
-
-        dialog.setOnShowListener {
-            val positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            positiveButton.isEnabled = false
-            positiveButton.text = getString(R.string.yes_in_seconds, 20)
-            positiveButton.setOnClickListener {
-                viewModel.removeKeyword(keyword)
-                dialog.dismiss()
-            }
-
-            countdownTimer = object : CountDownTimer(20_000L, 1_000L) {
-                override fun onTick(millisUntilFinished: Long) {
-                    val secondsRemaining = (millisUntilFinished / 1_000L).toInt()
-                    positiveButton.text = getString(R.string.yes_in_seconds, secondsRemaining)
-                }
-
-                override fun onFinish() {
-                    positiveButton.isEnabled = true
-                    positiveButton.text = getString(R.string.yes)
-                }
-            }.start()
-        }
-
-        dialog.setOnDismissListener {
-            countdownTimer?.cancel()
-        }
-
-        dialog.show()
     }
 
     override fun onDestroyView() {

@@ -41,7 +41,6 @@ class ReelBlocker : BaseBlocker() {
         const val INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN =
             "neth.iecal.curbox.refresh.reelblocker.cooldown"
 
-<<<<<<< HEAD
         fun findElementById(node: AccessibilityNodeInfo?, id: String?): AccessibilityNodeInfo? {
             if (node == null || id == null) return null
             try {
@@ -57,20 +56,10 @@ class ReelBlocker : BaseBlocker() {
             return null
         }
 
-        val BLOCKED_VIEW_ID_LIST = mutableListOf(
-            "com.instagram.android:id/root_clips_layout",
-            "com.myinsta.android:id/root_clips_layout",
-            "com.google.android.youtube:id/reel_recycler",
-            "app.revanced.android.youtube:id/reel_recycler"
-        )
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
-
         private const val TARGET_EVENTS_MASK = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                 AccessibilityEvent.TYPE_VIEW_SCROLLED or
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
                 AccessibilityEvent.TYPE_VIEW_FOCUSED
-
     }
     
     private val TAG = "ReelBlocker"
@@ -92,31 +81,20 @@ class ReelBlocker : BaseBlocker() {
 
     private lateinit var notificationManager: TimerNotification
 
-    fun doViewBlockerCheck(
-        event: AccessibilityEvent?
-    ){
-        fun showWarningScreen(viewId: String){
-<<<<<<< HEAD
+    fun doViewBlockerCheck(event: AccessibilityEvent?) {
+        fun showWarningScreen(viewId: String) {
             try {
-                if(service.isDelayOver(service.lastBackPressTimeStamp,1000)) {
+                if (service.isDelayOver(1000)) {
                     service.pressBack()
-=======
-            if(service.isDelayOver(3000)) {
-                service.pressBack()
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
-
                     if (reelBlockerConfig.warningScreenConfig.isWarningDialogHidden) {
                         return
                     }
-                    val dialogIntent = Intent(service, WarningActivity::class.java)
-                    dialogIntent.flags =
-                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    dialogIntent.putExtra("mode", Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER)
-                    dialogIntent.putExtra("result_id", viewId)
-                    dialogIntent.putExtra(
-                        "warning_config",
-                        Gson().toJson(reelBlockerConfig.warningScreenConfig)
-                    )
+                    val dialogIntent = Intent(service, WarningActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("mode", Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER)
+                        putExtra("result_id", viewId)
+                        putExtra("warning_config", Gson().toJson(reelBlockerConfig.warningScreenConfig))
+                    }
                     service.startActivity(dialogIntent)
                 }
             } catch (e: Exception) {
@@ -124,81 +102,32 @@ class ReelBlocker : BaseBlocker() {
             }
         }
         
-        if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) {
-            return
-        }
+        if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) return
+        if (!reelBlockerConfig.isActive) return
 
-        if (!reelBlockerConfig.isActive) {
-            return
-        }
-
-        val node = service.rootInActiveWindow
-<<<<<<< HEAD
-        if(node==null) {
-            return
-        }
-        
-        BLOCKED_VIEW_ID_LIST.forEach { viewId ->
-            try {
-                if(isViewOpened(node,viewId)){
-                    
-                    // ignore if view-id under cooldown
-                    if (isCooldownActive(viewId)) {
-                        return@forEach
-                    }
-
-                    // check if currently under allowed hours
-                    when(reelBlockerConfig.blockingType) {
-                        ReelBlockingType.TIMED -> {
-                            val endAllowedMillis = getEndTimeInMillis()
-                            if(endAllowedMillis==null) {
-                                showWarningScreen(viewId)
-                            }
-                        }
-                        ReelBlockingType.USAGE -> {
-                        }
-                        ReelBlockingType.REEL_COUNT -> {
-                            val limit = getDailyReelCountLimit()
-                            if (limit != null && limit > 0 && currentDailyCount >= limit) {
-                                showWarningScreen(viewId)
-                            }
-                        }
-                    }
-
-                }
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "doViewBlockerCheck.forEach", e)
-=======
-        if (node == null) return
-        
+        val node = service.rootInActiveWindow ?: return
         val pkg = event.packageName?.toString() ?: return
         val data = reelData[pkg] ?: return
         val viewId = data.viewId
 
-        if(isViewOpened(node, viewId)){
-            Log.d("reelblocker","view found")
+        if (isViewOpened(node, viewId)) {
+            Log.d(TAG, "view found: $viewId")
             for (req in data.requiresPresent) {
                 if (!NodeFinder.exists(node, req)) return
             }
-            Log.d("reelblocker","all present")
-
             for (req in data.requiresAbsent) {
                 if (NodeFinder.exists(node, req)) return
             }
-            Log.d("reelblocker","all absent")
 
-            if (isCooldownActive(viewId)) {
-                return
-            }
+            if (isCooldownActive(viewId)) return
 
-            when(reelBlockerConfig.blockingType) {
+            when (reelBlockerConfig.blockingType) {
                 ReelBlockingType.TIMED -> {
-                    val endAllowedMillis = getEndTimeInMillis()
-                    if(endAllowedMillis==null) {
+                    if (getEndTimeInMillis() == null) {
                         showWarningScreen(viewId)
                     }
                 }
-                ReelBlockingType.USAGE -> TODO()
+                ReelBlockingType.USAGE -> { /* TODO */ }
                 ReelBlockingType.REEL_COUNT -> {
                     ensureCountFlowForToday()
                     val limit = getDailyReelCountLimit()
@@ -206,13 +135,10 @@ class ReelBlocker : BaseBlocker() {
                         showWarningScreen(viewId)
                     }
                 }
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             }
         }
-        
         lastEventTimeStamp = SystemClock.uptimeMillis()
     }
-
 
     fun applyCooldown(viewId: String, endTime: Long) {
         try {
@@ -224,35 +150,27 @@ class ReelBlocker : BaseBlocker() {
         }
     }
 
-
     fun setupBlocker(service: BaseBlockingService) {
         try {
             this.service = service
-
             notificationManager = TimerNotification(service)
             
-            var displayMetrics: DisplayMetrics = service.resources.displayMetrics
+            val displayMetrics: DisplayMetrics = service.resources.displayMetrics
             screenHeight = displayMetrics.heightPixels
             screenWidth = displayMetrics.widthPixels
 
             settingsJob?.cancel()
-            countJob?.cancel()
-
             settingsJob = CoroutineScope(Dispatchers.IO).launch {
                 try {
                     service.dataStoreManager.settings.collectLatest { settings ->
                         reelBlockerConfig = settings.reelBlockerConfig
-                        
-                        when(reelBlockerConfig.blockingType) {
+                        when (reelBlockerConfig.blockingType) {
                             ReelBlockingType.TIMED -> {
-                                timeBAsedConfig = Gson().fromJson<ReelTimeConfig>(settings.reelBlockerConfig.settings,
-                                    ReelTimeConfig::class.java)
+                                timeBAsedConfig = Gson().fromJson(settings.reelBlockerConfig.settings, ReelTimeConfig::class.java)
                             }
-                            ReelBlockingType.USAGE -> {
-                            }
+                            ReelBlockingType.USAGE -> {}
                             ReelBlockingType.REEL_COUNT -> {
-                                countBasedConfig = Gson().fromJson<ReelCountConfig>(settings.reelBlockerConfig.settings,
-                                    ReelCountConfig::class.java)
+                                countBasedConfig = Gson().fromJson(settings.reelBlockerConfig.settings, ReelCountConfig::class.java)
                             }
                         }
                     }
@@ -260,30 +178,15 @@ class ReelBlocker : BaseBlocker() {
                     AppLogger.functionError(TAG, "setupBlocker.settingsJob", e)
                 }
             }
-
-<<<<<<< HEAD
-            val db = AppDatabase.getInstance(service)
-            countJob = CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    db.reelStatsDao().getCountFlow(TimeTools.getCurrentDate()).collectLatest { count ->
-                        currentDailyCount = count ?: 0
-                    }
-                } catch (e: Exception) {
-                    AppLogger.functionError(TAG, "setupBlocker.countJob", e)
-                }
-=======
-        launchCountFlow(TimeTools.getCurrentDate())
+            ensureCountFlowForToday()
+        } catch (e: Exception) {
+            AppLogger.functionError(TAG, "setupBlocker", e)
+        }
     }
 
-    /**
-     * Re-subscribes currentDailyCount to today's row. Room's flow only emits when the
-     * queried row changes, so a subscription bound to yesterday's date never sees today's
-     * writes — without this, yesterday's cap keeps blocking after midnight.
-     */
     private fun ensureCountFlowForToday() {
         val today = TimeTools.getCurrentDate()
         if (today != currentCountDate) {
-            currentDailyCount = 0
             launchCountFlow(today)
         }
     }
@@ -295,10 +198,7 @@ class ReelBlocker : BaseBlocker() {
         countJob = CoroutineScope(Dispatchers.IO).launch {
             db.reelStatsDao().getCountFlow(date).collectLatest { count ->
                 currentDailyCount = count ?: 0
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             }
-        } catch (e: Exception) {
-            AppLogger.functionError(TAG, "setupBlocker", e)
         }
     }
 
@@ -335,7 +235,6 @@ class ReelBlocker : BaseBlocker() {
             if (intent == null) return
             when (intent.action) {
                 INTENT_ACTION_REFRESH_REEL_BLOCKER -> setupBlocker(service)
-
                 INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN -> {
                     val interval = intent.getIntExtra("selected_time", reelBlockerConfig.warningScreenConfig.timeInterval)
                     applyCooldown(
@@ -368,56 +267,37 @@ class ReelBlocker : BaseBlocker() {
 
     private fun getDailyReelCountLimit(): Int? {
         val config = countBasedConfig ?: return null
-        if (config.isDailyUniform) {
-            return config.uniformLimit
-        } else {
+        return if (config.isDailyUniform) config.uniformLimit
+        else {
             val calendar = Calendar.getInstance()
-            val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1 // 0=Sunday, 1=Monday...
-            return config.dailyLimits[dayOfWeek]
+            val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1
+            config.dailyLimits[dayOfWeek]
         }
     }
 
-    /**
-     * @return null if reels is not currently allowed by time config, or the end time in uptimeMillis if allowed.
-     */
     private fun getEndTimeInMillis(): Long? {
-
-        if(timeBAsedConfig==null) return null
+        if (timeBAsedConfig == null) return null
         val calendar = Calendar.getInstance()
-        val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
-        val currentMinute = calendar.get(Calendar.MINUTE)
-        val currentMinutes = TimeTools.convertToMinutesFromMidnight(currentHour, currentMinute)
-
-        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1 // 0=Sunday, 1=Monday...
-
-        val intervals = if (timeBAsedConfig!!.isEveryday) {
-            timeBAsedConfig!!.everydayIntervals
-        } else {
-            timeBAsedConfig!!.dailyIntervals[dayOfWeek] ?: emptyList()
-        }
+        val currentMinutes = TimeTools.convertToMinutesFromMidnight(calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE))
+        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1
+        val intervals = if (timeBAsedConfig!!.isEveryday) timeBAsedConfig!!.everydayIntervals
+                        else timeBAsedConfig!!.dailyIntervals[dayOfWeek] ?: emptyList()
 
         intervals.forEach { interval ->
             val startMinutes = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
             val endMinutes = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
-
             if (startMinutes <= endMinutes) {
                 if (currentMinutes in startMinutes until endMinutes) {
-                    val remainingMins = endMinutes - currentMinutes
-                    return SystemClock.uptimeMillis() + (remainingMins * 60 * 1000L)
+                    return SystemClock.uptimeMillis() + ((endMinutes - currentMinutes) * 60 * 1000L)
                 }
             } else {
-                // cross midnight
                 if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
-                    val remainingMins = if (currentMinutes >= startMinutes) {
-                        (1440 - currentMinutes) + endMinutes
-                    } else {
-                        endMinutes - currentMinutes
-                    }
+                    val remainingMins = if (currentMinutes >= startMinutes) (1440 - currentMinutes) + endMinutes
+                                          else endMinutes - currentMinutes
                     return SystemClock.uptimeMillis() + (remainingMins * 60 * 1000L)
                 }
             }
         }
         return null
     }
-
 }

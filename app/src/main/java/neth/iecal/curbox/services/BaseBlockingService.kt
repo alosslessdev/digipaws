@@ -11,11 +11,7 @@ import android.view.accessibility.AccessibilityEvent
 import androidx.core.app.NotificationCompat
 import neth.iecal.curbox.R
 import neth.iecal.curbox.utils.DataStoreManager
-<<<<<<< HEAD
 import neth.iecal.curbox.utils.AppLogger
-import neth.iecal.curbox.trackers.MindfulMessageTracker
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import kotlin.lazy
 
 @SuppressLint("AccessibilityPolicy")
@@ -26,7 +22,6 @@ open class BaseBlockingService : AccessibilityService() {
     val dataStoreManager  by lazy {
         DataStoreManager(this)
     }
-
 
     var lastBackPressTimeStamp: Long =
         SystemClock.uptimeMillis() // prevents repetitive global actions
@@ -83,24 +78,23 @@ open class BaseBlockingService : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
-
-    fun isDelayOver( delay: Int): Boolean {
+    fun isDelayOver(delay: Int): Boolean {
         val currentTime = SystemClock.uptimeMillis().toFloat()
         return currentTime - lastBackPressTimeStamp > delay
     }
 
+    fun isDelayOver(lastTimestamp: Long, delay: Int): Boolean {
+        val currentTime = SystemClock.uptimeMillis().toFloat()
+        return currentTime - lastTimestamp > delay
+    }
+
     fun pressHome() {
-<<<<<<< HEAD
         try {
             performGlobalAction(GLOBAL_ACTION_HOME)
             lastBackPressTimeStamp = SystemClock.uptimeMillis()
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "pressHome", e)
         }
-=======
-        performGlobalAction(GLOBAL_ACTION_HOME)
-        lastBackPressTimeStamp = SystemClock.uptimeMillis()
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     }
 
     fun pressBack() {
