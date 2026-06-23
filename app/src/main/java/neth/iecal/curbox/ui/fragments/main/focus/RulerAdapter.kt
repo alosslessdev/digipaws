@@ -30,7 +30,7 @@ class RulerAdapter(private val maxValue: Int = 180) : RecyclerView.Adapter<Ruler
             com.google.android.material.R.attr.colorOutlineVariant
         )
 
-        if ((position + 1) % 5 == 0) {
+        if (position % 5 == 0) {
             params.height = 100
             holder.vTick.setBackgroundColor(majorColor)
         } else {
@@ -40,5 +40,5 @@ class RulerAdapter(private val maxValue: Int = 180) : RecyclerView.Adapter<Ruler
         holder.vTick.layoutParams = params
     }
 
-    override fun getItemCount(): Int = maxValue
+    override fun getItemCount(): Int = maxValue + 1
 }

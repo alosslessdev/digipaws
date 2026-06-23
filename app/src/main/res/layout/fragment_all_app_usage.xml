@@ -11,72 +11,53 @@
         android:layout_height="match_parent"
         android:fillViewport="true">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="24dp"
-        tools:context=".ui.activity.AppUsageActivity">
-
-        <!-- Top action row -->
-        <LinearLayout
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:orientation="horizontal">
-            <Button
-                android:id="@+id/open_menu"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                app:icon="@drawable/outline_more_vert_24"
-                app:iconTint="?attr/colorOnSurfaceVariant" />
-        </LinearLayout>
+            android:layout_height="wrap_content">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp">
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+
+                <TextView
+                    android:id="@+id/ascii_art"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.5"
+                    android:breakStrategy="simple"
+                    android:ellipsize="none"
+                    android:fontFamily="monospace"
+                    android:inputType="textMultiLine"
+                    android:lineSpacingMultiplier="0.85"
+                    android:singleLine="false"
+                    android:text="@string/ascii_star2"
+                    android:textSize="7sp" />
+            </HorizontalScrollView>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:paddingHorizontal="24dp"
-                android:paddingTop="28dp"
-                android:paddingBottom="24dp">
+                android:paddingHorizontal="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="24dp"
+                tools:context=".ui.activity.AppUsageActivity">
 
-                <!-- ACTIVITY label -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <RelativeLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:letterSpacing="0.2"
-                    android:text="@string/activity_powered_by"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:layout_marginTop="100dp">
 
-                <!-- Your Digital Well-being -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/your_digital_wellbeing"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                    android:textColor="?attr/colorOnSurface" />
-
-                <!-- Pebble bubble visualization with center text overlay -->
-                <FrameLayout
-                    android:layout_width="250dp"
-                    android:layout_height="250dp"
-                    android:layout_marginTop="15dp">
-
-                    <neth.iecal.curbox.ui.views.PebbleBubbleView
-                        android:id="@+id/pebble_view"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
+                    <Button
+                        android:id="@+id/open_menu"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_gravity="end"
+                        app:icon="@drawable/outline_more_vert_24" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -84,180 +65,167 @@
                         android:layout_gravity="center"
                         android:gravity="center"
                         android:orientation="vertical">
-                        <TextView
-                            android:id="@+id/total_usage"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold"
-                            android:textSize="50sp"
-                            android:shadowColor="#7F000000"
-                            android:shadowDx="2"
-                            android:shadowDy="2"
-                            android:shadowRadius="3"
-                            tools:text="4h 12m" />
 
                         <TextView
                             android:id="@+id/date_sublabel"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:textStyle="bold"
                             android:text="@string/total_today"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                            android:shadowColor="#7F000000"
-                            android:shadowDx="2"
-                            android:shadowDy="2"
-                            android:shadowRadius="3"
-                            />
+                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall" />
+
+                        <TextView
+                            android:id="@+id/total_usage"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/coolvetica_rg"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="55sp"
+                            android:textStyle="bold" />
 
                     </LinearLayout>
-                </FrameLayout>
+                </RelativeLayout>
 
-                <!-- Pebble legend (compact: dot + name) -->
-                <LinearLayout
-                    android:id="@+id/pebble_legend"
-                    android:layout_width="wrap_content"
+                <neth.iecal.curbox.ui.views.WeeklyBarGraphView
+                    android:id="@+id/weekly_bar_graph"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:gravity="center"
-                    android:orientation="horizontal" />
+                    android:layout_marginTop="24dp"
+                    android:padding="0dp" />
 
+                <LinearLayout
+                    android:id="@+id/week_navigation_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center">
 
+                    <ImageButton
+                        android:id="@+id/btn_prev_week"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/desc_previous_week"
+                        android:padding="8dp"
+                        android:src="@drawable/baseline_arrow_back_ios_24"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+
+                    <TextView
+                        android:id="@+id/tv_week_range"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <ImageButton
+                        android:id="@+id/btn_next_week"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/desc_next_week"
+                        android:padding="8dp"
+                        android:src="@drawable/baseline_arrow_forward_ios_24"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/app_usage_recycler_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="32dp"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
+                    android:paddingBottom="16dp"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+                <Space
+                    android:layout_width="1dp"
+                    android:layout_height="300dp" />
             </LinearLayout>
-        </LinearLayout>
-
-        <!-- Weekly activity section (outside card, more breathing room) -->
-        <neth.iecal.curbox.ui.views.WeeklyBarGraphView
-            android:id="@+id/weekly_bar_graph"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:paddingHorizontal="4dp" />
-
-        <!-- Week navigation -->
-        <LinearLayout
-            android:id="@+id/week_navigation_layout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <ImageButton
-                android:id="@+id/btn_prev_week"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Previous week"
-                android:padding="8dp"
-                android:src="@drawable/baseline_arrow_back_ios_24"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
-            <TextView
-                android:id="@+id/tv_week_range"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                android:textColor="?attr/colorOnSurface"
-                tools:text="Mar 10 – Mar 16" />
-
-            <ImageButton
-                android:id="@+id/btn_next_week"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Next week"
-                android:padding="8dp"
-                android:src="@drawable/baseline_arrow_forward_ios_24"
-                app:tint="?attr/colorOnSurfaceVariant" />
-        </LinearLayout>
-
-        <!-- Hidden select_date button (used programmatically) -->
-        <Button
-            android:id="@+id/select_date"
-            android:layout_width="wrap_content"
-            android:layout_height="0dp"
-            android:visibility="gone"
-            android:text="" />
-
-        <!-- Divider -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="20dp"
-            android:layout_marginHorizontal="8dp"
-            android:background="?attr/colorOutlineVariant" />
-
-        <!-- MOST USED section header -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:letterSpacing="0.1"
-            android:text="@string/most_used"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/app_usage_recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:clipToPadding="false"
-            android:nestedScrollingEnabled="false"
-            android:paddingBottom="16dp"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:listitem="@layout/app_usage_item" />
-
-        <TextView
-            android:id="@+id/comparison_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:fontFamily="sans-serif-light"
-            android:gravity="center"
-            android:visibility="gone"
-            android:lineSpacingExtra="2dp"
-            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textStyle="italic"
-            tools:text="&quot;You've spent 15% less time on your device\ncompared to yesterday.&quot;" />
-
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="300dp"/>
-    </LinearLayout>
+        </FrameLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Loading Overlay -->
     <LinearLayout
-        android:id="@+id/loading_overlay"
+        android:id="@+id/welcome_state"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
         android:orientation="vertical"
+        android:paddingHorizontal="40dp"
+        android:paddingBottom="96dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/welcome_ascii"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.6"
+            android:breakStrategy="simple"
+            android:ellipsize="none"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:lineSpacingMultiplier="0.85"
+            android:singleLine="false"
+            android:text="@string/ascii_hello"
+            android:textSize="4sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:fontFamily="@font/coolvetica"
+            android:gravity="center"
+            android:text="@string/usage_welcome_title"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="48sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.3"
+            android:text="@string/usage_welcome_message"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <Button
+            android:id="@+id/btn_read_docs"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:layout_marginBottom="60dp"
+            android:text="@string/usage_welcome_read_docs" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:background="?attr/colorSurface"
-        android:visibility="gone"
-        tools:visibility="visible"
-        android:elevation="10dp">
-        
-        <neth.iecal.curbox.ui.views.WalkingPawsLoadingView
+        android:elevation="10dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <neth.iecal.curbox.ui.views.FlowerBloomLoadingView
             android:layout_width="160dp"
             android:layout_height="80dp" />
-            
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:letterSpacing="0.1"
             android:text="@string/crunching_numbers"
             android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:letterSpacing="0.1" />
-            
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
     </LinearLayout>
 
 </FrameLayout>

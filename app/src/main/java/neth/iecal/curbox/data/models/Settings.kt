@@ -3,7 +3,7 @@ package neth.iecal.curbox.data.models
 data class Settings(
     val blockedAppGroups: List<AppGroup> = listOf(),
     val manualFocusGroups: List<ManualFocusGroup> = listOf(),
-    val autoFocusGroups: List<AutoFocusGroup> = listOf(),
+    val autoDndGroups: List<AutoDndGroup> = listOf(),
     /**
      * Stores info about active manual focus mode.
      * Format Pair<GroupId?, system ms when it ends>.
@@ -18,7 +18,13 @@ data class Settings(
     val usageTrackerIgnoredApps: List<String> = listOf(),
     val keepUninstalledUsageUntilNextDay: Boolean = true,
     val mindfulMessageConfig: MindfulMessageConfig = MindfulMessageConfig(),
+<<<<<<< HEAD
     val viewBlockerConfig: ViewBlockerConfig = ViewBlockerConfig(),
     val appBlockerCooldowns: Map<String, Long> = mapOf(),
     val webApps: List<WebApp> = listOf()
+=======
+    val uiHiderConfig: UiHiderConfig = UiHiderConfig(),
+    val reelCounterOverlayConfig: ReelCounterOverlayConfig = ReelCounterOverlayConfig(),
+    val nextWebsiteRecheckTime: Long = 0L
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 )

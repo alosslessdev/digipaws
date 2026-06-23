@@ -1,11 +1,6 @@
 package neth.iecal.curbox.services
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.CancellationException
@@ -18,15 +13,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import neth.iecal.curbox.CrashLogger
+import neth.iecal.curbox.anti_stimulants.AutoDnd
 import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
 import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.blockers.FocusModeBlocker
 import neth.iecal.curbox.blockers.KeywordBlocker
 import neth.iecal.curbox.blockers.ReelBlocker
+<<<<<<< HEAD
 import neth.iecal.curbox.blockers.viewblocker.ElementPickerNotification
 import neth.iecal.curbox.blockers.viewblocker.ViewBlocker
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.viewBlocker.ViewBlockerFragment
 import neth.iecal.curbox.utils.AppLogger
+=======
+import neth.iecal.curbox.blockers.uihider.NodePicker
+import neth.iecal.curbox.blockers.uihider.UiHider
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
 @Suppress("DEPRECATION")
 class AppBlockerService : BaseBlockingService() {
@@ -34,8 +35,10 @@ class AppBlockerService : BaseBlockingService() {
     private val TAG = "AppBlockerService"
     private val appBlocker: AppBlocker = AppBlocker()
     private val focusModeBlocker = FocusModeBlocker()
+    private val autoDnd = AutoDnd()
     private val reelBlocker = ReelBlocker()
     private var keywordBlocker = KeywordBlocker()
+<<<<<<< HEAD
     private val viewBlocker = ViewBlocker()
     private var pickerNotification: ElementPickerNotification? = null
 
@@ -63,6 +66,10 @@ class AppBlockerService : BaseBlockingService() {
             }
         }
     }
+=======
+    private val uiHider = UiHider()
+    private val nodePicker = NodePicker()
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
     private var grayScaleFilter = GrayScaleFilter()
 
@@ -73,6 +80,12 @@ class AppBlockerService : BaseBlockingService() {
     }
 
     private lateinit var crashLogger: CrashLogger
+
+    fun syncDndState() {
+        val autoDndActive = autoDnd.isDndRequested()
+        val manualFocusDndActive = focusModeBlocker.isDndRequested()
+        neth.iecal.curbox.utils.DndHelper.applyDndState(this, autoDndActive || manualFocusDndActive)
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -96,6 +109,18 @@ class AppBlockerService : BaseBlockingService() {
         event ?: return
         super.onAccessibilityEvent(event)
 
+<<<<<<< HEAD
+=======
+        try {
+            appBlocker.doAppBlockerCheck(event)
+            grayScaleFilter.doGrayscaleCheck(event)
+            focusModeBlocker.doFocusModeCheck(event)
+        } catch (t: Throwable) {
+            Log.e("error", t.message ?: "Unknown error")
+            crashLogger.logNonFatalError(Exception(t))
+        }
+
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         val eventCopy = AccessibilityEvent.obtain(event)
         val result = eventChannel.trySend(eventCopy)
 
@@ -128,6 +153,7 @@ class AppBlockerService : BaseBlockingService() {
 
     private fun startBackgroundWorker() {
         serviceScope.launch {
+<<<<<<< HEAD
             try {
                 for (event in eventChannel) {
                     try {
@@ -137,6 +163,16 @@ class AppBlockerService : BaseBlockingService() {
                         } catch (t: Throwable) {
                             android.util.Log.e(TAG, "Error in appBlocker.doAppBlockerCheck", t)
                         }
+=======
+            for (event in eventChannel) {
+                try {
+                    reelBlocker.doViewBlockerCheck(event)
+                    keywordBlocker.checkIfUnsupportedBrowser(event)
+                    uiHider.doUiHiderCheck(event)
+                } catch (t: Throwable) {
+                    // Don't log normal coroutine cancellations as crashes
+                    if (t is CancellationException) throw t
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
                         try {
                             grayScaleFilter.doGrayscaleCheck(event)
@@ -175,6 +211,7 @@ class AppBlockerService : BaseBlockingService() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onServiceConnected() {
+<<<<<<< HEAD
         try {
             super.onServiceConnected()
             
@@ -211,12 +248,34 @@ class AppBlockerService : BaseBlockingService() {
             AppLogger.functionError(TAG, "onServiceConnected", e)
             crashLogger.logNonFatalError(Exception(e))
         }
+=======
+        super.onServiceConnected()
+        appBlocker.setupAppBlocker(this)
+        focusModeBlocker.setupFocusMode(this)
+        autoDnd.setup(this)
+        reelBlocker.setupBlocker(this)
+        keywordBlocker.setupBlocker(this)
+        uiHider.setupBlocker(this)
+        nodePicker.setupBlocker(this)
+        grayScaleFilter.setup(this)
+
+        focusModeBlocker.setupReceivers()
+        appBlocker.setupReceivers()
+        reelBlocker.setupReceivers()
+        keywordBlocker.setupReceivers()
+        grayScaleFilter.setupReceivers()
+        uiHider.setupReceivers()
+        nodePicker.setupReceivers()
+
+        startBackgroundWorker()
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     }
 
     override fun onDestroy() {
         try {
             super.onDestroy()
 
+<<<<<<< HEAD
             try {
                 focusModeBlocker.removeReceivers()
             } catch (e: Exception) {
@@ -264,6 +323,16 @@ class AppBlockerService : BaseBlockingService() {
             } catch (e: Exception) {
                 AppLogger.functionError(TAG, "pickerNotification.cancelNotification", e)
             }
+=======
+            focusModeBlocker.removeReceivers()
+            autoDnd.stop()
+            reelBlocker.removeReceivers()
+            appBlocker.onDestroy()
+            keywordBlocker.removeReceivers()
+            grayScaleFilter.unregisterReceivers()
+            uiHider.removeReceivers()
+            nodePicker.removeReceivers()
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
             try {
                 eventChannel.close()

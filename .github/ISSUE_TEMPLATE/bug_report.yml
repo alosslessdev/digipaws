@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a reproducible bug or unexpected behavior in DigiPaws.
+description: Report a reproducible bug or unexpected behavior in Curbox.
 title: "[Bug]: "
 labels: ["bug"]
 assignees: []
@@ -27,11 +27,6 @@ body:
         2. Set timer
         3. Observe that timer does not start
 
-  - type: textarea
-    id: expected
-    attributes:
-      label: Expected Behavior
-      description: Describe what you expected to happen.
 
   - type: textarea
     id: actual
@@ -43,8 +38,8 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Device model, OS version, DigiPaws version.
-      placeholder: e.g., OnePlus 9, Android 14, DigiPaws 1.2.1
+      description: Device model, OS version, Curbox version.
+      placeholder: e.g., OnePlus 9, Android 14, Curbox 1.2.1
 
   - type: textarea
     id: additional

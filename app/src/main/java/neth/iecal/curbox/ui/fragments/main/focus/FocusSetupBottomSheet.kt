@@ -16,6 +16,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
@@ -24,6 +25,7 @@ import neth.iecal.curbox.data.models.FocusBlockMode
 import neth.iecal.curbox.data.models.ManualFocusGroup
 import neth.iecal.curbox.data.models.TimeInterval
 import neth.iecal.curbox.databinding.DialogFocusSessionConfigBinding
+import neth.iecal.curbox.hardcoded.URL_BAR_ID_LIST
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
 
 class FocusSetupBottomSheet : BottomSheetDialogFragment() {
@@ -55,12 +57,26 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
 
         setupGroupSelectionDropdown()
         observeViewModel()
+
+        if (viewModel.groups.value.isEmpty()) {
+            binding.createGroup.visibility = View.VISIBLE
+            binding.selectGrouo.visibility = View.GONE
+        } else {
+            viewModel.selectedGroup?.let { group ->
+                binding.groupDropdown.setText(group.toString(), false)
+                binding.btnEditGroup.visibility = View.VISIBLE
+                binding.btnDeleteGroup.visibility = View.VISIBLE
+            }
+        }
+
         binding.btnCreateGroup.setOnClickListener {
             // clear if creating new
             viewModel.selectedGroup = null
             binding.groupName.setText("")
             viewModel.newGroupSelectedApps = HashSet()
+            viewModel.newGroupSelectedKeywords = hashSetOf()
             binding.selectedAppCount.text = "Selected: 0"
+            binding.selectedWebsiteCount.text = "Selected: ${viewModel.newGroupSelectedKeywords.size}"
             binding.exitable.isChecked = true
             binding.autoTurnOnDnd.isChecked = false
             binding.recurringToggle.isChecked = false
@@ -92,7 +108,9 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             
             binding.groupName.setText(group.groupName)
             viewModel.newGroupSelectedApps = HashSet(group.packages)
+            viewModel.newGroupSelectedKeywords = HashSet(group.keywords)
             binding.selectedAppCount.text = "Selected: ${group.packages.size}"
+            binding.selectedWebsiteCount.text = "Selected: ${group.keywords.size}"
             if (group.blockMode == FocusBlockMode.BLOCK_SELECTED) {
                 binding.selectedBlockAction.check(R.id.btn_selected)
             } else {
@@ -100,6 +118,7 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             }
             binding.exitable.isChecked = group.exitable
             binding.autoTurnOnDnd.isChecked = group.autoTurnOnDnd
+<<<<<<< HEAD
             
             // Pre-fill recurring settings
             binding.recurringToggle.isChecked = group.isRecurring
@@ -115,6 +134,8 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             }
             // Note: we can either save as new or overwrite
             // To overwrite, we delete the old group before saving
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         }
 
         binding.btnDeleteGroup.setOnClickListener {
@@ -133,6 +154,7 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
                 .show()
         }
 
+<<<<<<< HEAD
         // Recurring toggle
         binding.recurringToggle.setOnCheckedChangeListener { _, isChecked ->
             binding.recurringSettings.visibility = if (isChecked) View.VISIBLE else View.GONE
@@ -143,11 +165,19 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
         }
 
         // code dealing with new group creation
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         binding.btnSelectApps.setOnClickListener {
             val intent = Intent(requireContext(), SelectAppsActivity::class.java)
+            intent.putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(viewModel.newGroupSelectedApps))
             selectAppsLauncher.launch(intent)
         }
-                binding.autoTurnOnDnd.setOnCheckedChangeListener { buttonView, isChecked ->
+
+        binding.btnAddWebsites.setOnClickListener {
+            showAddWebsitesDialog()
+        }
+
+        binding.autoTurnOnDnd.setOnCheckedChangeListener { buttonView, isChecked ->
             if (isChecked) {
                 val nm = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 if (!nm.isNotificationPolicyAccessGranted) {
@@ -161,6 +191,7 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
 
         binding.saveGroup.setOnClickListener {
             val isEditing = viewModel.selectedGroup != null
+<<<<<<< HEAD
             val dailyIntervals = if (binding.recurringToggle.isChecked) {
                 collectDailyIntervals()
             } else {
@@ -176,25 +207,138 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
                 isRecurring = binding.recurringToggle.isChecked,
                 dailyIntervals = dailyIntervals
             )
+=======
+            val blockMode = if(binding.selectedBlockAction.checkedButtonId == R.id.btn_selected) FocusBlockMode.BLOCK_SELECTED else FocusBlockMode.BLOCK_ALL_EXCEPT_SELECTED
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             
-            if (isEditing) {
-                viewModel.updateGroup(newGroup)
-            } else {
-                viewModel.addGroup(newGroup)
+            if (viewModel.newGroupSelectedKeywords.isNotEmpty()) {
+                val supportedBrowsers = URL_BAR_ID_LIST.keys
+                val hasBrowserSelected = viewModel.newGroupSelectedApps.any { it in supportedBrowsers }
+                
+                if (!hasBrowserSelected) {
+                    if (blockMode == FocusBlockMode.BLOCK_ALL_EXCEPT_SELECTED) {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("No Browser Selected")
+                            .setMessage("You have set some websites to be allowed, but no supported browser is in your 'Allowed Apps' list. \n\nTo access these websites, please add a browser (like Chrome or Firefox) to the selected apps.")
+                            .setPositiveButton("Add Browser") { _, _ ->
+                                binding.btnSelectApps.performClick()
+                            }
+                            .setNegativeButton("Save Anyway") { _, _ ->
+                                saveFocusGroup(isEditing, blockMode)
+                            }
+                            .show()
+                    } else {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("Website Blocking Notice")
+                            .setMessage("You have set some websites to be blocked, but no browser is in your 'Blocked Apps' list. \n\nNote that website blocking only works on supported browsers (like Chrome or Firefox). Any other browser will still be able to access these websites. Consider blocking unsupported browsers if needed.")
+                            .setPositiveButton("Add Browser") { _, _ ->
+                                binding.btnSelectApps.performClick()
+                            }
+                            .setNegativeButton("Save Anyway") { _, _ ->
+                                saveFocusGroup(isEditing, blockMode)
+                            }
+                            .show()
+                    }
+                    return@setOnClickListener
+                }
             }
-            
-            binding.createGroup.visibility = View.GONE
-            binding.selectGrouo.visibility = View.VISIBLE
-            
-            // Re-select it if it was edited
-            if (isEditing) {
-                viewModel.selectedGroup = newGroup
-                binding.groupDropdown.setText(newGroup.toString(), false)
-            }
+
+            saveFocusGroup(isEditing, blockMode)
         }
-        binding.selectedBlockAction.checkedButtonId
     }
 
+    private fun saveFocusGroup(isEditing: Boolean, blockMode: FocusBlockMode) {
+        val newGroup = ManualFocusGroup(
+            groupId = if (isEditing) viewModel.selectedGroup!!.groupId else java.util.UUID.randomUUID().toString(),
+            groupName = binding.groupName.text.toString(),
+            packages = viewModel.newGroupSelectedApps,
+            keywords = viewModel.newGroupSelectedKeywords,
+            blockMode = blockMode,
+            exitable = binding.exitable.isChecked,
+            autoTurnOnDnd = binding.autoTurnOnDnd.isChecked
+        )
+
+        if (isEditing) {
+            viewModel.updateGroup(newGroup)
+        } else {
+            viewModel.addGroup(newGroup)
+        }
+
+        binding.createGroup.visibility = View.GONE
+        binding.selectGrouo.visibility = View.VISIBLE
+
+        // Select it after it was created/edited
+        viewModel.selectedGroup = newGroup
+        binding.groupDropdown.setText(newGroup.toString(), false)
+        binding.btnEditGroup.visibility = View.VISIBLE
+        binding.btnDeleteGroup.visibility = View.VISIBLE
+    }
+
+    private fun showAddWebsitesDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_focus_add_websites, null)
+        val etWebsite = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_website)
+        val btnAdd = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_add)
+        val rvWebsites = view.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rv_websites)
+        
+        val tempKeywords = ArrayList(viewModel.newGroupSelectedKeywords)
+        val adapter = KeywordAdapter(tempKeywords)
+        rvWebsites.adapter = adapter
+
+        btnAdd.setOnClickListener {
+            val text = etWebsite.text.toString().trim()
+            if (text.isNotEmpty()) {
+                val parts = text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                parts.forEach {
+                    if (!tempKeywords.contains(it)) {
+                        tempKeywords.add(it)
+                    }
+                }
+                etWebsite.setText("")
+                adapter.notifyDataSetChanged()
+            }
+        }
+
+        etWebsite.setOnEditorActionListener { _, _, _ ->
+            btnAdd.performClick()
+            true
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Add Websites/Keywords")
+            .setView(view)
+            .setPositiveButton("Save") { _, _ ->
+                viewModel.newGroupSelectedKeywords = HashSet(tempKeywords)
+                binding.selectedWebsiteCount.text = "Selected: ${tempKeywords.size}"
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    inner class KeywordAdapter(private val items: MutableList<String>) : RecyclerView.Adapter<KeywordAdapter.ViewHolder>() {
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val tvKeyword: android.widget.TextView = view.findViewById(R.id.tv_keyword)
+            val btnRemove: android.widget.ImageButton = view.findViewById(R.id.btn_remove)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_keyword, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val keyword = items[position]
+            holder.tvKeyword.text = keyword
+            holder.btnRemove.setOnClickListener {
+                val currentPos = holder.adapterPosition
+                if (currentPos != RecyclerView.NO_POSITION) {
+                    items.removeAt(currentPos)
+                    notifyItemRemoved(currentPos)
+                }
+            }
+        }
+
+        override fun getItemCount() = items.size
+    }
 
     private fun addRecurringIntervalRow(startHour: Int = 9, startMinute: Int = 0, endHour: Int = 17, endMinute: Int = 0) {
         var startHour = startHour
@@ -290,20 +434,17 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun observeViewModel() {
-        // Collect the StateFlow safely, respecting the Fragment's lifecycle
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-
                 viewModel.groups.collect { suggestions ->
-                    // Update the adapter data
                     autoCompleteAdapter.clear()
                     autoCompleteAdapter.addAll(suggestions)
                     autoCompleteAdapter.notifyDataSetChanged()
                 }
-
             }
         }
     }
+
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return super.onCreateDialog(savedInstanceState).apply {
             window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)

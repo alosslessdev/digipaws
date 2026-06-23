@@ -56,10 +56,8 @@ class DataStoreManager(private val context: Context) {
         }
     }
 
-    // One DataStore for everything
     private val settingsDataStore = getSettingsDataStore(context, gson)
 
-    // Access the flow exactly like before
     val settings = settingsDataStore.data
 
     suspend fun updateAppGroups(newGroups: List<AppGroup>) {
@@ -70,8 +68,8 @@ class DataStoreManager(private val context: Context) {
         settingsDataStore.updateData { it.copy(manualFocusGroups = newGroup) }
     }
 
-    suspend fun updateAutoFocusGroups(newGroups: List<neth.iecal.curbox.data.models.AutoFocusGroup>) {
-        settingsDataStore.updateData { it.copy(autoFocusGroups = newGroups) }
+    suspend fun updateAutoDndGroups(newGroups: List<neth.iecal.curbox.data.models.AutoDndGroup>) {
+        settingsDataStore.updateData { it.copy(autoDndGroups = newGroups) }
     }
     
     suspend fun setManualFocusStateToActive(focusGroupId:String, durationInMs: Long){
@@ -85,8 +83,8 @@ class DataStoreManager(private val context: Context) {
         settingsDataStore.updateData { it.copy(reelBlockerConfig = config) }
     }
 
-    suspend fun updateKeywordBlockerConfig(config: neth.iecal.curbox.data.models.KeywordBlocker) {
-        settingsDataStore.updateData { it.copy(keywordBlockerConfig = config) }
+    suspend fun updateKeywordBlockerConfig(transform: (neth.iecal.curbox.data.models.KeywordBlocker) -> neth.iecal.curbox.data.models.KeywordBlocker) {
+        settingsDataStore.updateData { it.copy(keywordBlockerConfig = transform(it.keywordBlockerConfig)) }
     }
 
     suspend fun updateReelCounterState(isActive: Boolean) {
@@ -109,8 +107,16 @@ class DataStoreManager(private val context: Context) {
         settingsDataStore.updateData { it.copy(mindfulMessageConfig = config) }
     }
 
-    suspend fun updateViewBlockerConfig(config: neth.iecal.curbox.data.models.ViewBlockerConfig) {
-        settingsDataStore.updateData { it.copy(viewBlockerConfig = config) }
+    suspend fun updateUiHiderConfig(config: neth.iecal.curbox.data.models.UiHiderConfig) {
+        settingsDataStore.updateData { it.copy(uiHiderConfig = config) }
+    }
+
+    suspend fun updateReelCounterOverlayConfig(config: neth.iecal.curbox.data.models.ReelCounterOverlayConfig) {
+        settingsDataStore.updateData { it.copy(reelCounterOverlayConfig = config) }
+    }
+
+    suspend fun updateNextWebsiteRecheckTime(time: Long) {
+        settingsDataStore.updateData { it.copy(nextWebsiteRecheckTime = time) }
     }
 
     suspend fun updateAppBlockerCooldowns(cooldowns: Map<String, Long>) {

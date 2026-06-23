@@ -9,7 +9,11 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import neth.iecal.curbox.blockers.BaseBlocker
 import androidx.core.net.toUri
+<<<<<<< HEAD
 import neth.iecal.curbox.utils.AppLogger
+=======
+import neth.iecal.curbox.hardcoded.URL_BAR_ID_LIST
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
 class BrowserBlocker(val service: AccessibilityService) : BaseBlocker() {
 
@@ -20,8 +24,8 @@ class BrowserBlocker(val service: AccessibilityService) : BaseBlocker() {
     private val cacheNotBlockedBrowserApps: HashSet<String> = hashSetOf()
 
     var isTurnedOn = false
-    fun isAppBrowser( event: AccessibilityEvent): Boolean {
-        if(!isTurnedOn) return false
+    fun isAppBrowser(event: AccessibilityEvent?): Boolean {
+        if(!isTurnedOn || event == null) return false
         val packageName = event.packageName?.toString() ?: return false
 
         if (cacheBlockedBrowserApps.contains(packageName)) {
@@ -31,7 +35,7 @@ class BrowserBlocker(val service: AccessibilityService) : BaseBlocker() {
             return false
         }
 
-        val isBrowser = resolveIsBrowser(service, packageName) && !KeywordBlocker.URL_BAR_ID_LIST.containsKey(packageName)
+        val isBrowser = resolveIsBrowser(service, packageName) && !URL_BAR_ID_LIST.containsKey(packageName)
 
         if (isBrowser) {
             cacheBlockedBrowserApps.add(packageName)

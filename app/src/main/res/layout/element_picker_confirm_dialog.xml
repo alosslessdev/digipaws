@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#A6000000">
@@ -9,13 +8,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_margin="24dp">
+        android:layout_margin="16dp">
 
         <LinearLayout
-            android:id="@+id/card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#000000"
+            android:background="@drawable/element_picker_dialog_bg"
             android:orientation="vertical"
             android:padding="20dp">
 
@@ -23,181 +21,203 @@
                 android:id="@+id/titleText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingBottom="12dp"
+                android:text="@string/picker_dialog_block_element"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/descText"
+                android:id="@+id/selectorInfoText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingBottom="16dp"
+                android:layout_marginTop="12dp"
+                android:background="#1AFFFFFF"
+                android:padding="12dp"
+                android:textColor="#BBBBBB"
+                android:textSize="12sp"
+                android:fontFamily="monospace" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/picker_dialog_generated_rule"
                 android:textColor="#FFFFFF"
-                android:textIsSelectable="true"
-                android:textSize="14sp" />
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/picker_dialog_rule_desc"
+                android:textColor="#888888"
+                android:textSize="11sp" />
+
+            <EditText
+                android:id="@+id/ruleQueryInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="#1AFFFFFF"
+                android:gravity="top|start"
+                android:hint="@string/hint_picker_query"
+                android:inputType="textMultiLine"
+                android:minLines="2"
+                android:padding="10dp"
+                android:textColor="#EEFFFF"
+                android:textColorHint="#555555"
+                android:textSize="13sp"
+                android:fontFamily="monospace" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/picker_dialog_element_properties"
+                android:textColor="#90CAF9"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/picker_dialog_properties_desc"
+                android:textColor="#777777"
+                android:textSize="10sp" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/propertyChipsContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </HorizontalScrollView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/picker_dialog_blocking_action"
+                android:textColor="#CE93D8"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/picker_dialog_action_desc"
+                android:textColor="#777777"
+                android:textSize="10sp" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/actionChipsContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </HorizontalScrollView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/picker_dialog_advanced"
+                android:textColor="#A5D6A7"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/picker_dialog_advanced_desc"
+                android:textColor="#777777"
+                android:textSize="10sp" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/modifierChipsContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </HorizontalScrollView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/picker_dialog_label_optional"
+                android:textColor="#DDDDDD"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
             <EditText
                 android:id="@+id/commentInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="e.g. Hide explore tab"
-                android:singleLine="true"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#FFFFFF"
-                android:textSize="14sp" />
-
-            <!-- Options toggle -->
-            <TextView
-                android:id="@+id/optionsToggle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingTop="12dp"
-                android:paddingBottom="8dp"
-                android:text="▶ Options"
-                android:textColor="#33B5E5"
+                android:layout_marginTop="4dp"
+                android:background="#1AFFFFFF"
+                android:hint="@string/hint_picker_label"
+                android:inputType="text"
+                android:padding="10dp"
+                android:textColor="#EEFFFF"
+                android:textColorHint="#555555"
                 android:textSize="13sp" />
 
             <LinearLayout
-                android:id="@+id/optionsContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <!-- Action mode -->
-                <CheckBox
-                    android:id="@+id/chkPressBack"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:buttonTint="#33B5E5"
-                    android:text="Press back instead of overlay"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-                <!-- Block touches -->
-                <CheckBox
-                    android:id="@+id/chkBlockTouches"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:buttonTint="#33B5E5"
-                    android:checked="true"
-                    android:text="Block touches on overlay"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-                <!-- Match by text content -->
-                <CheckBox
-                    android:id="@+id/chkMatchByText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:buttonTint="#33B5E5"
-                    android:text="Match by text content (fuzzy)"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-                <!-- Match by description content -->
-                <CheckBox
-                    android:id="@+id/chkMatchByDesc"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:buttonTint="#33B5E5"
-                    android:text="Match by description (fuzzy)"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-                <!-- Block only if another view is absent -->
-                <CheckBox
-                    android:id="@+id/chkRequireAbsent"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:buttonTint="#33B5E5"
-                    android:text="Only block if a view is absent"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-                <EditText
-                    android:id="@+id/inputAbsentViewId"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Absent view ID (e.g. com.app:id/nav)"
-                    android:singleLine="true"
-                    android:textColor="#FFFFFF"
-                    android:textColorHint="#888888"
-                    android:textSize="12sp"
-                    android:visibility="gone" />
-
-                <!-- Block parent layout -->
-                <CheckBox
-                    android:id="@+id/chkBlockLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:buttonTint="#33B5E5"
-                    android:text="Block entire parent layout"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-                <!-- Match children content -->
-                <CheckBox
-                    android:id="@+id/chkMatchChildren"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:buttonTint="#33B5E5"
-                    android:text="Only block if children match"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-                <EditText
-                    android:id="@+id/inputMatchChildren"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Child text to match (e.g. Sponsored)"
-                    android:singleLine="true"
-                    android:textColor="#FFFFFF"
-                    android:textColorHint="#888888"
-                    android:textSize="12sp"
-                    android:visibility="gone" />
-
-                <!-- Clickable filter -->
-                <CheckBox
-                    android:id="@+id/chkClickableOnly"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:buttonTint="#33B5E5"
-                    android:text="Only match clickable elements"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/btnRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="end"
-                android:orientation="horizontal"
-                android:paddingTop="16dp">
+                android:paddingTop="20dp">
+
+                <Button
+                    android:id="@+id/btnHelp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="40dp"
+                    android:background="#00000000"
+                    android:text="@string/dialog_question_mark"
+                    android:textColor="#80DEEA"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <Button
                     android:id="@+id/cancelBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="8dp"
-                    android:text="Cancel"
+                    android:background="#00000000"
+                    android:text="@string/cancel"
                     android:textAllCaps="false"
+                    android:textColor="#AAAAAA"
                     android:textSize="14sp" />
 
                 <Button
                     android:id="@+id/confirmBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="8dp"
-                    android:text="Confirm"
+                    android:background="#1565C0"
+                    android:paddingHorizontal="24dp"
+                    android:text="@string/btn_block"
                     android:textAllCaps="false"
-                    android:textSize="14sp" />
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

@@ -27,7 +27,6 @@ class WeeklyBarGraphView @JvmOverloads constructor(
     private var selectedIndex: Int = -1
     private var onDaySelected: ((DayData) -> Unit)? = null
 
-    // Paints
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val selectedBarPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -100,7 +99,6 @@ class WeeklyBarGraphView @JvmOverloads constructor(
 
         val minBarPx = minBarHeight * density
 
-        // Draw bars
         for (i in days.indices) {
             val cx = leftOffset + gapWidth * i + gapWidth / 2f
             val ratio = days[i].value / effectiveMax
@@ -117,7 +115,6 @@ class WeeklyBarGraphView @JvmOverloads constructor(
             canvas.drawRoundRect(barRect, barRadius * density, barRadius * density, paint)
         }
 
-        // Draw day labels
         val labelY = chartBottom + labelAreaHeight * 0.65f
         for (i in days.indices) {
             val cx = leftOffset + gapWidth * i + gapWidth / 2f

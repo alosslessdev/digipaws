@@ -9,8 +9,12 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 /build
+build/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
 /test-code*
+.idea/
+CLAUDE.md
+AGENT.md

@@ -21,12 +21,17 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
+<<<<<<< HEAD
 import kotlinx.coroutines.flow.firstOrNull
+=======
+import kotlinx.coroutines.flow.first
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import neth.iecal.curbox.R
 import neth.iecal.curbox.databinding.ActivitySelectAppsBinding
 import neth.iecal.curbox.databinding.DialogAddKeywordBinding
+import neth.iecal.curbox.utils.DataStoreManager
 
 class SelectAppsActivity : AppCompatActivity() {
 
@@ -34,6 +39,10 @@ class SelectAppsActivity : AppCompatActivity() {
     private lateinit var selectedAppList: HashSet<String>
 
     private var appItemList: MutableList<AppItem> = mutableListOf()
+
+    // Unified list of (groupName -> packages) from all blocker types
+    private var allGroups: List<Pair<String, Set<String>>> = emptyList()
+    private val dataStoreManager by lazy { DataStoreManager(this) }
     @SuppressLint("NotifyDataSetChanged")
 
     /**
@@ -74,47 +83,76 @@ class SelectAppsActivity : AppCompatActivity() {
         binding.appList.layoutManager = LinearLayoutManager(this)
 
         binding.selectAppsMagic.setOnClickListener {
-            val popupMenu = PopupMenu(this, binding.selectAppsMagic)
-            
-            val categoriesMap = mapOf(
-                ApplicationInfo.CATEGORY_AUDIO to "Audio",
-                ApplicationInfo.CATEGORY_GAME to "Games",
-                ApplicationInfo.CATEGORY_IMAGE to "Images",
-                ApplicationInfo.CATEGORY_MAPS to "Maps",
-                ApplicationInfo.CATEGORY_NEWS to "News",
-                ApplicationInfo.CATEGORY_PRODUCTIVITY to "Productivity",
-                ApplicationInfo.CATEGORY_SOCIAL to "Social",
-                ApplicationInfo.CATEGORY_VIDEO to "Video",
-                ApplicationInfo.CATEGORY_UNDEFINED to "Undefined"
-            )
+            lifecycleScope.launch {
+                val settings = dataStoreManager.settings.first()
+                allGroups = buildList {
+                    settings.blockedAppGroups.forEach { add(it.name to it.selectedPackages.toSet()) }
+                    settings.manualFocusGroups.forEach { add(it.groupName to it.packages) }
+                    settings.grayscaleGroups.forEach { add(it.groupName to it.packages) }
+                }
 
-            val availableCategories = appItemList.mapNotNull { it.appInfo?.category }.toSet().sorted()
+                val popupMenu = PopupMenu(this@SelectAppsActivity, binding.selectAppsMagic)
 
-            availableCategories.forEach { category ->
-                val title = "Auto Select ${categoriesMap[category] ?: "Category $category"}"
-                popupMenu.menu.add(0, category, 0, title)
-            }
-            
-            popupMenu.menu.add(0, 1000, 0, "Add a custom android package")
+                val categoriesMap = mapOf(
+                    ApplicationInfo.CATEGORY_AUDIO to "Audio",
+                    ApplicationInfo.CATEGORY_GAME to "Games",
+                    ApplicationInfo.CATEGORY_IMAGE to "Images",
+                    ApplicationInfo.CATEGORY_MAPS to "Maps",
+                    ApplicationInfo.CATEGORY_NEWS to "News",
+                    ApplicationInfo.CATEGORY_PRODUCTIVITY to "Productivity",
+                    ApplicationInfo.CATEGORY_SOCIAL to "Social",
+                    ApplicationInfo.CATEGORY_VIDEO to "Video",
+                    ApplicationInfo.CATEGORY_UNDEFINED to "Undefined"
+                )
 
-            popupMenu.setOnMenuItemClickListener { menuItem ->
-                if (menuItem.itemId == 1000) {
-                    makeAddCustomPackageDialog()
-                    true
-                } else {
-                    val categoryToSelect = menuItem.itemId
-                    appItemList.forEach { item ->
-                        if (item.appInfo?.category == categoryToSelect) {
-                            selectedAppList.add(item.packageName)
+                val availableCategories = appItemList.mapNotNull { it.appInfo?.category }.toSet().sorted()
+
+                availableCategories.forEach { category ->
+                    val title = "Auto Select ${categoriesMap[category] ?: "Category $category"}"
+                    popupMenu.menu.add(0, category, 0, title)
+                }
+
+                popupMenu.menu.add(0, 1000, 0, "Add a custom android package")
+
+                if (allGroups.isNotEmpty()) {
+                    popupMenu.menu.add(0, 1999, 0, "── Import from Group ──").isEnabled = false
+                    allGroups.forEachIndexed { index, (name, _) ->
+                        popupMenu.menu.add(0, 2000 + index, 0, name)
+                    }
+                }
+
+                popupMenu.setOnMenuItemClickListener { menuItem ->
+                    when {
+                        menuItem.itemId == 1000 -> {
+                            makeAddCustomPackageDialog()
+                            true
+                        }
+                        menuItem.itemId >= 2000 -> {
+                            val packages = allGroups.getOrNull(menuItem.itemId - 2000)?.second
+                            if (packages != null) {
+                                selectedAppList.addAll(packages)
+                                val slist = sortSelectedItemsToTop(appItemList)
+                                (binding.appList.adapter as ApplicationAdapter).updateData(slist)
+                                updateSelectAllButton()
+                            }
+                            true
+                        }
+                        else -> {
+                            val categoryToSelect = menuItem.itemId
+                            appItemList.forEach { item ->
+                                if (item.appInfo?.category == categoryToSelect) {
+                                    selectedAppList.add(item.packageName)
+                                }
+                            }
+                            val slist = sortSelectedItemsToTop(appItemList)
+                            (binding.appList.adapter as ApplicationAdapter).updateData(slist)
+                            updateSelectAllButton()
+                            true
                         }
                     }
-                    val slist = sortSelectedItemsToTop(appItemList)
-                    (binding.appList.adapter as ApplicationAdapter).updateData(slist)
-                    updateSelectAllButton()
-                    true
                 }
+                popupMenu.show()
             }
-            popupMenu.show()
         }
 
         //manages the behaviour of the select all button
@@ -154,7 +192,6 @@ class SelectAppsActivity : AppCompatActivity() {
             val profiles = launcherApps.profiles
             val installedPackages = mutableSetOf<String>()
 
-            // Load installed apps
             for (profile in profiles) {
                 val apps = launcherApps.getActivityList(null, profile)
                     .map { it.applicationInfo }

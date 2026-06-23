@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ReelStatsEntity::class, ScrollPatternEntity::class, FocusStatsEntity::class],
-    version = 3,
+    entities = [ReelStatsEntity::class, ScrollPatternEntity::class, FocusStatsEntity::class, WebsiteStatsEntity::class, IntentLogEntity::class, AppUsageEntity::class],
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -15,6 +15,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun reelStatsDao(): ReelStatsDao
     abstract fun scrollPatternDao(): ScrollPatternDao
     abstract fun focusStatsDao(): FocusStatsDao
+    abstract fun websiteStatsDao(): WebsiteStatsDao
+    abstract fun intentLogDao(): IntentLogDao
+    abstract fun appUsageDao(): AppUsageDao
 
     companion object {
         @Volatile

@@ -8,9 +8,14 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import neth.iecal.curbox.data.db.AppDatabase
+import neth.iecal.curbox.data.models.ReelCounterOverlayConfig
 import neth.iecal.curbox.trackers.ReelsCountTracker
 import neth.iecal.curbox.ui.views.WeeklyBarGraphView
 import neth.iecal.curbox.utils.DataStoreManager
@@ -27,6 +32,9 @@ class ReelCounterViewModel(application: Application) : AndroidViewModel(applicat
     private val reelStatsDao = AppDatabase.getInstance(application).reelStatsDao()
 
     val settings = dataStoreManager.settings
+
+    private val _overlayConfig = MutableStateFlow(ReelCounterOverlayConfig())
+    val overlayConfig: StateFlow<ReelCounterOverlayConfig> = _overlayConfig.asStateFlow()
 
     private val _weekOffset = MutableLiveData(0)
     val weekOffset: LiveData<Int> = _weekOffset
@@ -51,6 +59,14 @@ class ReelCounterViewModel(application: Application) : AndroidViewModel(applicat
 
     private val dayLabelFormatter = DateTimeFormatter.ofPattern("MMM d")
 
+    init {
+        viewModelScope.launch {
+            dataStoreManager.settings.collectLatest { settings ->
+                _overlayConfig.value = settings.reelCounterOverlayConfig
+            }
+        }
+    }
+
     fun initialize() {
         viewModelScope.launch {
             loadWeekData()
@@ -61,6 +77,12 @@ class ReelCounterViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             dataStoreManager.updateReelCounterState(isActive)
             requestReelCounterRefresh()
+        }
+    }
+
+    fun updateOverlayConfig(config: ReelCounterOverlayConfig) {
+        viewModelScope.launch {
+            dataStoreManager.updateReelCounterOverlayConfig(config)
         }
     }
 
@@ -114,14 +136,13 @@ class ReelCounterViewModel(application: Application) : AndroidViewModel(applicat
         for (i in 0..6) {
             val date = weekStart.plusDays(i.toLong())
             if (date == today) todayIndex = i
-            
+
             val isFuture = date.isAfter(today)
             val count = if (isFuture) 0 else {
                 val dbDateStr = date.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
                 dbRecords[dbDateStr]?.count ?: 0
             }
 
-            // The value is passed as Float for the graph
             val dateMillis = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
             dayDataList.add(WeeklyBarGraphView.DayData(dayLabels[i], count.toFloat(), dateMillis))
         }
@@ -141,7 +162,7 @@ class ReelCounterViewModel(application: Application) : AndroidViewModel(applicat
         val today = LocalDate.now()
         val isFuture = date.isAfter(today)
         val isToday = date == today
-        
+
         val dbDateStr = date.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
         val count = if (isFuture) 0 else reelStatsDao.getCount(dbDateStr) ?: 0
 

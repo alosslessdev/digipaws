@@ -3,8 +3,6 @@ name: Release CI
 on:
   push:
     branches: [ "kt-rewrite" ]
-  pull_request:
-    branches: [ "kt-rewrite" ]
   workflow_dispatch:
 
 jobs:
@@ -17,11 +15,11 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4.2.1
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
@@ -135,22 +133,16 @@ jobs:
           # Extract VirusTotal scan URL (output format from the action is "filename=URL")
           VT_URL=$(echo "$VT_ANALYSIS" | cut -d'=' -f2-)
           
-          # Properly formatted Telegram Markdown message (with VirusTotal link)
-          MESSAGE="*New Beta Release*%0A%0A"
-          MESSAGE+="A new signed beta APK is ready and has **passed** the VirusTotal scan!%0A%0A"
-          MESSAGE+="*Commit:* [$COMMIT_SHA]($COMMIT_URL)%0A"
-          MESSAGE+="*Message:* $COMMIT_MESSAGE%0A%0A"
-          MESSAGE+="*Author:* [$COMMIT_AUTHOR]($AUTHOR_URL)%0A"
-          MESSAGE+="*VirusTotal Check:* [View Full Scan Results]($VT_URL)%0A%0A"
-          MESSAGE+="Built with GitHub Actions on $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          # Properly formatted Telegram HTML message
+          MESSAGE=$(printf "<b>New Beta Release</b>\n\nA new signed beta APK is ready and has passed the VirusTotal scan!\n\n<b>Commit:</b> <a href=\"%s\">%s</a>\n<b>Message:</b> %s\n\n<b>Author:</b> <a href=\"%s\">%s</a>\n<b>VirusTotal Check:</b> <a href=\"%s\">View Full Scan Results</a>\n\n<i>Built with GitHub Actions on %s</i>" "$COMMIT_URL" "${COMMIT_SHA:0:7}" "$COMMIT_MESSAGE" "$AUTHOR_URL" "$COMMIT_AUTHOR" "$VT_URL" "$(date -u +'%Y-%m-%d %H:%M:%S UTC')")
           
           # Send message with file using hardcoded Chat ID and Topic ID
           curl -X POST \
             -F chat_id="-1002199979475" \
             -F message_thread_id="437" \
-            -F document=@"$APK_PATH" \
-            -F "caption=$MESSAGE" \
-            -F "parse_mode=Markdown" \
+            -F "document=@$APK_PATH" \
+            --form-string "caption=$MESSAGE" \
+            -F "parse_mode=HTML" \
             "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument"
 
       - name: Upload Signed Fdroid Release APK

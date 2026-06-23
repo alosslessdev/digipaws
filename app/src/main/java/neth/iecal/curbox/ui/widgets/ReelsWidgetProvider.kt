@@ -3,12 +3,15 @@ package neth.iecal.curbox.ui.widgets
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.util.Log
 import android.widget.RemoteViews
+import kotlinx.coroutines.runBlocking
 import neth.iecal.curbox.R
+import neth.iecal.curbox.data.db.AppDatabase
 import neth.iecal.curbox.utils.TimeTools
 
 class ReelsWidgetProvider : AppWidgetProvider() {
@@ -38,7 +41,6 @@ class ReelsWidgetProvider : AppWidgetProvider() {
         try {
             when (intent.action) {
                 ACTION_WIDGET_REFRESH -> handleRefresh(context, intent)
-                "android.appwidget.action.APPWIDGET_UPDATE" -> handleRefresh(context, intent)
                 else -> Log.d(TAG, "Received unhandled action: ${intent.action}")
             }
         } catch (e: Exception) {
@@ -49,11 +51,7 @@ class ReelsWidgetProvider : AppWidgetProvider() {
     private fun handleRefresh(context: Context, intent: Intent) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val widgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
-
-        if (widgetIds == null) {
-            Log.e(TAG, "No widget IDs provided for refresh")
-            return
-        }
+            ?: appWidgetManager.getAppWidgetIds(ComponentName(context, ReelsWidgetProvider::class.java))
 
         widgetIds.forEach { widgetId ->
             updateWidget(context, appWidgetManager, widgetId)
@@ -66,63 +64,59 @@ class ReelsWidgetProvider : AppWidgetProvider() {
         widgetId: Int
     ) {
         try {
+            val currentDate = TimeTools.getCurrentDate()
+            val yesterdayDate = TimeTools.getPreviousDate()
+
+            var reelsCountToday = 0
+            var reelsCountYesterday = 0
+            runBlocking {
+                try {
+                    val dao = AppDatabase.getInstance(context).reelStatsDao()
+                    reelsCountToday = dao.getCount(currentDate) ?: 0
+                    reelsCountYesterday = dao.getCount(yesterdayDate) ?: 0
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error reading reel stats from DB", e)
+                }
+            }
+
+            val softGreen = Color.parseColor("#4CAF50")
+            val softRed = Color.parseColor("#F44336")
+
             val views = RemoteViews(context.packageName, R.layout.widget_reels_count).apply {
-                // Update reels count
-                val currentDate = TimeTools.getCurrentDate()
-                val yesterdayDate = TimeTools.getPreviousDate()
-
-                val softGreen = Color.parseColor("#4CAF50") // Muted green
-                val softRed = Color.parseColor("#F44336")  // Muted red
-
-                var reelsCountToday = 0
-                var reelsCountYesterday = 0
-                kotlinx.coroutines.runBlocking {
-                    try {
-                        val db = neth.iecal.curbox.data.db.AppDatabase.getInstance(context)
-                        val dao = db.reelStatsDao()
-                        reelsCountToday = dao.getCount(currentDate) ?: 0
-                        reelsCountYesterday = dao.getCount(yesterdayDate) ?: 0
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-
-                // Calculate the change percentage
-                val changePercentage = if (reelsCountYesterday > 0) {
-                    ((reelsCountToday - reelsCountYesterday).toDouble() / reelsCountYesterday) * 100
-                } else {
-                    0.0 // No change percentage if no reels were scrolled yesterday
-                }
-
-                // Format and set the change percentage for display
-                when {
-                    changePercentage < 0 -> { // Reduction in usage
-                        setTextViewText(
-                            R.id.widget_reels_cout_percentage,
-                            "-%.1f%%".format(-changePercentage) // Remove negative sign when displaying reduction
-                        )
-                        setTextColor(R.id.widget_reels_cout_percentage, softGreen) // Green for reduction
-                    }
-                    changePercentage > 0 -> { // Increase in usage
-                        setTextViewText(
-                            R.id.widget_reels_cout_percentage,
-                            "+%.1f%%".format(changePercentage)
-                        )
-                        setTextColor(R.id.widget_reels_cout_percentage, softRed) // Red for increase
-                    }
-                    else -> { // No change
-                        setTextViewText(
-                            R.id.widget_reels_cout_percentage,
-                            "0.0%" // Display no change
-                        )
-                        setTextColor(R.id.widget_reels_cout_percentage, Color.WHITE) // Neutral color for no change
-                    }
-                }
-
-
                 setTextViewText(R.id.widget_reels_cout, formatNumber(reelsCountToday.toLong()))
 
-                // Set up refresh button
+                when {
+                    reelsCountYesterday == 0 -> {
+                        // No baseline from yesterday — can't compute a meaningful percentage
+                        setTextViewText(R.id.widget_reels_cout_percentage, "N/A")
+                        setTextColor(R.id.widget_reels_cout_percentage, Color.WHITE)
+                    }
+                    else -> {
+                        val changePercentage =
+                            ((reelsCountToday - reelsCountYesterday).toDouble() / reelsCountYesterday) * 100
+                        when {
+                            changePercentage < 0 -> {
+                                setTextViewText(
+                                    R.id.widget_reels_cout_percentage,
+                                    "-%.1f%%".format(-changePercentage)
+                                )
+                                setTextColor(R.id.widget_reels_cout_percentage, softGreen)
+                            }
+                            changePercentage > 0 -> {
+                                setTextViewText(
+                                    R.id.widget_reels_cout_percentage,
+                                    "+%.1f%%".format(changePercentage)
+                                )
+                                setTextColor(R.id.widget_reels_cout_percentage, softRed)
+                            }
+                            else -> {
+                                setTextViewText(R.id.widget_reels_cout_percentage, "0.0%")
+                                setTextColor(R.id.widget_reels_cout_percentage, Color.WHITE)
+                            }
+                        }
+                    }
+                }
+
                 val refreshIntent = createRefreshIntent(context, widgetId)
                 val pendingIntent = PendingIntent.getBroadcast(
                     context,
@@ -131,7 +125,6 @@ class ReelsWidgetProvider : AppWidgetProvider() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 setOnClickPendingIntent(R.id.refresh_stats, pendingIntent)
-
             }
 
             appWidgetManager.updateAppWidget(widgetId, views)
@@ -147,7 +140,8 @@ class ReelsWidgetProvider : AppWidgetProvider() {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
         }
     }
-    fun formatNumber(number: Long): String {
+
+    private fun formatNumber(number: Long): String {
         val suffixes = arrayOf("", "k", "m", "b", "t")
         var value = number.toDouble()
         var index = 0
@@ -163,5 +157,4 @@ class ReelsWidgetProvider : AppWidgetProvider() {
             String.format("%.1f%s", value, suffixes[index])
         }
     }
-
 }

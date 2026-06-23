@@ -3,7 +3,6 @@ package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -22,8 +21,8 @@ import neth.iecal.curbox.databinding.FragmentCreateAppGroupBinding
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.AppUsageConfig
+import neth.iecal.curbox.utils.ViewUtils
 import java.util.UUID
-import kotlin.jvm.java
 
 class CreateAppGroupFragment : Fragment() {
 
@@ -32,7 +31,6 @@ class CreateAppGroupFragment : Fragment() {
     }
 
     private var _binding: FragmentCreateAppGroupBinding? = null
-    // This property is only valid between onCreateView and onDestroyView.
     private val binding get() = _binding!!
 
     private var selectedApps: ArrayList<String> = arrayListOf()
@@ -65,10 +63,7 @@ class CreateAppGroupFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        binding.toolbar.setNavigationOnClickListener {
-            requireActivity().finish()
-        }
+        setupBlockingTypeSelection()
 
         var isEditing = false
         var existingGroup: AppGroup? = null
@@ -88,34 +83,36 @@ class CreateAppGroupFragment : Fragment() {
                     if (group != null && !isEditing) {
                         isEditing = true
                         existingGroup = group
-                        binding.toolbar.title = "Edit App Group"
+                        binding.textView2.text = "Edit App Group"
                         binding.etGroupName.setText(group.name)
                         selectedApps = ArrayList(group.selectedPackages)
                         binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
 
+                        binding.btnDeleteGroup.visibility = View.VISIBLE
+                        binding.btnDeleteGroup.setOnClickListener {
+                            isDeleting = true
+                            viewModel.deleteGroup(group.id)
+                            Toast.makeText(requireContext(), getString(R.string.group_deleted), Toast.LENGTH_SHORT).show()
+                            requireActivity().finish()
+                        }
+
                         if (group.blockingType == AppBlockingType.Usage) {
-                            binding.rgBlockingType.check(R.id.rb_usage_based)
+                            binding.rbUsageBased.isChecked = true
+                            binding.rbTimeBased.isChecked = false
+                            binding.rbOnOpen.isChecked = false
                             viewModel.currentUsageConfig = Gson().fromJson(group.setting, AppUsageConfig::class.java)
-                        } else {
-                            binding.rgBlockingType.check(R.id.rb_time_based)
+                        } else if (group.blockingType == AppBlockingType.Timed) {
+                            binding.rbTimeBased.isChecked = true
+                            binding.rbUsageBased.isChecked = false
+                            binding.rbOnOpen.isChecked = false
                             viewModel.currentTimeConfig = Gson().fromJson(group.setting, AppTimeConfig::class.java)
+                        } else {
+                            binding.rbOnOpen.isChecked = true
+                            binding.rbUsageBased.isChecked = false
+                            binding.rbTimeBased.isChecked = false
+                            binding.btnConfigureSettings.visibility = View.GONE
                         }
                         viewModel.warningScrnConfig = group.warningScreenConfig
-
-                        binding.toolbar.menu.clear()
-                        val deleteItem = binding.toolbar.menu.add(0, 1001, 0, "Delete")
-                        deleteItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-                        binding.toolbar.setOnMenuItemClickListener { item ->
-                            if (item.itemId == 1001) {
-                                isDeleting = true
-                                viewModel.deleteGroup(group.id)
-                                Toast.makeText(requireContext(), getString(R.string.group_deleted), Toast.LENGTH_SHORT).show()
-                                requireActivity().finish()
-                                true
-                            } else {
-                                false
-                            }
-                        }
                     }
                 }
             }
@@ -128,7 +125,7 @@ class CreateAppGroupFragment : Fragment() {
         }
 
         binding.btnConfigureSettings.setOnClickListener {
-            val isUsageBased = binding.rgBlockingType.checkedRadioButtonId == R.id.rb_usage_based
+            val isUsageBased = binding.rbUsageBased.isChecked
 
             if (isUsageBased) {
                 UsageBasedSettingsFragment().show(parentFragmentManager, UsageBasedSettingsFragment.FRAGMENT_ID)
@@ -137,12 +134,53 @@ class CreateAppGroupFragment : Fragment() {
             }
         }
         binding.configureWarningScreen.setOnClickListener {
-            AppBlockerWarningConfigFragment().show(parentFragmentManager,
-                AppBlockerWarningConfigFragment.FRAGMENT_ID)
+            val groupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
+            val configFragment = neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.newInstance(
+                viewModel.warningScrnConfig, 
+                "result_warning_config",
+                isNew = groupId == null,
+                isOnOpen = binding.rbOnOpen.isChecked
+            )
+            parentFragmentManager.beginTransaction()
+                .hide(this)
+                .add(R.id.fragment_holder, configFragment)
+                .addToBackStack(null)
+                .commit()
+        }
+
+        parentFragmentManager.setFragmentResultListener("result_warning_config", viewLifecycleOwner) { _, bundle ->
+            val configStr = bundle.getString("result_config")
+            if (configStr != null) {
+                viewModel.warningScrnConfig = com.google.gson.Gson().fromJson(configStr, neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig::class.java)
+            }
         }
 
         binding.fabSaveGroup.setOnClickListener {
             saveGroup()
+        }
+    }
+
+    private fun setupBlockingTypeSelection() {
+        val radioButtons = listOf(binding.rbUsageBased, binding.rbTimeBased, binding.rbOnOpen)
+        
+        radioButtons.forEach { rb ->
+            rb.setOnClickListener {
+                radioButtons.forEach { it.isChecked = false }
+                rb.isChecked = true
+                binding.btnConfigureSettings.visibility = if (rb != binding.rbOnOpen) View.VISIBLE else View.GONE
+            }
+        }
+
+        binding.btnHelpUsage.setOnClickListener {
+            ViewUtils.showHelpPopup(it, "Set a daily time limit for these apps. Once reached, they will be blocked for the rest of the day.", "https://curbox.app/docs/reducers/app-pause/")
+        }
+
+        binding.btnHelpTime.setOnClickListener {
+            ViewUtils.showHelpPopup(it, "Allow these apps only during specific time intervals during the day (e.g., during work hours).", "https://curbox.app/docs/reducers/app-pause/")
+        }
+
+        binding.btnHelpOnOpen.setOnClickListener {
+            ViewUtils.showHelpPopup(it, "Show a warning screen every time you open these apps. Access is only allowed for the current session.", "https://curbox.app/docs/reducers/app-pause/")
         }
     }
 
@@ -159,8 +197,13 @@ class CreateAppGroupFragment : Fragment() {
             return
         }
 
-        val isUsageBased = binding.rgBlockingType.checkedRadioButtonId == R.id.rb_usage_based
-        val blockingType = if (isUsageBased) AppBlockingType.Usage else AppBlockingType.Timed
+        val isUsageBased = binding.rbUsageBased.isChecked
+        val isOnOpen = binding.rbOnOpen.isChecked
+        val blockingType = when {
+            isUsageBased -> AppBlockingType.Usage
+            isOnOpen -> AppBlockingType.OnOpen
+            else -> AppBlockingType.Timed
+        }
 
         val savedGroupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
         val isEditingRecord = savedGroupId != null
@@ -176,10 +219,12 @@ class CreateAppGroupFragment : Fragment() {
             isActive = if (isEditingRecord && targetExistingGroup != null) targetExistingGroup.isActive else true,
             setting = if(isUsageBased) {
                 Gson().toJson(viewModel.currentUsageConfig)
+            } else if (isOnOpen) {
+                ""
             } else {
                 Gson().toJson(viewModel.currentTimeConfig)
             },
-            warningScreenConfig = viewModel.warningScrnConfig
+            warningScreenConfig = viewModel.warningScrnConfig.copy(isOnOpenConfig = isOnOpen)
         )
 
         if (isEditingRecord && targetExistingGroup != null) {

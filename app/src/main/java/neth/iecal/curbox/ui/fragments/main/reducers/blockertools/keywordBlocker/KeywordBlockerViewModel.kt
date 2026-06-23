@@ -3,18 +3,23 @@ package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.data.models.KeywordBlocker
+import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.utils.DataStoreManager
+<<<<<<< HEAD
 import neth.iecal.curbox.utils.BridgeServiceManager
 import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
 import neth.iecal.curbox.utils.KeywordUsageTracker
+=======
+import neth.iecal.curbox.data.models.AppUsageConfig
+import neth.iecal.curbox.data.models.AppTimeConfig
+import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
 class KeywordBlockerViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
@@ -22,6 +27,10 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     private val _keywordBlockerConfig = MutableStateFlow(KeywordBlocker())
     val keywordBlockerConfig: StateFlow<KeywordBlocker> = _keywordBlockerConfig
+
+    var currentUsageConfig = AppUsageConfig()
+    var currentTimeConfig = AppTimeConfig()
+    var warningScrnConfig = AppBlockerWarningScreenConfig()
 
     init {
         viewModelScope.launch {
@@ -34,16 +43,21 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     private fun requestKeywordBlockerRefresh() {
         val intent = Intent(neth.iecal.curbox.blockers.KeywordBlocker.INTENT_ACTION_REFRESH_CONFIG)
+<<<<<<< HEAD
         BridgeServiceManager.sendBridgedBroadcast(application, intent)
+=======
+        getApplication<Application>().sendBroadcast(intent)
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     }
-    private fun updateConfig(newConfig: KeywordBlocker) {
+    private fun updateConfig(transform: (neth.iecal.curbox.data.models.KeywordBlocker) -> neth.iecal.curbox.data.models.KeywordBlocker) {
         viewModelScope.launch {
-            dataStoreManager.updateKeywordBlockerConfig(newConfig)
+            dataStoreManager.updateKeywordBlockerConfig(transform)
             requestKeywordBlockerRefresh()
         }
     }
 
     fun setIsActive(isActive: Boolean) {
+<<<<<<< HEAD
         updateConfig(_keywordBlockerConfig.value.copy(isActive = isActive))
     }
 
@@ -77,6 +91,9 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     fun setSearchRecursively(enabled: Boolean) {
         updateConfig(_keywordBlockerConfig.value.copy(searchRecursively = enabled))
+=======
+        updateConfig { it.copy(isActive = isActive) }
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     }
 
     fun setMatchSubstrings(enabled: Boolean) {
@@ -84,7 +101,45 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
     }
 
     fun setBlockAllExceptSupported(enabled: Boolean) {
-        updateConfig(_keywordBlockerConfig.value.copy(blockAllExceptSupported = enabled))
+        updateConfig { it.copy(blockAllExceptSupported = enabled) }
+    }
+
+    fun addGroup(group: KeywordGroup) {
+        updateConfig { config ->
+            val groups = config.keywordGroups.toMutableList()
+            groups.add(group)
+            config.copy(keywordGroups = groups)
+        }
+    }
+
+    fun updateGroupById(group: KeywordGroup) {
+        updateConfig { config ->
+            val groups = config.keywordGroups.toMutableList()
+            val index = groups.indexOfFirst { it.id == group.id }
+            if (index != -1) {
+                groups[index] = group
+            }
+            config.copy(keywordGroups = groups)
+        }
+    }
+
+    fun deleteGroup(groupId: String) {
+        updateConfig { config ->
+            val groups = config.keywordGroups.toMutableList()
+            groups.removeAll { it.id == groupId }
+            config.copy(keywordGroups = groups)
+        }
+    }
+
+    fun updateGroupActiveState(groupId: String, isActive: Boolean) {
+        updateConfig { config ->
+            val groups = config.keywordGroups.toMutableList()
+            val index = groups.indexOfFirst { it.id == groupId }
+            if (index != -1) {
+                groups[index] = groups[index].copy(isActive = isActive)
+            }
+            config.copy(keywordGroups = groups)
+        }
     }
 
     fun setTimeTrackingEnabled(enabled: Boolean) {

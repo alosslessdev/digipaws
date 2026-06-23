@@ -1,0 +1,542 @@
+package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared
+
+import android.content.Context
+import android.os.Bundle
+import android.transition.AutoTransition
+import android.transition.TransitionManager
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import com.journeyapps.barcodescanner.BarcodeEncoder
+import com.google.zxing.BarcodeFormat
+import com.google.gson.Gson
+import neth.iecal.curbox.R
+import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
+import neth.iecal.curbox.data.models.AppBlockingType
+import neth.iecal.curbox.databinding.FragmentWarningConfigBinding
+import java.util.UUID
+
+class WarningConfigFragment : Fragment() {
+
+    private var _binding: FragmentWarningConfigBinding? = null
+    private val binding get() = _binding!!
+
+    private var initialConfig: AppBlockerWarningScreenConfig? = null
+    private var currentQrMap = mutableMapOf<String, Long>()
+    private var pendingQrDuration = -1L
+
+    data class UnlockOption(
+        val title: String,
+        val subtext: String,
+        val isRecommended: Boolean = false
+    ) {
+        override fun toString(): String = title
+    }
+
+    private val challengeOptions = listOf(
+        UnlockOption("Never Unlock", "Total lockdown. No bypassing allowed."),
+        UnlockOption("Require effort to unlock", "In behavioral psychology, adding physical friction breaks the automatic habit loop, giving your brain a necessary pause to reconsider.", true),
+        UnlockOption("Wait to unlock", "Allows immediate access after a short wait.")
+    )
+
+    private val effortOptions = listOf(
+        UnlockOption("Unlock requires QR/Barcode scanning", "Scan any code (like a product box) to unlock.", true),
+        UnlockOption("Unlock requires typing a sentence", "Precisely type a long sentence to prove focus."),
+        UnlockOption("Unlock requires stating an intent", "Briefly describe your goal before accessing.")
+    )
+
+    private val noEffortOptions = listOf(
+        UnlockOption("Ask me how much time I need", "You choose the duration during each unlock."),
+        UnlockOption("Only give me a fixed amount of time", "Automatically locks after a set duration.", true)
+    )
+
+    private class UnlockOptionAdapter(context: Context, options: List<UnlockOption>) :
+        ArrayAdapter<UnlockOption>(context, R.layout.item_dropdown_with_subtext, options) {
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.item_dropdown_with_subtext, parent, false)
+            
+            val optionTitle = view.findViewById<TextView>(R.id.option_title)
+            val optionSubtext = view.findViewById<TextView>(R.id.option_subtext)
+            val recommendedBadge = view.findViewById<View>(R.id.recommended_badge)
+
+            getItem(position)?.let { option ->
+                optionTitle.text = option.title
+                optionSubtext.text = option.subtext
+                recommendedBadge.isVisible = option.isRecommended
+            }
+            
+            return view
+        }
+
+        override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+            return getView(position, convertView, parent)
+        }
+    }
+
+    private val barcodeLauncher = registerForActivityResult(ScanContract()) { result ->
+        if (result.contents != null) {
+            val duration = pendingQrDuration
+            currentQrMap[result.contents] = duration
+            updateQrList()
+            Toast.makeText(requireContext(), "QR Code Saved Successfully!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(requireContext(), "Scan cancelled", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val configStr = arguments?.getString(ARG_CONFIG)
+        initialConfig = if (configStr != null) {
+            Gson().fromJson(configStr, AppBlockerWarningScreenConfig::class.java)
+        } else null
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentWarningConfigBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupInitialState()
+        setupListeners()
+    }
+
+    private fun setupInitialState() {
+        val config = initialConfig ?: AppBlockerWarningScreenConfig()
+        val isOnOpen = arguments?.getBoolean(ARG_IS_ON_OPEN) == true
+        config.isOnOpenConfig = isOnOpen
+        
+        val isNew = arguments?.getBoolean(ARG_IS_NEW) ?: (arguments?.getString(ARG_CONFIG) == null)
+        
+        currentQrMap = config.qrKeys.toMutableMap()
+        updateQrList()
+
+        val challengeAdapter = UnlockOptionAdapter(requireContext(), challengeOptions)
+        binding.unlockChallengeDropdown.setAdapter(challengeAdapter)
+
+        if (!isNew) {
+            var (challengeIdx, secondaryIdx) = when {
+                config.isProceedDisabled -> 0 to -1
+                config.isQrUnlockRequirementEnabled -> 1 to 0
+                config.isTypingRequirementEnabled -> 1 to 1
+                config.isIntentRequirementEnabled -> 1 to 2
+                config.isDynamicIntervalSettingAllowed -> 2 to 0
+                else -> 2 to 1 // Fixed time
+            }
+
+            if (isOnOpen && challengeIdx == 2) {
+                secondaryIdx = 1
+            }
+
+            binding.unlockChallengeDropdown.setText(challengeOptions[challengeIdx].title, false)
+            updateSecondaryDropdown(challengeIdx)
+            
+            if (secondaryIdx != -1) {
+                val options = if (challengeIdx == 1) effortOptions else noEffortOptions
+                binding.secondaryBehaviorDropdown.setText(options[secondaryIdx].title, false)
+            }
+            updateUiVisibility(challengeIdx, secondaryIdx, animate = isOnOpen)
+        } else {
+            binding.secondaryBehaviorLayout.isVisible = false
+            binding.timingContainer.isVisible = false
+            binding.proceedDelayContainer.isVisible = false
+            binding.qrSetupContainer.isVisible = false
+            binding.typingSetupContainer.isVisible = false
+        }
+        
+        binding.typingSentenceEdit.setText(config.typingSentence)
+
+        binding.fixedTimeSlider.value = (config.timeInterval / 60000).toFloat().coerceIn(1f, 120f)
+        binding.timingTitle.text = "Fixed Unlock Duration: ${binding.fixedTimeSlider.value.toInt()} mins"
+
+        binding.proceedDelaySlider.value = config.proceedDelayInSecs.toFloat().coerceIn(0f, 60f)
+        binding.proceedDelayTitle.text = "Wait before unlocking: ${binding.proceedDelaySlider.value.toInt()}s"
+
+        binding.proceedLimitSwitch.isChecked = config.proceedLimitEnabled
+        binding.proceedLimitContainer.visibility = if (config.proceedLimitEnabled) View.VISIBLE else View.GONE
+
+        binding.allowedProceedsSlider.value = config.allowedProceeds.toFloat().coerceIn(1f, 20f)
+        binding.allowedProceedsTitle.text = "Allowed proceeds: ${binding.allowedProceedsSlider.value.toInt()}"
+
+        binding.proceedWindowSlider.value = config.proceedsTimeWindowMn.toFloat().coerceIn(1f, 240f)
+        binding.proceedWindowTitle.text = "Time window: ${binding.proceedWindowSlider.value.toInt()} mins"
+
+        binding.warningMsgEdit.setText(config.message)
+        binding.switchVibrateBrightness.isChecked = config.vibrateAndIncBrightness
+
+        if (isOnOpen) {
+            binding.timingContainer.visibility = View.GONE
+        }
+    }
+
+    private fun updateSecondaryDropdown(challengeIdx: Int) {
+        val isOnOpen = arguments?.getBoolean(ARG_IS_ON_OPEN) == true
+        
+        if (isOnOpen && challengeIdx == 2) {
+            binding.secondaryBehaviorLayout.visibility = View.GONE
+            binding.secondaryBehaviorDropdown.setText(noEffortOptions[1].title, false)
+            return
+        }
+
+        val options = when (challengeIdx) {
+            1 -> effortOptions
+            2 -> noEffortOptions
+            else -> null
+        }
+
+        if (options != null) {
+            val adapter = UnlockOptionAdapter(requireContext(), options)
+            binding.secondaryBehaviorDropdown.setAdapter(adapter)
+            binding.secondaryBehaviorLayout.visibility = View.VISIBLE
+        } else {
+            binding.secondaryBehaviorLayout.visibility = View.GONE
+        }
+    }
+
+    private fun setupListeners() {
+        binding.unlockChallengeDropdown.setOnItemClickListener { _, _, position, _ ->
+            updateSecondaryDropdown(position)
+            
+            val isOnOpen = arguments?.getBoolean(ARG_IS_ON_OPEN) == true
+            // Clear secondary dropdown when parent changes
+            if (!(isOnOpen && position == 2)) {
+                binding.secondaryBehaviorDropdown.setText("", false)
+            }
+            
+            val secondaryIdx = if (isOnOpen && position == 2) 1 else -1
+            updateUiVisibility(position, secondaryIdx, animate = true)
+        }
+
+        binding.secondaryBehaviorDropdown.setOnItemClickListener { _, _, position, _ ->
+            val challengeTitle = binding.unlockChallengeDropdown.text.toString()
+            val challengeIdx = challengeOptions.indexOfFirst { it.title == challengeTitle }
+            updateUiVisibility(challengeIdx, position, animate = true)
+        }
+
+        binding.fixedTimeSlider.addOnChangeListener { _, value, _ ->
+            binding.timingTitle.text = "Fixed Unlock Duration: ${value.toInt()} mins"
+        }
+
+        binding.proceedDelaySlider.addOnChangeListener { _, value, _ ->
+            binding.proceedDelayTitle.text = "Wait before unlocking: ${value.toInt()}s"
+        }
+
+        binding.proceedLimitSwitch.setOnCheckedChangeListener { _, isChecked ->
+            binding.proceedLimitContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+        binding.allowedProceedsSlider.addOnChangeListener { _, value, _ ->
+            binding.allowedProceedsTitle.text = "Allowed proceeds: ${value.toInt()}"
+        }
+
+        binding.proceedWindowSlider.addOnChangeListener { _, value, _ ->
+            binding.proceedWindowTitle.text = "Time window: ${value.toInt()} mins"
+        }
+
+        binding.advancedSettingsHeader.setOnClickListener {
+            val isCurrentlyVisible = binding.advancedSettingsContent.isVisible
+            TransitionManager.beginDelayedTransition(binding.mainContentContainer, AutoTransition())
+            binding.advancedSettingsContent.isVisible = !isCurrentlyVisible
+            binding.advancedSettingsArrow.animate().rotation(if (isCurrentlyVisible) 0f else 90f).start()
+        }
+
+        binding.btnGenerateQr.setOnClickListener {
+            showQrConfigDialog { duration ->
+                val uniqueStr = UUID.randomUUID().toString()
+                currentQrMap[uniqueStr] = duration
+                updateQrList()
+                
+                try {
+                    val barcodeEncoder = BarcodeEncoder()
+                    val bitmap = barcodeEncoder.encodeBitmap(uniqueStr, BarcodeFormat.QR_CODE, 800, 800)
+                    val imageView = ImageView(requireContext()).apply {
+                        setImageBitmap(bitmap)
+                        setPadding(32, 32, 32, 32)
+                    }
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("QR/Barcode Generated")
+                        .setMessage("Please save or print this QR/Barcode. You will need it to unlock.")
+                        .setView(imageView)
+                        .setPositiveButton("Done", null)
+                        .setNeutralButton("Save to Gallery") { _, _ ->
+                            saveImageToGallery(bitmap)
+                        }
+                        .show()
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), "Failed to generate QR image", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        binding.btnScanExistingQr.setOnClickListener {
+            showQrConfigDialog { duration ->
+                pendingQrDuration = duration
+                val options = ScanOptions()
+                options.setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
+                options.setPrompt("Scan a QR code or barcode to unlock the blocker later. You can use almost any code, even one from a product box at home, so there’s no need to print a new one!")
+                options.setCameraId(0)
+                options.setBeepEnabled(false)
+                options.setBarcodeImageEnabled(true)
+                options.setCaptureActivity(neth.iecal.curbox.ui.activity.PortraitCaptureActivity::class.java)
+                barcodeLauncher.launch(options)
+            }
+        }
+        
+        binding.saveconfigs.setOnClickListener {
+            val challengeStr = binding.unlockChallengeDropdown.text.toString()
+            val secondaryStr = binding.secondaryBehaviorDropdown.text.toString()
+            
+            val cIdx = challengeOptions.indexOfFirst { it.title == challengeStr }
+            
+            var isProceedDisabled = false
+            var isQrUnlockRequirementEnabled = false
+            var isTypingRequirementEnabled = false
+            var isIntentRequirementEnabled = false
+            var isDynamicIntervalSettingAllowed = false
+
+            when (cIdx) {
+                0 -> isProceedDisabled = true
+                1 -> {
+                    val sIdx = effortOptions.indexOfFirst { it.title == secondaryStr }
+                    when (sIdx) {
+                        0 -> isQrUnlockRequirementEnabled = true
+                        1 -> isTypingRequirementEnabled = true
+                        2 -> isIntentRequirementEnabled = true
+                    }
+                }
+                2 -> {
+                    val sIdx = noEffortOptions.indexOfFirst { it.title == secondaryStr }
+                    if (sIdx == 0) isDynamicIntervalSettingAllowed = true
+                }
+            }
+
+            val config = AppBlockerWarningScreenConfig(
+                message = binding.warningMsgEdit.text.toString(),
+                timeInterval = (binding.fixedTimeSlider.value.toInt()) * 60_000,
+                isDynamicIntervalSettingAllowed = isDynamicIntervalSettingAllowed,
+                isProceedDisabled = isProceedDisabled,
+                isWarningDialogHidden = false,
+                isQrUnlockRequirementEnabled = isQrUnlockRequirementEnabled,
+                qrKeys = if (isQrUnlockRequirementEnabled) currentQrMap else mapOf(),
+                isTypingRequirementEnabled = isTypingRequirementEnabled,
+                typingSentence = binding.typingSentenceEdit.text.toString(),
+                isIntentRequirementEnabled = isIntentRequirementEnabled,
+                proceedDelayInSecs = binding.proceedDelaySlider.value.toInt(),
+                vibrateAndIncBrightness = binding.switchVibrateBrightness.isChecked,
+                proceedLimitEnabled = binding.proceedLimitSwitch.isChecked,
+                allowedProceeds = binding.allowedProceedsSlider.value.toInt(),
+                proceedsTimeWindowMn = binding.proceedWindowSlider.value.toInt(),
+                isOnOpenConfig = arguments?.getBoolean(ARG_IS_ON_OPEN) == true
+            )
+            
+            val requestKey = arguments?.getString(ARG_REQUEST_KEY) ?: RESULT_KEY
+            parentFragmentManager.setFragmentResult(requestKey, Bundle().apply {
+                putString(RESULT_CONFIG, Gson().toJson(config))
+            })
+            parentFragmentManager.popBackStack()
+        }
+    }
+
+    private fun saveImageToGallery(bitmap: android.graphics.Bitmap) {
+        val context = requireContext()
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, "Unlock_QR_${System.currentTimeMillis()}.png")
+            put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/Curbox")
+                put(android.provider.MediaStore.Images.Media.IS_PENDING, 1)
+            }
+        }
+        
+        val uri = context.contentResolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        if (uri != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    values.clear()
+                    values.put(android.provider.MediaStore.Images.Media.IS_PENDING, 0)
+                    context.contentResolver.update(uri, values, null, null)
+                }
+                Toast.makeText(context, "Saved to Gallery!", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(context, "Failed to create MediaStore entry", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateUiVisibility(challengeIndex: Int, secondaryIndex: Int, animate: Boolean = false) {
+        if (animate) {
+            TransitionManager.beginDelayedTransition(
+                binding.mainContentContainer,
+                AutoTransition()
+            )
+        }
+
+        val isOnOpen = arguments?.getBoolean(ARG_IS_ON_OPEN) == true
+
+        binding.apply {
+            // Timing container visible if "Requires no effort" + "Fixed time" OR "Require effort" + (Typing or Intent)
+            timingContainer.visibility = if (!isOnOpen && ((challengeIndex == 2 && secondaryIndex == 1) || (challengeIndex == 1 && secondaryIndex != 0 && secondaryIndex != -1))) View.VISIBLE else View.GONE
+            
+            // Proceed delay visible for anything except "Never Unlock" or when nothing selected
+            proceedDelayContainer.visibility = if (challengeIndex != 0 && challengeIndex != -1) View.VISIBLE else View.GONE
+            
+            qrSetupContainer.visibility = if (challengeIndex == 1 && secondaryIndex == 0) View.VISIBLE else View.GONE
+            typingSetupContainer.visibility = if (challengeIndex == 1 && secondaryIndex == 1) View.VISIBLE else View.GONE
+        }
+    }
+    
+    private fun showQrConfigDialog(onConfigured: (Long) -> Unit) {
+        if (initialConfig?.isOnOpenConfig == true) {
+            onConfigured(-1L) // Default to dynamic/manual duration, but WarningActivity will override it anyway
+            return
+        }
+        val pickerContainer = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 24)
+        }
+        
+        val switchDynamic = com.google.android.material.switchmaterial.SwitchMaterial(requireContext()).apply {
+            text = "Use dynamic timing (User selects time during unlock)"
+            isChecked = true
+        }
+
+        val pickerInnerContainer = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = 24 }
+        }
+        
+        val timeLabel = TextView(requireContext()).apply {
+            text = "Fixed unlock duration: 5 mins"
+            setPadding(8, 8, 8, 8)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        
+        val slider = com.google.android.material.slider.Slider(requireContext()).apply {
+            valueFrom = 1f
+            valueTo = 120f
+            stepSize = 1f
+            value = 5f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            addOnChangeListener { _, value, _ ->
+                timeLabel.text = "Fixed unlock duration: ${value.toInt()} mins"
+            }
+        }
+
+        pickerInnerContainer.addView(timeLabel)
+        pickerInnerContainer.addView(slider)
+
+        switchDynamic.setOnCheckedChangeListener { _, isChecked ->
+            pickerInnerContainer.visibility = if (isChecked) View.GONE else View.VISIBLE
+        }
+
+        pickerContainer.addView(switchDynamic)
+        pickerContainer.addView(pickerInnerContainer)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("QR/Barcode Timing")
+            .setMessage("Configure the time behavior for this code before continuing.")
+            .setView(pickerContainer)
+            .setPositiveButton("Continue") { _, _ ->
+                val duration = if (switchDynamic.isChecked) -1L else slider.value.toLong() * 60_000L
+                onConfigured(duration)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun updateQrList() {
+        binding.qrListContainer.removeAllViews()
+        if (!currentQrMap.isEmpty()) {
+            currentQrMap.forEach { (uuid, duration) ->
+                val itemView = LinearLayout(requireContext()).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    setPadding(0, 16, 0, 16)
+                    weightSum = 1f
+                }
+                
+                val infoText = TextView(requireContext()).apply {
+                    val durationText = if (duration == -1L) "Dynamic time" else "${duration / 60000} mins"
+                    text = "QR/Barcode - $durationText"
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    setPadding(4, 4, 4, 4)
+                }
+                
+                val removeBtn = com.google.android.material.button.MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                    text = "Remove"
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    setOnClickListener {
+                        currentQrMap.remove(uuid)
+                        updateQrList()
+                    }
+                }
+                
+                itemView.addView(infoText)
+                itemView.addView(removeBtn)
+                binding.qrListContainer.addView(itemView)
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    companion object {
+        const val FRAGMENT_ID = "warning_config_fragment"
+        const val ARG_CONFIG = "arg_config"
+        const val ARG_REQUEST_KEY = "arg_request_key"
+        const val ARG_IS_NEW = "arg_is_new"
+        const val ARG_IS_ON_OPEN = "arg_is_on_open"
+        const val RESULT_KEY = "request_key_warning_config"
+        const val RESULT_CONFIG = "result_config"
+
+
+        fun newInstance(config: AppBlockerWarningScreenConfig, requestKey: String = RESULT_KEY, isNew: Boolean = false,isOnOpen: Boolean = false): WarningConfigFragment {
+            return WarningConfigFragment().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_CONFIG, Gson().toJson(config))
+                    putString(ARG_REQUEST_KEY, requestKey)
+                    putBoolean(ARG_IS_NEW, isNew)
+                    putBoolean(ARG_IS_ON_OPEN, isOnOpen)
+
+                }
+            }
+        }
+    }
+}

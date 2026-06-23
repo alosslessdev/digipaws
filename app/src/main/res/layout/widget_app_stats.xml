@@ -18,8 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:gravity="center">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -33,7 +32,7 @@
                 android:id="@+id/refresh_stats_screentime"
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:contentDescription="Refresh stats"
+                android:contentDescription="@string/desc_refresh_stats"
                 android:src="@drawable/baseline_refresh_24"
                 android:tint="?android:attr/colorAccent" />
         </LinearLayout>
@@ -48,7 +47,7 @@
             android:layout_weight="3"
             android:gravity="center_vertical"
             android:singleLine="true"
-            android:text="@string/val_0h_0m"
+            android:text="@string/value_zero_time"
             android:textColor="?android:attr/textColorPrimary"
             android:textStyle="bold" />
 
@@ -61,9 +60,8 @@
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:singleLine="true"
-            android:text="@string/val_1h_app"
+            android:text="@string/sample_usage_1h"
             android:textColor="?android:attr/textColorPrimary" />
-
 
         <TextView
             android:id="@+id/app_2_sm"
@@ -74,9 +72,8 @@
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:singleLine="true"
-            android:text="@string/val_1h_app"
+            android:text="@string/sample_usage_1h"
             android:textColor="?android:attr/textColorPrimary" />
-
 
         <TextView
             android:id="@+id/app_3_sm"
@@ -87,7 +84,7 @@
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:singleLine="true"
-            android:text="@string/val_1h_app"
+            android:text="@string/sample_usage_1h"
             android:textColor="?android:attr/textColorPrimary" />
 
     </LinearLayout>

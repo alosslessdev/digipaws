@@ -20,11 +20,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.Constants
+import neth.iecal.curbox.blockers.uihider.NodeFinder
 import neth.iecal.curbox.data.models.ReelBlocker
 import neth.iecal.curbox.data.models.ReelBlockingType
 import neth.iecal.curbox.data.models.ReelTimeConfig
 import neth.iecal.curbox.data.models.ReelCountConfig
 import neth.iecal.curbox.data.db.AppDatabase
+import neth.iecal.curbox.hardcoded.ReelAppConfig.Companion.reelData
 import neth.iecal.curbox.services.BaseBlockingService
 import neth.iecal.curbox.ui.activity.WarningActivity
 import neth.iecal.curbox.utils.TimeTools
@@ -39,6 +41,7 @@ class ReelBlocker : BaseBlocker() {
         const val INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN =
             "neth.iecal.curbox.refresh.reelblocker.cooldown"
 
+<<<<<<< HEAD
         fun findElementById(node: AccessibilityNodeInfo?, id: String?): AccessibilityNodeInfo? {
             if (node == null || id == null) return null
             try {
@@ -60,6 +63,8 @@ class ReelBlocker : BaseBlocker() {
             "com.google.android.youtube:id/reel_recycler",
             "app.revanced.android.youtube:id/reel_recycler"
         )
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
         private const val TARGET_EVENTS_MASK = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                 AccessibilityEvent.TYPE_VIEW_SCROLLED or
@@ -75,6 +80,7 @@ class ReelBlocker : BaseBlocker() {
     private var timeBAsedConfig : ReelTimeConfig? = null
     private var countBasedConfig : ReelCountConfig? = null
     private var currentDailyCount: Int = 0
+    private var currentCountDate: String? = null
     private var settingsJob: Job? = null
     private var countJob: Job? = null
     
@@ -90,9 +96,14 @@ class ReelBlocker : BaseBlocker() {
         event: AccessibilityEvent?
     ){
         fun showWarningScreen(viewId: String){
+<<<<<<< HEAD
             try {
                 if(service.isDelayOver(service.lastBackPressTimeStamp,1000)) {
                     service.pressBack()
+=======
+            if(service.isDelayOver(3000)) {
+                service.pressBack()
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
                     if (reelBlockerConfig.warningScreenConfig.isWarningDialogHidden) {
                         return
@@ -122,6 +133,7 @@ class ReelBlocker : BaseBlocker() {
         }
 
         val node = service.rootInActiveWindow
+<<<<<<< HEAD
         if(node==null) {
             return
         }
@@ -156,8 +168,48 @@ class ReelBlocker : BaseBlocker() {
                 }
             } catch (e: Exception) {
                 AppLogger.functionError(TAG, "doViewBlockerCheck.forEach", e)
+=======
+        if (node == null) return
+        
+        val pkg = event.packageName?.toString() ?: return
+        val data = reelData[pkg] ?: return
+        val viewId = data.viewId
+
+        if(isViewOpened(node, viewId)){
+            Log.d("reelblocker","view found")
+            for (req in data.requiresPresent) {
+                if (!NodeFinder.exists(node, req)) return
+            }
+            Log.d("reelblocker","all present")
+
+            for (req in data.requiresAbsent) {
+                if (NodeFinder.exists(node, req)) return
+            }
+            Log.d("reelblocker","all absent")
+
+            if (isCooldownActive(viewId)) {
+                return
+            }
+
+            when(reelBlockerConfig.blockingType) {
+                ReelBlockingType.TIMED -> {
+                    val endAllowedMillis = getEndTimeInMillis()
+                    if(endAllowedMillis==null) {
+                        showWarningScreen(viewId)
+                    }
+                }
+                ReelBlockingType.USAGE -> TODO()
+                ReelBlockingType.REEL_COUNT -> {
+                    ensureCountFlowForToday()
+                    val limit = getDailyReelCountLimit()
+                    if (limit != null && limit > 0 && currentDailyCount >= limit) {
+                        showWarningScreen(viewId)
+                    }
+                }
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             }
         }
+        
         lastEventTimeStamp = SystemClock.uptimeMillis()
     }
 
@@ -209,6 +261,7 @@ class ReelBlocker : BaseBlocker() {
                 }
             }
 
+<<<<<<< HEAD
             val db = AppDatabase.getInstance(service)
             countJob = CoroutineScope(Dispatchers.IO).launch {
                 try {
@@ -218,6 +271,31 @@ class ReelBlocker : BaseBlocker() {
                 } catch (e: Exception) {
                     AppLogger.functionError(TAG, "setupBlocker.countJob", e)
                 }
+=======
+        launchCountFlow(TimeTools.getCurrentDate())
+    }
+
+    /**
+     * Re-subscribes currentDailyCount to today's row. Room's flow only emits when the
+     * queried row changes, so a subscription bound to yesterday's date never sees today's
+     * writes — without this, yesterday's cap keeps blocking after midnight.
+     */
+    private fun ensureCountFlowForToday() {
+        val today = TimeTools.getCurrentDate()
+        if (today != currentCountDate) {
+            currentDailyCount = 0
+            launchCountFlow(today)
+        }
+    }
+
+    private fun launchCountFlow(date: String) {
+        countJob?.cancel()
+        currentCountDate = date
+        val db = AppDatabase.getInstance(service)
+        countJob = CoroutineScope(Dispatchers.IO).launch {
+            db.reelStatsDao().getCountFlow(date).collectLatest { count ->
+                currentDailyCount = count ?: 0
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             }
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "setupBlocker", e)
@@ -279,13 +357,13 @@ class ReelBlocker : BaseBlocker() {
     }
 
     private fun isViewOpened(rootNode: AccessibilityNodeInfo, viewId: String): Boolean {
-        val viewNode =
-            findElementById(rootNode, viewId)
+        val viewNode = NodeFinder.findFirst(rootNode, viewId) ?: return false
         val nodeRect = Rect()
-        viewNode?.getBoundsInScreen(nodeRect)
+        viewNode.getBoundsInScreen(nodeRect)
+        NodeFinder.recycle(viewNode)
         val isOffScreenLeft = nodeRect.right <= 0
         val isOffScreenRight = nodeRect.left >= screenWidth
-        return (viewNode != null && !isOffScreenLeft && !isOffScreenRight)
+        return !isOffScreenLeft && !isOffScreenRight
     }
 
     private fun getDailyReelCountLimit(): Int? {

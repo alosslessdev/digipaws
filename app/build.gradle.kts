@@ -20,9 +20,10 @@ android {
         applicationId = "neth.iecal.curbox"
         minSdk = 26
         targetSdk = 34
-        versionCode = 50
-        versionName = "5"
+        versionCode = 1
+        versionName = "1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        resValue("string", "app_name", "Curbox")
     }
 
     productFlavors {
@@ -69,6 +70,11 @@ android {
                 }
             }
         }
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            resValue("string", "app_name", "Debug Curbox")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -80,6 +86,7 @@ android {
     buildFeatures {
         viewBinding = true
         buildConfig = true
+        aidl = true
     }
 }
 
@@ -100,6 +107,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
 
+    // QR Scanner & Generator
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    
     // Shizuku dependecies
     implementation (libs.api)
     implementation (libs.provider)
@@ -124,18 +134,20 @@ androidComponents {
             
             doLast {
                 val adbPath = sdkComponents.adb.get().asFile.absolutePath
-                val appId = "neth.iecal.curbox"
+                val appId = variant.applicationId.get()
                 Thread.sleep(2000)
                 // Grant Accessibility Permission
                 exec {
-                    val combinedServices = "$appId/$appId.services.AppBlockerService:$appId/$appId.services.UsageTrackingService"
+                    val baseId = "neth.iecal.curbox"
+                    val combinedServices = "$appId/$baseId.services.AppBlockerService:$appId/$baseId.services.UsageTrackingService"
 
                     commandLine(adbPath, "shell", "settings", "put", "secure", "enabled_accessibility_services", combinedServices)
                 }
-                
+
                 // Launch MainActivity
                 exec {
-                    commandLine(adbPath, "shell", "am", "start", "-n", "$appId/$appId.ui.activity.FragmentActivity")
+                    val baseId = "neth.iecal.curbox"
+                    commandLine(adbPath, "shell", "am", "start", "-n", "$appId/$baseId.ui.activity.FragmentActivity")
                 }
             }
         }

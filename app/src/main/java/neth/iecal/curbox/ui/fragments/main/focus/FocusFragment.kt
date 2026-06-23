@@ -13,20 +13,30 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.RecyclerView
+import java.util.Locale
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.utils.ViewUtils
 import neth.iecal.curbox.R
 import neth.iecal.curbox.databinding.FragmentFocusBinding
+<<<<<<< HEAD
 import neth.iecal.curbox.utils.TimeTools
 import neth.iecal.curbox.utils.BridgeServiceManager
+=======
+import androidx.core.view.isNotEmpty
+import kotlin.math.abs
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
 class FocusFragment : Fragment() {
 
     private var _binding: FragmentFocusBinding? = null
     private val binding get() = _binding!!
-    
+
     private val viewModel: FocusViewModel by activityViewModels()
 
     private var isProgrammaticScroll = false
+    private var itemWidthPx = 0
+    private val snapHelper = LinearSnapHelper()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -42,41 +52,89 @@ class FocusFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.currentRunningFocus.collect { (groupId, endTime) ->
-                        if (groupId != null) {
-                            binding.activeContainer.visibility = View.VISIBLE
-                            binding.setupContainer.visibility = View.GONE
+                    viewModel.currentRunningFocus.combine(viewModel.groups) { focus, groups ->
+                        focus to groups
+                    }.collect { (focus, groups) ->
+                        val b = _binding ?: return@collect
+                        val (groupId, endTime) = focus
+                        val isRunning = groupId != null
+                        b.tvActiveGroup.visibility = if (isRunning) View.VISIBLE else View.GONE
+                        b.btnGoToStats.visibility = if (isRunning) View.GONE else View.VISIBLE
+                        b.tvSeconds.text = if (isRunning) "" else "mins"
 
-                            val group = viewModel.groups.value.find { it.groupId == groupId }
-                            binding.tvActiveGroup.text = group!!.groupName
+                        if (isRunning) {
+                            b.btnStartConfig.text = getString(R.string.focus_end_session)
+                        } else {
+                            b.btnStartConfig.text = if (groups.isEmpty()) getString(R.string.focus_create_group) else getString(R.string.focus_start)
+                        }
 
-                            binding.btnStop.visibility = if (group.exitable) View.VISIBLE else View.GONE
+                        if (isRunning) {
+                            b.rvRuler.stopScroll()
+                            snapHelper.attachToRecyclerView(null)
+                            val group = groups.find { it.groupId == groupId }
+                            b.tvActiveGroup.text = group?.groupName
+                            b.btnStartConfig.isEnabled = group?.exitable == true
                             viewModel.startTimer(endTime)
                         } else {
-                            binding.activeContainer.visibility = View.GONE
-                            binding.setupContainer.visibility = View.VISIBLE
+                            snapHelper.attachToRecyclerView(b.rvRuler)
+                            b.btnStartConfig.isEnabled = true
+                            b.tvMinutes.text = viewModel.selectedMins.toString()
+                            scrollToMinute(viewModel.selectedMins, smooth = false)
                         }
                     }
                 }
 
                 launch {
-                    viewModel.allSessions.collect { sessions ->
-                        val runningAuto = sessions.find { it.wasAutoFocus && it.status == 0 }
-                        if (runningAuto != null) {
-                            val group = viewModel.autoFocusGroups.value.find { it.groupId == runningAuto.groupId }
-                            if (group != null) {
-                                binding.cvActiveAutoFocus.visibility = View.VISIBLE
-                                binding.textHeader.visibility = View.GONE
-                                val now = java.util.Calendar.getInstance()
-                                val calDay = now.get(java.util.Calendar.DAY_OF_WEEK)
-                                val currentDay = if (calDay == java.util.Calendar.SUNDAY) 6 else calDay - 2
-                                val currentMinutes = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
-                                val intervals = group.dailyIntervals[currentDay] ?: emptyList()
-                                val activeInterval = intervals.find { interval ->
-                                    val start = interval.startHour * 60 + interval.startMinute
-                                    val end = interval.endHour * 60 + interval.endMinute
-                                    if (start <= end) currentMinutes in start until end else currentMinutes >= start || currentMinutes < end
+                    var lastTotalMinutesLeft = -1.0
+                    var floatPixelAccumulator = 0.0
+
+                    viewModel.currentRunningTimer.collect { time ->
+                        val b = _binding ?: return@collect
+                        val currentFocus = viewModel.currentRunningFocus.value
+                        if (currentFocus.first != null && time > 0) {
+                            val totalMinutesLeft = time / 60000.0
+                            val minutes = (time / 60000).toInt()
+                            val seconds = ((time % 60000) / 1000).toInt()
+
+                            b.tvMinutes.text = minutes.toString()
+                            b.tvSeconds.text = String.format(Locale.getDefault(), ":%02d", seconds)
+
+                            if (b.rvRuler.width > 0 && b.rvRuler.isNotEmpty()) {
+                                // Dynamically fetch the exact physical width of a rendered item
+                                if (itemWidthPx > 0) {
+                                    if (lastTotalMinutesLeft < 0 || abs(lastTotalMinutesLeft - totalMinutesLeft) > 1.0) {
+                                        // Absolute (re)sync: place the centered tick on the remaining time.
+                                        // scrollToPositionWithOffset places the item's left edge at
+                                        // paddingLeft + offset, and paddingLeft already equals the
+                                        // centering padding, so offset 0 centers integerPart. Shift it
+                                        // left by the fractional part to land between two ticks.
+                                        val fractionalPart = (totalMinutesLeft - totalMinutesLeft.toInt()).toFloat()
+                                        val offset = -(fractionalPart * itemWidthPx).toInt()
+
+                                        isProgrammaticScroll = true
+                                        (b.rvRuler.layoutManager as LinearLayoutManager)
+                                            .scrollToPositionWithOffset(totalMinutesLeft.toInt(), offset)
+                                        isProgrammaticScroll = false // Reset instantly, onScrolled is synchronous
+
+                                        floatPixelAccumulator = 0.0
+                                    } else {
+                                        // Smoothly scroll the per-tick delta to prevent layout thrashing.
+                                        // Time decreases, so deltaMinutes > 0 and we scroll back (negative
+                                        // dx) toward lower values, keeping the strip in sync with tvMinutes.
+                                        val deltaMinutes = lastTotalMinutesLeft - totalMinutesLeft
+                                        floatPixelAccumulator += deltaMinutes * itemWidthPx
+                                        val pixelsToScroll = floatPixelAccumulator.toInt()
+
+                                        if (pixelsToScroll != 0) {
+                                            isProgrammaticScroll = true
+                                            b.rvRuler.scrollBy(-pixelsToScroll, 0)
+                                            isProgrammaticScroll = false
+                                            floatPixelAccumulator -= pixelsToScroll
+                                        }
+                                    }
+                                    lastTotalMinutesLeft = totalMinutesLeft
                                 }
+<<<<<<< HEAD
                                 if (activeInterval != null) {
                                     val startStr = String.format("%02d:%02d", activeInterval.startHour, activeInterval.startMinute)
                                     val endStr = String.format("%02d:%02d", activeInterval.endHour, activeInterval.endMinute)
@@ -94,10 +152,12 @@ class FocusFragment : Fragment() {
                             } else {
                                 binding.cvActiveAutoFocus.visibility = View.GONE
                                 binding.textHeader.visibility = View.VISIBLE
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
                             }
                         } else {
-                            binding.cvActiveAutoFocus.visibility = View.GONE
-                            binding.textHeader.visibility = View.VISIBLE
+                            // Reset state when timer stops
+                            lastTotalMinutesLeft = -1.0
                         }
 
                         // Show active recurring manual focus groups
@@ -133,17 +193,12 @@ class FocusFragment : Fragment() {
                         }
                     }
                 }
-
-                launch {
-                    viewModel.currentRunningTimer.collect { time ->
-                        binding.tvCountdown.text = TimeTools.formatTimeInHHMM(time)
-                    }
-                }
             }
         }
         setupRuler()
         setupClicks()
     }
+<<<<<<< HEAD
     override fun onResume() {
         super.onResume()
         viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -156,13 +211,10 @@ class FocusFragment : Fragment() {
             }
         }
     }
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
     private fun setupClicks() {
-        binding.btn15m.setOnClickListener { scrollToMinute(15) }
-        binding.btn30m.setOnClickListener { scrollToMinute(30) }
-        binding.btn60m.setOnClickListener { scrollToMinute(60) }
-        binding.btn120m.setOnClickListener { scrollToMinute(120) }
-
         binding.btnGoToStats.setOnClickListener {
             parentFragmentManager.beginTransaction()
                 .replace(R.id.fragment_holder, FocusStatsFragment())
@@ -171,68 +223,86 @@ class FocusFragment : Fragment() {
         }
 
         binding.btnStartConfig.setOnClickListener {
-            FocusSetupBottomSheet().show(parentFragmentManager, FocusSetupBottomSheet.FRAGMENT_ID)
+            if (viewModel.currentRunningFocus.value.first != null) {
+                viewModel.forceStopFocus()
+            } else {
+                FocusSetupBottomSheet().show(parentFragmentManager, FocusSetupBottomSheet.FRAGMENT_ID)
+            }
         }
 
-        binding.btnStop.setOnClickListener {
-            viewModel.forceStopFocus()
+        binding.btnHelp.setOnClickListener {
+            ViewUtils.showHelpPopup(it, "Focus mode helps you stay away from distractions for a set period of time.", "https://curbox.app/docs/focus/focus-mode/")
         }
-
     }
 
 
     private fun updateTime(pos:Int){
-        viewModel.selectedMins = pos + 1
-        binding.tvMinutes.text = viewModel.selectedMins.toString()
+        val b = _binding ?: return
+        viewModel.selectedMins = pos.coerceAtLeast(1)
+        b.tvMinutes.text = viewModel.selectedMins.toString()
+        b.tvSeconds.text = "mins"
     }
 
     private fun setupRuler() {
+        val bInitial = _binding ?: return
+        val initialSelectedMins = viewModel.selectedMins
+        isProgrammaticScroll = true
+
         val layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-        binding.rvRuler.layoutManager = layoutManager
-        binding.rvRuler.adapter = RulerAdapter(240)
+        bInitial.rvRuler.layoutManager = layoutManager
+        bInitial.rvRuler.adapter = RulerAdapter(240)
 
-        val snapHelper = LinearSnapHelper()
-        snapHelper.attachToRecyclerView(binding.rvRuler)
+        bInitial.rvRuler.setOnTouchListener { _, _ ->
+            viewModel.currentRunningFocus.value.first != null
+        }
 
-        binding.rvRuler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+        snapHelper.attachToRecyclerView(bInitial.rvRuler)
+
+        bInitial.rvRuler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                if (isProgrammaticScroll) return
+                if (isProgrammaticScroll || viewModel.currentRunningFocus.value.first != null) return
                 val centerView = snapHelper.findSnapView(layoutManager) ?: return
                 val pos = layoutManager.getPosition(centerView)
                 updateTime(pos)
             }
         })
 
-        binding.rvRuler.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+        bInitial.rvRuler.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
-                if (_binding == null || binding.rvRuler.width == 0) return
-                binding.rvRuler.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                val b = _binding ?: return
+                if (b.rvRuler.width == 0) return
+                b.rvRuler.viewTreeObserver.removeOnGlobalLayoutListener(this)
 
-                val itemWidthPx = (20 * resources.displayMetrics.density).toInt()
-                val padding = (binding.rvRuler.width / 2) - (itemWidthPx / 2)
-                binding.rvRuler.setPadding(padding, 0, padding, 0)
-                binding.rvRuler.clipToPadding = false
+                itemWidthPx = (20 * resources.displayMetrics.density).toInt()
+                val padding = (b.rvRuler.width / 2) - (itemWidthPx / 2)
+                b.rvRuler.setPadding(padding, 0, padding, 0)
+                b.rvRuler.clipToPadding = false
+
+                b.rvRuler.post {
+                    if (viewModel.currentRunningFocus.value.first == null) {
+                        scrollToMinute(initialSelectedMins, smooth = false)
+                    }
+                }
             }
         })
     }
 
     private fun scrollToMinute(minutes: Int, smooth: Boolean = true) {
-        val targetPos = (minutes - 1).coerceAtLeast(0)
+        val b = _binding ?: return
+        val targetPos = minutes.coerceAtLeast(0)
         isProgrammaticScroll = true
 
         if (smooth) {
-            binding.rvRuler.smoothScrollToPosition(targetPos)
+            b.rvRuler.smoothScrollToPosition(targetPos)
         } else {
-            (binding.rvRuler.layoutManager as LinearLayoutManager)
+            // paddingLeft already equals the centering padding, so offset 0 centers targetPos.
+            (b.rvRuler.layoutManager as LinearLayoutManager)
                 .scrollToPositionWithOffset(targetPos, 0)
         }
 
-        binding.rvRuler.postDelayed({ isProgrammaticScroll = false }, 300)
-        updateTime(minutes - 1)
+        b.rvRuler.postDelayed({ isProgrammaticScroll = false }, 300)
+        if (!smooth) updateTime(minutes)
     }
-
-
-
 
     override fun onDestroyView() {
         super.onDestroyView()

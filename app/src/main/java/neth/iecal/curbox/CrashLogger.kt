@@ -1,7 +1,10 @@
 package neth.iecal.curbox
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.util.Log
+import neth.iecal.curbox.ui.activity.CrashLogActivity
 import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
@@ -16,6 +19,7 @@ class CrashLogger(private val context: Context) : Thread.UncaughtExceptionHandle
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         try {
+            Log.e("Crash", throwable.printStackTrace().toString())
             val timeStamp =
                 SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
             val writer = FileWriter(logFile, true) // Append mode
@@ -25,11 +29,18 @@ class CrashLogger(private val context: Context) : Thread.UncaughtExceptionHandle
             throwable.printStackTrace(printWriter)
             printWriter.flush()
             printWriter.close()
+
+            val intent = Intent(context, CrashLogActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
+            context.startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-        defaultHandler?.uncaughtException(thread, throwable) // Let the system handle the crash
+        // Kill the current process to prevent the system's "app has crashed" dialog
+        android.os.Process.killProcess(android.os.Process.myPid())
+        System.exit(10)
     }
     fun logNonFatalError(exception: Exception) {
         try {

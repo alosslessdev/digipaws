@@ -8,7 +8,6 @@ import java.util.UUID
 data class FocusStatsEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val groupId: String,
-    val wasAutoFocus: Boolean,
     val startTimeInMillis: Long,
     val estimatedEndTimeInMillis: Long,
     val actualEndTimeInMillis: Long,

@@ -158,7 +158,6 @@ class TimerNotification(private val context: Context) {
 
             notificationManager.notify(NOTIFICATION_ID, notification)
         }.onFailure { exception ->
-            // NOW you will actually see why it's failing in your Logcat!
             Log.e(TAG, "Failed to show notification: ${exception.message}", exception)
         }
     }

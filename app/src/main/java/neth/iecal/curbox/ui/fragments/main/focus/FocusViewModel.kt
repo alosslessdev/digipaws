@@ -18,6 +18,7 @@ import neth.iecal.curbox.utils.BridgeServiceManager
 
 class FocusViewModel(application: Application) : AndroidViewModel(application) {
     var newGroupSelectedApps = hashSetOf<String>()
+    var newGroupSelectedKeywords = hashSetOf<String>()
 
     private val dataStoreManager = DataStoreManager(application)
     private val db = neth.iecal.curbox.data.db.AppDatabase.getInstance(application)
@@ -28,9 +29,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     val allSessions = statsDao.getAllSessionsFlow()
 
-    private val _autoFocusGroups = MutableStateFlow<List<neth.iecal.curbox.data.models.AutoFocusGroup>>(emptyList())
-    val autoFocusGroups: StateFlow<List<neth.iecal.curbox.data.models.AutoFocusGroup>> = _autoFocusGroups
-    var selectedMins = 25
+    private val _autoDndGroups = MutableStateFlow<List<neth.iecal.curbox.data.models.AutoDndGroup>>(emptyList())
+    val autoDndGroups: StateFlow<List<neth.iecal.curbox.data.models.AutoDndGroup>> = _autoDndGroups
+    
+    private val prefs = application.getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
+    var selectedMins = prefs.getInt("lastFocusDuration", 25)
 
     var selectedGroup : ManualFocusGroup? = null
 
@@ -47,8 +50,20 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             dataStoreManager.settings.collectLatest { settings ->
                 _groups.value = settings.manualFocusGroups
-                _autoFocusGroups.value = settings.autoFocusGroups
+                _autoDndGroups.value = settings.autoDndGroups
                 _currentRunningFocus.value = settings.activeManualFocusGroupId
+
+                if (selectedGroup == null && settings.manualFocusGroups.isNotEmpty()) {
+                    val lastGroupId = prefs.getString("lastFocusGroupId", null)
+                    val lastUsedGroup = settings.manualFocusGroups.find { it.groupId == lastGroupId }
+
+                    if (lastUsedGroup != null) {
+                        selectedGroup = lastUsedGroup
+                    } else if (settings.manualFocusGroups.size == 1) {
+                        selectedGroup = settings.manualFocusGroups[0]
+                    }
+                }
+
                 if(settings.activeManualFocusGroupId.first != null) {
                     if (settings.activeManualFocusGroupId.second < System.currentTimeMillis()) {
                         forceStopFocus(wasMidwayExit = false)
@@ -74,7 +89,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun forceStopFocus(wasMidwayExit: Boolean = false){
         viewModelScope.launch {
-            val runningSessions = statsDao.getRunningSessions().filter { !it.wasAutoFocus }
+            val runningSessions = statsDao.getRunningSessions()
             val now = System.currentTimeMillis()
             for (session in runningSessions) {
                 if (wasMidwayExit) {
@@ -88,15 +103,19 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             requestFocusBlockerRefresh()
         }
     }
-    fun startFocusing(){
+    fun startFocusing() {
         if(selectedGroup == null) return
+        prefs.edit()
+            .putInt("lastFocusDuration", selectedMins)
+            .putString("lastFocusGroupId", selectedGroup?.groupId)
+            .apply()
+        
         val durationMs = selectedMins * 60_000L
         val startTime = System.currentTimeMillis()
         val endTime = startTime + durationMs
         viewModelScope.launch {
             val session = neth.iecal.curbox.data.db.FocusStatsEntity(
                 groupId = selectedGroup!!.groupId,
-                wasAutoFocus = false,
                 startTimeInMillis = startTime,
                 estimatedEndTimeInMillis = endTime,
                 actualEndTimeInMillis = 0L,
@@ -140,10 +159,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
                 _currentRunningTimer.value = remaining
 
-                delay(1000L)
+                delay(100L)
             }
 
-            // Timer Finished
             onTimerFinished()
         }
     }

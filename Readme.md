@@ -4,166 +4,144 @@
    
    [![GitHub contributors](https://img.shields.io/github/contributors/nethical6/curbox)](https://github.com/nethical6/curbox/graphs/contributors)
    [![Discord Server](https://img.shields.io/badge/Discord%20Server-white?style=flat&logo=discord)](https://discord.com/invite/Vs9mwUtuCN)
-   [![Telegram Group](https://img.shields.io/badge/Telegram%20Group-blue?style=flat&logo=telegram)](https://t.me/curbox6)
-   [![Total downloads](https://img.shields.io/github/downloads/nethical6/curbox/total)](https://github.com/nethical6/curbox/releases)
-   [![Repository Size](https://img.shields.io/github/repo-size/nethical6/curbox)](https://github.com/nethical6/curbox)
+   [![Telegram Group](https://img.shields.io/badge/Telegram%20Group-blue?style=flat&logo=telegram)](https://t.me/curboxapp)
 
 </div>
+
+Curbox (formerly Digipauwse) is a powerful open source utility for Android built to help you reclaim your time and master your digital habits. It provides a suite of tools designed to break the cycle of screen addiction through granular control and deep insights.
+
+### Screenshots
+Click on any image to enlarge it.
 
 <div align="center">
-<a href="https://f-droid.org/packages/neth.iecal.curbox/">
-    <img alt="Get it on F-Droid"
-        height="80"
-        src="https://f-droid.org/badge/get-it-on.png" />
-</a>
-</div>
-Curbox is an open-source Android productivity utility designed to help users reduce screen addiction. The application offers two modes namely the Base mode and the Gamified mode (The gamification mode is being separated and developed as a new app knows as 
-
-
-[Questphone](https://github.com/QuestPhone/questphone)
-
-
-
-> [!CAUTION]
-> Please switch to the latest beta build if you face issues [Github Actions](
-https://github.com/nethical6/curbox/actions)
-
-> [!CAUTION]
-> I am rewriting the project as the old code was a mess. For stable local builds, please try [this commit](https://github.com/nethical6/curbox/tree/7ab40881d27ef6f83c9690cc03b97a763ea3d009). 
-
-> [!CAUTION]
-> This project is experimental and not yet ready for full production. [Donate](https://curbox.life/donate)
-
-> [!CAUTION]
-> Curbox was recently removed from the Play Store for an unknown reason that Google refuses to
-> disclose or discuss upon. "We didn't like your app restricting screen usage, so go fuck yourself"
-> type shi
-
-## Features
-
-- **Open Source**: Fully transparent and free to use, with the source code available for community contributions.
-- **Productivity Enhancement**: Helps build healthier digital habits and reduce screen addiction.
-- **Versatile Blockers**: Take control of your digital environment by blocking apps, keywords, and unwanted in-app screens (e.g., YouTube shorts, comments).
-- **Widgets** : Add stats to your homescreen
-- **App Usage Stats** : Display Your stats
-## Screenshots
-Click on any image to enlarge it.
 <table>
 	<tr>
-		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/1.png' width='120'></td>
-		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/2.png' width='120'></td>
-		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/3.png' width='120'></td>
-		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/4.png' width='120'></td>
-		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/5.png' width='120'></td>
-		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/6.png' width='120'></td>
-		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/7.png' width='120'></td>
-		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/8.png' width='120'></td>
+		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg' width='120'></td>
+		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg' width='120'></td>
+		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg' width='120'></td>
+		<td><img src='fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg' width='120'></td>
 	</tr>
 </table>
+</div>
+
+### Why Curbox Stands Out
+
+Most screen time tools are closed source and require internet access. This raises concerns about your private usage data being tracked or sold. Curbox takes a different path.
+* All screen time apps use a powerful Android feature (Accessibility service) that lets them see everything you do, including your private messages. They all connect to the internet, posing a severe security threat. Curbox uses this same feature, but it does not have internet access (it doesn't declare the permission in the manifest). This means your personal data can never leave your phone, keeping it completely private and secure.
+* Open Source Transparency
+The entire codebase is public. Anyone can verify how the app works. This ensures there are no hidden trackers or malicious behaviors. Open source doesn't mean anyone can see how you use the app. 
+* Respect for Your Data
+Because there is no cloud connection, you are the sole owner of your statistics. There are literally a few companies selling your usage insights for millions so the algorithm can be further strengthened to keep you trapped.
+
+### Platforms:
+- Android (this repository)
+- [Web Extension Repository](https://github.com/curbox-app/curbox-extension)
+- IOS (comming soon)
+
+### Independent Reviews & Endorsements
+
+* **HowToMen (900k followers):** [Top 20 shizuku apps 2025](https://youtu.be/hGsPpd0uIco?t=123&si=I4wFOCA-ePm61XLk)
+* **HowToMen (900k followers):** [Top 15 best android apps may 2025](https://youtu.be/_b-GRZEAENc?t=710&si=3L8m8WlS-qWoVX8C)
+* **HowToMen (900k followers):** [Top 15 best android apps may 2026](https://youtu.be/B59glf2bweo?t=546&si=T2pUw2yZi9Krsv3A)
+* **GadgetGeek (4k followers):** [Awesome Free and open source apps](https://youtu.be/rAQ85K337l8?t=1148&si=U2ZmJe7CALvYAuGE)
+* **Sam Beckman (600k followers):** [Best free and open source apps 2026](https://youtu.be/bR19smAQfUs?t=624&si=DXNLiF-F1pY4neVq)
+* **Sam Beckman (600k followers):** [This app makes your phone less distracting](https://youtu.be/ncc7Ho9cNLw?si=e5BFCPvh4FbFqDFC)
+* **justtechit.english (462k followers):** [Open Source App Hunt Part 2](https://www.instagram.com/reel/DY4dJbVMn4p/)
+* **Sohail TECH (16k followers):** [5 Best & POWERFUL Android Apps in 2025](https://www.youtube.com/watch?v=u8B6TihqlPs)
+* **Anubhav Roy (340k followers):** [Best Free Open Source Android Apps in 2026](https://www.youtube.com/watch?v=M2ufnTybmH4)
+* **El Androide Feliz (50k followers):** [The BEST APPS compatible with SHIZUKU](https://www.youtube.com/watch?v=rps2uw8Cokw)
+* **Techy Marathi (723k followers):** [Instagram Reel](https://www.instagram.com/reel/DJjcOc8yKOR/)
+* **Sillycorns (700k followers):** [Top 10 Coolest Android Apps of 2025!](https://youtu.be/FWn5ZEyqdvQ?t=273&si=hocsC2GTdYPPmNRK)
+
+Please open an issue if your review is not included, Thank you so much!
 
 
-## ToDo
-- [x] Block reels
-- [x] Block comments
-- [x] Block explicit content
-- [x] App blockers
-- [x] Focus Mode
-- [x] Turn selected apps black and white to make them boring
-- [x] Show time elapsed using an app on the centre of the screen
-- [x] Anti-Uninstall
-- [x] Customisable warning screen
-- [x] Track App Usage Stats
-- [x] Homescreen widgets
-- [x] Track how many tiktoks you scroll everyday 
-- [ ] Track attention span
-- [ ] Geoblocker (basically block things when a certain area is entered, like workplace)
-- [x] Block custom user defined keywords
-- [x] Redirect to a different website when a blocked keyword is found
-- [ ] Modular and downloadable view blockers
-- [ ] Expand the app to iOS and desktop.
+### In-Depth Feature Analysis
 
-## Modes
+Curbox goes beyond simple app timers. It targets the specific triggers that lead to mindless scrolling.
 
-### Base Mode (✅)
+#### Blocking & Control
+- **App & Website Blocking:** Block distracting apps and websites completely.
+- **Short-Form Content Blocker:** Specifically target Instagram Reels and YouTube Shorts.
+- **Granular UI Hiding:** Block specific parts of an app's UI (e.g., block the entire YouTube home feed while allowing searches or hide instagram feed while allowing posts and messages from friends).
+- **URL Path Blocking:** Block specific sections of a website (e.g., block `m.youtube.com/shorts/*` but allow `m.youtube.com`).
 
-Allows user to configure everything as they desire according to their own needs.
+#### Insights & Awareness
+- **Usage Analytics:** Detailed insights into app and website usage.
+- **Focus Statistics:** Track your progress and focus sessions.
+- **Live Scroll Counter:** See a real-time count of how many short-form videos you've scrolled through.
+- **Session Timer:** A live timer showing how much time has elapsed since you opened a given app.
 
-### Gamified Mode (🚧🔨)
+#### Mindful Usage Tools
+- **Focus Mode:** Temporarily pause apps and websites to stay focused on your work.
+- **Scheduled DND:** Schedule Do Not Disturb to turn on automatically.
+- **App-Specific Grayscale:** Apply a grayscale filter only to specific apps (e.g., Instagram) while keeping others (e.g., Camera) in color.
+- **Usage-Based Limits:** Block apps or websites based on usage (e.g., block WhatsApp after 1 hour of use).
+- **Time-Based Access:** Allow apps only during specific hours (e.g., WhatsApp only between 7 AM and 9 PM).
+- **Home Screen Widgets:** Quick access to your stats and controls right from your home screen.
 
-This Mode introduces a gamified experience to control screen time using various fun elements like
-quests and goals. This mode tracks your usage and configures everything accordingly as the days pass
-by.
-> [!CAUTION]
-> This mode is being separately being developed as an individual app now. Checkout [QuestPhone](https://github.com/QuestPhone/questphone)
+#### Unlock Mechanisms
+Define what happens when you try to open an app outside its allowed schedule:
+- **Strict Blockade:** Complete blockade with no access.
+- **Timed Unlocks:** Predefine a short duration (e.g., 5 mins) for each subsequent unlock.
+- **Dynamic Selection:** Choose the duration of your temporary unlock on each attempt.
+- **QR/Barcode Unlock:** Requires scanning a physical QR code or barcode (e.g., from product boxes like books) to unlock. Spread them across your home to force physical movement!
+- **Sentence Retyping:** Requires physically typing a specific sentence (e.g., "I am giving up on my goals to use this app right now") to unlock.
+- **Unlock Limits:** Set how many subsequent unlocks you can perform every X hours.
 
-## Configuring
+#### For Developers
+- **[Curbox API](CURBOX_API.md):** Let your apps directly interact with curbox and start focus modes, change settings, get usage stats, etc. Requires user permission
 
-1. Launch Curbox on your Android device.
-2. Provide all necessary permissions like Accessibility service, Notification, Draw over other apps etc
-3. On Android 13+ devices, you need to additionally allow restricted settings before enabling the accessibility permission. Watch a tutorial [here](https://youtu.be/91B72lEpcqc?si=PCKKUSwM1aLdELqJ)
-4. Configure the apps and views you want to block and set your preferences.
-5. Start using your device with Curbox managing your screen time.
+### How to install
+[Read the documentation to get the step by step instructions](https://curbox.app/docs)
 
+App can be downloaded from (still highly recommended to read docs) [GitHub Releases](https://github.com/nethical6/curbox/releases)
 
-> [!TIP]  
-> This app relies exclusively on accessibility services to function. Because it requires sensitive permissions, please avoid downloading it from untrusted sources.
+### Contributing
 
-## Contributing
-
-We welcome contributions from the community! If you'd like to contribute, please follow these steps:
+We welcome contributions from the community! If you want to help improve Curbox, please follow these steps:
 
 1. Fork the repository.
 2. Create a new branch for your feature or bugfix.
-    ```sh
-    git checkout -b feature/your-feature-name
-    ```
-3. Commit your changes.
-    ```sh
-    git commit -m "Add some feature"
-    ```
-4. Push to the branch.
-    ```sh
-    git push origin feature/your-feature-name
-    ```
+3. Commit your changes with a clear message.
+4. Push to your branch.
 5. Create a new Pull Request.
 
-Please ensure your code adheres to our coding standards and includes relevant tests.
+Developing for accessibility services and blockers is complex. It requires understanding how different apps structure their views. We appreciate any help in discovering new ways to block distracting content.
+Please don't open a PR if you "vibe code" and have no idea what you're doing or what the code does. Preferably, just open an issue with the feature request.
 
-Developing codes for accessibility services and blockers can be exceptionally complex and challenging to understand. This is primarily because blocking mechanisms must account for various app types, each functioning differently. Discovering these mechanisms has often required extensive app-specific debugging, coupled with trial-and-error approaches.
-
-
-
-## Thanks
-- [Usage Direct](https://codeberg.org/fynngodau/usageDirect): I had an extremely tough time figuring out and fixing the app usage stats. Extremely thanks to this app for saving me.
-- [Redd Focus](https://github.com/kasnder/redd-focus-android/): The entirety of view-blocker is based off this project.
-- [ShizuTools](https://github.com/legendsayantan/ShizuTools): [ShizukuRunner.kt](https://github.com/nethical6/curbox/blob/kt-rewrite/app/src/main/java/neth/iecal/curbox/utils/ShizukuRunner.kt) has been derived from this project
-- [MPAndroidChart](https://github.com/PhilJay/MPAndroidChart): All charts and graphs were made using this library
-## License
-
-Curbox is licensed under the [GPL 3 or later licence](LICENSE). You are free to use, modify, and distribute this software in accordance with the license.
-
-## Contact
-
-For questions, suggestions, or feedback, please open an issue on the [GitHub repository](https://github.com/nethical6/curbox/issues) or contact me at:
-1. Discord: @nethical
-2. Telegram: @nethicalps
-
-## Common Questions
-
-### Q: Is Curbox safe?
-
-**A:** Yes, way safer than any closed source app blocker on play-store.
-
-### Q: Does it steal my data?
-
-**A:** No. In fact it doesn't even need the INTERNET permission to run
-
-### Q: I am unable to turn on accessibility settings. It says to enable "Restricted Settings"
-
-**A:** Try downloading the app directly from f-droid app, instead of an .apk file. Read more on this
-forum -> https://forum.f-droid.org/t/cant-activate-permissions-for-curbox-on-android-14/30539
+Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file before working on the project or learning
+how to make quick contributions like adding support for a modded app in the reel counter, adding support
+for a new browser, etc.
 
 
----
+### Special Thanks
 
-Thank you for using Curbox! Together, we can create healthier digital habits.
+* All my beloved donors and sponsors
+* Digipauws: Inspiration for the entire code structure and working mechanism
+* Usage Direct: For help with app usage statistics.
+* Redd Focus: For the foundation of the view blocker system.
+* ShizuTools: For Shizuku runner implementations.
+* MPAndroidChart: For the beautiful graphs and charts.
+
+### License
+
+Curbox is licensed under the GPL 3 or later license. You are free to use, modify, and distribute this software in accordance with the license.
+
+### Contact
+
+For questions or feedback, please open an issue on the GitHub repository or reach out:
+* Discord: @nethical
+* Telegram: @nethicalps
+* Email: [aguptaq88@gmail.com](aguptaq88@gmail.com)
+
+### TAGS (ignore em pls)
+
+<details>
+<summary>Keywords</summary>
+
+app blocker, free app blocker, open source app blocker, screen time app, screen time tracker, digital wellbeing app, focus app, productivity app, website blocker, porn blocker, adult content blocker, distraction blocker, social media blocker, Instagram blocker, Instagram Reels blocker, YouTube Shorts blocker, TikTok blocker, Snapchat Spotlight blocker, short form video blocker, doomscrolling blocker, reel counter, scroll counter, dopamine detox app, digital detox app, phone addiction app, screen addiction app, internet addiction app, self control app, focus mode app, deep work app, study focus app, grayscale app, app usage tracker, usage stats app, schedule DND app, app timer, app limit app, time limit app.
+
+StayFree alternative, Opal alternative, Freedom app alternative, Forest app alternative, Cold Turkey alternative, AppBlock alternative, ScreenZen alternative, one sec alternative, BlockSite alternative, Stay Focused alternative, ActionDash alternative, Digital Wellbeing alternative, Brick alternative, Unpluq alternative, Refocus alternative, Roots app alternative, Clearspace alternative, Jomo alternative, LockMeOut alternative, Detox app alternative, ZenScreen alternative, Minimalist Phone alternative, RescueTime alternative, Offtime alternative, Flipd alternative, Forest focus alternative, free StayFree alternative, open source Freedom alternative, no subscription app blocker, offline app blocker, private screen time app, app blocker without internet, Android app blocker, F-Droid app blocker, Shizuku app blocker.
+
+</details>

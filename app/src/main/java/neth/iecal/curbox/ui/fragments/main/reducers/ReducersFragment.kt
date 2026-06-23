@@ -1,14 +1,20 @@
 package neth.iecal.curbox.ui.fragments.main.reducers
 
 import android.os.Bundle
+import android.transition.AutoTransition
+import android.transition.TransitionManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import neth.iecal.curbox.R
 
 import android.content.Intent
 import neth.iecal.curbox.ui.activity.FragmentActivity
+import neth.iecal.curbox.utils.ViewUtils
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.GrayscaleFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.AppBlockerGroupsFragment
@@ -22,8 +28,12 @@ class ReducersFragment : Fragment() {
         val appBlockerCard = view.findViewById<MaterialCardView>(R.id.card_app_blocker)
         val reelBlockerCard = view.findViewById<MaterialCardView>(R.id.card_reels_blocker)
         val keywordBlockerCard = view.findViewById<MaterialCardView>(R.id.card_keyword_blocker)
-        val autoFocusCard = view.findViewById<MaterialCardView>(R.id.card_autofocus)
+        val autoDndCard = view.findViewById<MaterialCardView>(R.id.card_autodnd)
         
+        view.findViewById<MaterialButton>(R.id.btn_help).setOnClickListener {
+            ViewUtils.showHelpPopup(it, "Blocker tools and stimulation reducers help you regain focus.", "https://curbox.app/docs/reducers/overview/")
+        }
+
         appBlockerCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
                 putExtra("fragment", AppBlockerGroupsFragment.FRAGMENT_ID)
@@ -45,9 +55,9 @@ class ReducersFragment : Fragment() {
             startActivity(intent)
         }
 
-        autoFocusCard.setOnClickListener {
+        autoDndCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autofocus.AutoFocusFragment.FRAGMENT_ID)
+                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.AutoDndFragment.FRAGMENT_ID)
             }
             startActivity(intent)
         }
@@ -76,6 +86,7 @@ class ReducersFragment : Fragment() {
             startActivity(intent)
         }
 
+<<<<<<< HEAD
         val webAppsCard = view.findViewById<MaterialCardView>(R.id.card_web_apps)
         webAppsCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
@@ -86,10 +97,40 @@ class ReducersFragment : Fragment() {
 
         val viewBlockingCard = view.findViewById<MaterialCardView>(R.id.card_view_blocker)
         viewBlockingCard.setOnClickListener {
+=======
+        val uiHiderCard = view.findViewById<MaterialCardView>(R.id.card_ui_hider)
+        uiHiderCard.setOnClickListener {
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.viewBlocker.ViewBlockerFragment.FRAGMENT_ID)
+                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderFragment.FRAGMENT_ID)
             }
             startActivity(intent)
+        }
+
+        val intentsLogCard = view.findViewById<MaterialCardView>(R.id.card_logged_intents)
+        intentsLogCard.setOnClickListener {
+            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.analytics.IntentsLogFragment.FRAGMENT_ID)
+            }
+            startActivity(intent)
+        }
+
+        val apiCard = view.findViewById<MaterialCardView>(R.id.card_api)
+        apiCard.setOnClickListener {
+            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID)
+            }
+            startActivity(intent)
+        }
+
+        val advancedHeader = view.findViewById<View>(R.id.advanced_header)
+        val advancedContent = view.findViewById<View>(R.id.advanced_content)
+        val advancedArrow = view.findViewById<ImageView>(R.id.advanced_arrow)
+        advancedHeader.setOnClickListener {
+            val isVisible = advancedContent.isVisible
+            TransitionManager.beginDelayedTransition(view.findViewById(R.id.reducers_root), AutoTransition())
+            advancedContent.isVisible = !isVisible
+            advancedArrow.animate().rotation(if (isVisible) 0f else 90f).start()
         }
 
         return view

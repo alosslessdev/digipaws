@@ -1,33 +1,42 @@
 package neth.iecal.curbox.utils
 
-import android.app.ActivityManager
-import android.app.usage.UsageEvents
-import android.app.usage.UsageStatsManager
 import android.content.Context
+<<<<<<< HEAD
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import neth.iecal.curbox.ui.fragments.usage.AllAppsUsageFragment
+=======
+import neth.iecal.curbox.data.db.AppDatabase
+import neth.iecal.curbox.data.db.AppUsageEntity
+import neth.iecal.curbox.ui.fragments.main.usage.AllAppsUsageFragment
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.util.concurrent.ConcurrentHashMap
 
-class UsageStatsHelper(private val context: Context) {
+class UsageStatsHelper(context: Context) {
 
+<<<<<<< HEAD
     private val usageStatsManager =
         context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     private val dataStoreManager = DataStoreManager(context)
     private val snapshotStore = UsageStatsSnapshotStore(context)
     private val zoneId = ZoneId.systemDefault()
+=======
+    private val dao = AppDatabase.getInstance(context.applicationContext).appUsageDao()
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
-    private val guardian = UnmatchedCloseEventGuardian()
+    suspend fun getForegroundStatsByRelativeDay(offset: Int): List<AllAppsUsageFragment.Stat> {
+        return getForegroundStatsByDay(LocalDate.now().minusDays(offset.toLong()))
+    }
 
-    private data class CachedRange(
-        val stats: List<AllAppsUsageFragment.Stat>,
-        val cachedAt: Long
-    )
+    suspend fun getForegroundStatsByDay(date: LocalDate): List<AllAppsUsageFragment.Stat> {
+        return dao.getForDate(TimeTools.dayKey(date))
+            .map { it.toStat() }
+            .sortedByDescending { it.totalTime }
+    }
 
+<<<<<<< HEAD
     private data class RangeKey(
         val start: Long,
         val end: Long,
@@ -176,42 +185,68 @@ class UsageStatsHelper(private val context: Context) {
         val start = queryDay.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val end = queryDay.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         return getForegroundStatsByTimestamps(start, end)
-    }
+=======
+    suspend fun getForegroundStatsByTimestamps(start: Long, end: Long): List<AllAppsUsageFragment.Stat> {
+        val dates = datesBetween(start, end)
+        if (dates.isEmpty()) return emptyList()
 
-    fun getForegroundStatsByDay(queryDate: LocalDate): List<AllAppsUsageFragment.Stat> {
-        val start = queryDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val end = queryDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        return getForegroundStatsByTimestamps(start, end)
-    }
-
-    private fun isCacheValid(rangeKey: RangeKey, cachedAt: Long, now: Long): Boolean {
-        val ageMs = now - cachedAt
-        val isRecentRange = rangeKey.end >= now - 60_000
-        return if (isRecentRange) {
-            ageMs < 5_000
-        } else {
-            true
+        val merged = HashMap<String, AllAppsUsageFragment.Stat>()
+        for (row in dao.getForDates(dates)) {
+            val existing = merged[row.packageName]
+            if (existing == null) {
+                merged[row.packageName] = row.toStat()
+            } else {
+                val hourly = existing.hourlyUsage.copyOf()
+                val incoming = parseHourly(row.hourlyUsage)
+                for (i in 0 until 24) hourly[i] += incoming[i]
+                merged[row.packageName] = AllAppsUsageFragment.Stat(
+                    packageName = row.packageName,
+                    totalTime = existing.totalTime + row.totalTime,
+                    sessions = existing.sessions + row.launchCount,
+                    hourlyUsage = hourly
+                )
+            }
         }
+        return merged.values.sortedByDescending { it.totalTime }
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     }
 
-    private fun pruneCache() {
-        if (rangeCache.size <= 32) return
+    suspend fun getEarliestTimestamp(): Long = dao.earliestTimestamp() ?: System.currentTimeMillis()
 
-        val now = System.currentTimeMillis()
-        val staleKeys = rangeCache.entries
-            .filter { (key, value) -> !isCacheValid(key, value.cachedAt, now) }
-            .map { it.key }
+    private fun datesBetween(start: Long, end: Long): List<String> {
+        val zone = ZoneId.systemDefault()
+        val startDate = Instant.ofEpochMilli(start).atZone(zone).toLocalDate()
+        val endDate = Instant.ofEpochMilli(end).atZone(zone).toLocalDate()
+        if (endDate.isBefore(startDate)) return emptyList()
 
-        staleKeys.forEach { rangeCache.remove(it) }
-
-        if (rangeCache.size <= 32) return
-
-        val entriesByAge = rangeCache.entries
-            .sortedBy { it.value.cachedAt }
-
-        val overflow = rangeCache.size - 32
-        entriesByAge.take(overflow).forEach { rangeCache.remove(it.key) }
+        val result = ArrayList<String>()
+        var cursor = startDate
+        while (!cursor.isAfter(endDate)) {
+            result.add(TimeTools.dayKey(cursor))
+            cursor = cursor.plusDays(1)
+        }
+        return result
     }
+
+    private fun AppUsageEntity.toStat(): AllAppsUsageFragment.Stat {
+        return AllAppsUsageFragment.Stat(
+            packageName = packageName,
+            totalTime = totalTime,
+            sessions = launchCount,
+            hourlyUsage = parseHourly(hourlyUsage)
+        )
+    }
+
+    private fun parseHourly(serialized: String?): LongArray {
+        val result = LongArray(24)
+        if (serialized.isNullOrEmpty()) return result
+        val parts = serialized.split(',')
+        for (i in 0 until minOf(24, parts.size)) {
+            result[i] = parts[i].toLongOrNull() ?: 0L
+        }
+        return result
+    }
+<<<<<<< HEAD
 
     private fun getSingleDay(start: Long, end: Long): LocalDate? {
         if (end <= start) return null
@@ -311,4 +346,6 @@ class UsageStatsHelper(private val context: Context) {
     }
 
 
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 }

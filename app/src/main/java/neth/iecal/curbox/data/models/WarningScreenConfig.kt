@@ -8,8 +8,14 @@ data class AppBlockerWarningScreenConfig(
     val isProceedDisabled: Boolean = false,
     val isWarningDialogHidden: Boolean = false, // perform back/home action directly without showing warning screen
     val proceedDelayInSecs: Int = 15,
-    val vibrateAndIncBrightness: Boolean = true,
+    val vibrateAndIncBrightness: Boolean = false,
     val proceedLimitEnabled: Boolean = false,
     val allowedProceeds: Int = 3,
     val proceedsTimeWindowMn: Int = 60,
+    val isQrUnlockRequirementEnabled: Boolean = false,
+    val qrKeys: Map<String,Long> = mapOf(), // qr code content -> Duration of unlock (-1 if dynamic timing)
+    val isTypingRequirementEnabled: Boolean = false,
+    val typingSentence: String = "",
+    val isIntentRequirementEnabled: Boolean = false,
+    var isOnOpenConfig: Boolean = false,
 )

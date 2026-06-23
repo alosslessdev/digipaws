@@ -2,7 +2,6 @@ package neth.iecal.curbox.ui.activity
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -15,16 +14,23 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import neth.iecal.curbox.Constants
 import neth.iecal.curbox.R
 import neth.iecal.curbox.blockers.AppBlocker
+import neth.iecal.curbox.blockers.KeywordBlocker
 import neth.iecal.curbox.blockers.ReelBlocker
 import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
 import neth.iecal.curbox.databinding.DialogWarningOverlayBinding
-import neth.iecal.curbox.services.AppBlockerService
 import kotlin.random.Random
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.core.content.edit
+import androidx.core.widget.doAfterTextChanged
+import neth.iecal.curbox.anti_stimulants.MindfulMessage
 
 class WarningActivity : AppCompatActivity() {
 
@@ -33,12 +39,44 @@ class WarningActivity : AppCompatActivity() {
 
     private var vibrator: Vibrator? = null
 
+    private var isQrScanned = false
+    private var scannedValidDuration = -1L
+
+    private lateinit var binding: DialogWarningOverlayBinding
+    private val barcodeLauncher = registerForActivityResult(
+        ScanContract()
+    ) { result ->
+        if (result.contents == null) {
+            Toast.makeText(this@WarningActivity, "Cancelled", Toast.LENGTH_LONG).show()
+        } else {
+            val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
+                intent.getStringExtra("warning_config"),
+                AppBlockerWarningScreenConfig::class.java
+            )
+            if (warningScreenConfig.qrKeys.containsKey(result.contents)) {
+                isQrScanned = true
+                scannedValidDuration = warningScreenConfig.qrKeys[result.contents] ?: -1L
+                
+                binding.btnProceed.isEnabled = true
+                binding.btnProceed.setText(R.string.proceed)
+                
+                if (scannedValidDuration == -1L) {
+                    binding.minsPicker.visibility = View.VISIBLE
+                } else {
+                    binding.minsPicker.visibility = View.GONE
+                }
+            } else {
+                 Toast.makeText(this@WarningActivity, "Invalid QR Code - Pattern does not match", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val mode = intent.getIntExtra("mode", 0)
 
-val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
+        val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
             intent.getStringExtra("warning_config"),
             AppBlockerWarningScreenConfig::class.java
         )
@@ -72,7 +110,7 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
             triggerRandomizedVibration(maxOf(3000L, (warningScreenConfig.proceedDelayInSecs / 2) * 1000L))
         }
 
-        val binding = DialogWarningOverlayBinding.inflate(layoutInflater)
+        binding = DialogWarningOverlayBinding.inflate(layoutInflater)
         val isHomePressRequested = intent.getBooleanExtra("is_press_home", false)
         binding.minsPicker.setValue(3)
         binding.minsPicker.minValue = 2
@@ -98,11 +136,35 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
 
                     override fun onFinish() {
                         binding.btnProceed.let { button ->
-                            button.isEnabled = true
-                            if (warningScreenConfig.isDynamicIntervalSettingAllowed) {
+                            if (!warningScreenConfig.isQrUnlockRequirementEnabled && warningScreenConfig.isDynamicIntervalSettingAllowed) {
                                 binding.minsPicker.visibility = View.VISIBLE
                             }
-                            button.setText(R.string.proceed)
+
+                            if (warningScreenConfig.isIntentRequirementEnabled) {
+                                binding.intentInputLayout.visibility = View.VISIBLE
+                                button.isEnabled = false
+                                button.setText(R.string.proceed)
+
+                                binding.intentInputEdit.doAfterTextChanged { s ->
+                                    button.isEnabled = s?.toString()?.trim()?.isNotEmpty() == true
+                                }
+                            } else if (warningScreenConfig.isTypingRequirementEnabled) {
+                                binding.typingTargetSentence.visibility = View.VISIBLE
+                                binding.typingTargetSentence.text = "\"${warningScreenConfig.typingSentence}\""
+                                binding.typingInputLayout.visibility = View.VISIBLE
+                                button.isEnabled = false
+                                button.setText(R.string.proceed)
+                                
+                                binding.typingInputEdit.doAfterTextChanged { s ->
+                                    button.isEnabled = s?.toString() == warningScreenConfig.typingSentence
+                                }
+                            } else if (warningScreenConfig.isQrUnlockRequirementEnabled && !isQrScanned) {
+                                button.text = "Scan QR Code"
+                                button.isEnabled = true
+                            } else {
+                                button.setText(R.string.proceed)
+                                button.isEnabled = true
+                            }
                         }
                         binding.proceedSeconds.visibility = View.GONE
                     }
@@ -119,10 +181,14 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
 
         binding.warningMsg.text = warningScreenConfig.message
 
-        binding.minsPicker.setValue(warningScreenConfig.timeInterval / 60000)
+        if (warningScreenConfig.isOnOpenConfig) {
+            binding.minsPicker.visibility = View.GONE
+        } else {
+            binding.minsPicker.setValue(warningScreenConfig.timeInterval / 60000)
+        }
 
         binding.btnCancel.setOnClickListener {
-            if (mode == Constants.WARNING_SCREEN_MODE_APP_BLOCKER || isHomePressRequested) {
+            if (mode == Constants.WARNING_SCREEN_MODE_APP_BLOCKER || mode == Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER || isHomePressRequested) {
                 val intent = Intent(Intent.ACTION_MAIN)
                 intent.addCategory(Intent.CATEGORY_HOME)
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -133,6 +199,18 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
         }
 
         binding.btnProceed.setOnClickListener {
+            if (warningScreenConfig.isQrUnlockRequirementEnabled && !isQrScanned) {
+                val options = ScanOptions()
+                options.setDesiredBarcodeFormats(ScanOptions.ALL_CODE_TYPES)
+                options.setPrompt("Scan a QR Code to unlock")
+                options.setCameraId(0) // Use a specific camera of the device
+                options.setBeepEnabled(false)
+                options.setBarcodeImageEnabled(true)
+                options.setCaptureActivity(neth.iecal.curbox.ui.activity.PortraitCaptureActivity::class.java)
+                barcodeLauncher.launch(options)
+                return@setOnClickListener
+            }
+
             if (warningScreenConfig.proceedLimitEnabled && targetId.isNotEmpty()) {
                 val limitPrefs = getSharedPreferences("proceed_limits", Context.MODE_PRIVATE)
                 val historyString = limitPrefs.getString("proceeds_$targetId", "") ?: ""
@@ -145,13 +223,40 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
                 limitPrefs.edit { putString("proceeds_$targetId", validHistory.joinToString(",")) }
             }
 
+            if (warningScreenConfig.isIntentRequirementEnabled) {
+                val intentText = binding.intentInputEdit.text.toString().trim()
+                val pkg = targetId
+                val time = binding.minsPicker.getValue() * 60_000L
+                
+                CoroutineScope(Dispatchers.IO).launch {
+                    val log = neth.iecal.curbox.data.db.IntentLogEntity(
+                        timestamp = System.currentTimeMillis(),
+                        packageName = pkg,
+                        intentText = intentText,
+                        unlockedDurationMs = time
+                    )
+                    neth.iecal.curbox.data.db.AppDatabase.getInstance(this@WarningActivity).intentLogDao().insert(log)
+                }
+
+                val broadcastIntent = Intent(MindfulMessage.ADD_NEW_INTENT)
+                broadcastIntent.putExtra("package_name", pkg)
+                broadcastIntent.putExtra("intent_text", intentText)
+                broadcastIntent.putExtra("duration_ms", time)
+                sendBroadcast(broadcastIntent)
+            }
+
             if (mode == Constants.WARNING_SCREEN_MODE_VIEW_BLOCKER) {
                 intent.getStringExtra("result_id")
                     ?.let { it1 ->
+                        val finalTime = if (warningScreenConfig.isQrUnlockRequirementEnabled && scannedValidDuration != -1L) {
+                            (scannedValidDuration / 60000).toInt()
+                        } else {
+                            binding.minsPicker.getValue()
+                        }
                         sendRefreshRequest(
                             it1,
                             ReelBlocker.INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN,
-                            binding.minsPicker.getValue()
+                            finalTime
                         )
                     }
             }
@@ -159,15 +264,38 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
             if (mode == Constants.WARNING_SCREEN_MODE_APP_BLOCKER) {
                 intent.getStringExtra("result_id")
                     ?.let { it1 ->
+                        val finalTime = if (warningScreenConfig.isOnOpenConfig) {
+                            1440
+                        } else if (warningScreenConfig.isQrUnlockRequirementEnabled && scannedValidDuration != -1L) {
+                            (scannedValidDuration / 60000).toInt()
+                        } else {
+                            binding.minsPicker.getValue()
+                        }
                         sendRefreshRequest(
                             it1,
                             AppBlocker.INTENT_ACTION_REFRESH_APP_BLOCKER_COOLDOWN,
-                            binding.minsPicker.getValue()
+                            finalTime
                         )
                         val intent = packageManager.getLaunchIntentForPackage(it1)
                         if (intent != null) {
                             startActivity(intent)
                         }
+                    }
+            }
+
+            if (mode == Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER) {
+                intent.getStringExtra("result_id")
+                    ?.let { it1 ->
+                        val finalTime = if (warningScreenConfig.isQrUnlockRequirementEnabled && scannedValidDuration != -1L) {
+                            (scannedValidDuration / 60000).toInt()
+                        } else {
+                            binding.minsPicker.getValue()
+                        }
+                        sendRefreshRequest(
+                            it1,
+                            KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN,
+                            finalTime
+                        )
                     }
             }
 
@@ -190,12 +318,8 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
         sendBroadcast(intent)
     }
 
-    /**
-     * Triggers a jagged, unpredictable vibration waveform.
-     * The lack of a steady rhythm prevents habituation and breaks focus.
-     */
+    // Jagged rhythm prevents habituation and breaks the habit loop.
     private fun triggerRandomizedVibration(durationMillis: Long) {
-        // Initialize the class-level vibrator variable
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
@@ -207,7 +331,7 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
         vibrator?.let { currentVibrator ->
             if (currentVibrator.hasVibrator()) {
                 val patternList = mutableListOf<Long>()
-                patternList.add(0L) // Start immediately (0ms initial delay)
+                patternList.add(0L)
 
                 var elapsedTime = 0L
 
@@ -216,14 +340,14 @@ val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
                     val pauseDuration = Random.nextLong(40, 150)
 
                     if (elapsedTime + vibrateDuration >= durationMillis) {
-                        patternList.add(durationMillis - elapsedTime) // Cap exactly at duration
+                        patternList.add(durationMillis - elapsedTime)
                         break
                     }
                     patternList.add(vibrateDuration)
                     elapsedTime += vibrateDuration
 
                     if (elapsedTime + pauseDuration >= durationMillis) {
-                        patternList.add(durationMillis - elapsedTime) // Cap exactly at duration
+                        patternList.add(durationMillis - elapsedTime)
                         break
                     }
                     patternList.add(pauseDuration)

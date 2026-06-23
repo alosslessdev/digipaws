@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
+import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.GrayscaleGroup
 import neth.iecal.curbox.data.models.TimeInterval
 import neth.iecal.curbox.utils.DataStoreManager
@@ -21,7 +22,7 @@ class GrayscaleViewModel(application: Application) : AndroidViewModel(applicatio
     private val _groups = MutableStateFlow<List<GrayscaleGroup>>(emptyList())
     val groups: StateFlow<List<GrayscaleGroup>> = _groups
 
-    var currentDailyIntervals: MutableMap<Int, MutableList<TimeInterval>> = mutableMapOf()
+    var currentTimeConfig: AppTimeConfig = AppTimeConfig()
 
     init {
         viewModelScope.launch {

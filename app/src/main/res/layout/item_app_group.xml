@@ -13,7 +13,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
         android:padding="16dp">
 
         <LinearLayout
@@ -27,7 +26,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/group_name"
-                android:textColor="?attr/colorOnSurface"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -36,8 +34,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="@string/val_10_apps_usage_based"
-                android:textColor="?attr/colorOnSurfaceVariant"
+                android:text="@string/desc_10_apps_usage_based"
+                android:textColor="@color/md_theme_onSurfaceVariant"
                 android:textSize="14sp" />
         </LinearLayout>
 

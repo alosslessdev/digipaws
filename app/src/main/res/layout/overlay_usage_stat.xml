@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tool="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:gravity="center"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -15,8 +13,7 @@
         android:textColor="#FFFFFF"
         android:textSize="96sp"
         android:visibility="gone"
-        android:alpha="0.8"
-        tool:text="38" />
+        android:alpha="0.8" />
 
     <TextView
         android:id="@+id/time_elapsed_txt"
@@ -24,7 +21,6 @@
         android:layout_height="wrap_content"
         android:textColor="#FFFFFF"
         android:textSize="20sp"
-        android:alpha="0.8"
-        tool:text="13:33" />
+        android:alpha="0.8" />
 
 </LinearLayout>

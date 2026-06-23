@@ -16,7 +16,9 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.GrayscaleGroup
+import neth.iecal.curbox.data.models.TimeInterval
 import neth.iecal.curbox.databinding.FragmentCreateGrayscaleGroupBinding
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
 import java.util.UUID
@@ -57,10 +59,6 @@ class CreateGrayscaleGroupFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.toolbar.setNavigationOnClickListener {
-            requireActivity().finish()
-        }
-
         var isEditing = false
         var existingGroup: GrayscaleGroup? = null
         val groupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
@@ -73,7 +71,12 @@ class CreateGrayscaleGroupFragment : Fragment() {
         }
 
         if (groupId == null) {
-            viewModel.currentDailyIntervals = mutableMapOf()
+            viewModel.currentTimeConfig = AppTimeConfig(
+                everydayIntervals = mutableListOf(
+                    TimeInterval(startHour = 20, endHour = 24),
+                    TimeInterval(startHour = 0, endHour = 7)
+                )
+            )
         }
 
         if (groupId != null) {
@@ -83,26 +86,19 @@ class CreateGrayscaleGroupFragment : Fragment() {
                     if (group != null && !isEditing) {
                         isEditing = true
                         existingGroup = group
-                        binding.toolbar.title = "Edit Grayscale Group"
+                        binding.textView.text = "Edit Grayscale Group"
                         binding.etGroupName.setText(group.groupName)
                         selectedApps = ArrayList(group.packages.toList())
                         binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
 
-                        viewModel.currentDailyIntervals = group.dailyIntervals.toMutableMap()
-
-                        binding.toolbar.menu.clear()
-                        val deleteItem = binding.toolbar.menu.add(0, 1001, 0, "Delete")
-                        deleteItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-                        binding.toolbar.setOnMenuItemClickListener { item ->
-                            if (item.itemId == 1001) {
-                                viewModel.removeGroup(group)
-                                Toast.makeText(requireContext(), getString(R.string.group_deleted), Toast.LENGTH_SHORT).show()
-                                requireActivity().finish()
-                                true
-                            } else {
-                                false
-                            }
+                        binding.btnDeleteGroup.visibility = View.VISIBLE
+                        binding.btnDeleteGroup.setOnClickListener {
+                            viewModel.removeGroup(group)
+                            Toast.makeText(requireContext(), "Group deleted", Toast.LENGTH_SHORT).show()
+                            requireActivity().finish()
                         }
+
+                        viewModel.currentTimeConfig = group.timeConfig.copy()
                     }
                 }
             }
@@ -138,7 +134,7 @@ class CreateGrayscaleGroupFragment : Fragment() {
                 groupId = if (isEditingRecord && targetExistingGroup != null) targetExistingGroup.groupId else UUID.randomUUID().toString(),
                 groupName = name,
                 packages = HashSet(selectedApps),
-                dailyIntervals = viewModel.currentDailyIntervals
+                timeConfig = viewModel.currentTimeConfig
             )
 
             if (isEditingRecord && targetExistingGroup != null) {

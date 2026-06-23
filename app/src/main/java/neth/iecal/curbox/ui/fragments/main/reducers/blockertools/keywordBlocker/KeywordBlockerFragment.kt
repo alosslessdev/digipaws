@@ -1,18 +1,21 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker
 
-import neth.iecal.curbox.R
-
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+<<<<<<< HEAD
 import android.os.CountDownTimer
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Patterns
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+<<<<<<< HEAD
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -21,10 +24,22 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+=======
+import androidx.appcompat.widget.PopupMenu
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.switchmaterial.SwitchMaterial
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.R
+import neth.iecal.curbox.data.models.AppBlockingType
+import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.databinding.FragmentKeywordBlockerBinding
-import neth.iecal.curbox.ui.activity.SelectAppsActivity
+import neth.iecal.curbox.ui.activity.FragmentActivity
 
 class KeywordBlockerFragment : Fragment() {
 
@@ -33,20 +48,6 @@ class KeywordBlockerFragment : Fragment() {
 
     private val viewModel: KeywordBlockerViewModel by activityViewModels()
     private var isUpdatingUi = false
-
-    private var selectedApps = listOf<String>()
-    private val selectAppsLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == AppCompatActivity.RESULT_OK) {
-            val apps = result.data?.getStringArrayListExtra("SELECTED_APPS")
-            if (apps != null) {
-                viewModel.setIgnoredApps(apps)
-                binding.btnSelectIgnoredApps.text = "Select Ignored Apps (${apps.size})"
-                selectedApps = apps
-            }
-        }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -58,51 +59,56 @@ class KeywordBlockerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        if (!viewModel.keywordBlockerConfig.value.isActive) {
+            viewModel.setIsActive(true)
+        }
+        binding.rvKeywordGroups.layoutManager = LinearLayoutManager(requireContext())
         setupListeners()
         observeViewModel()
     }
 
     private fun setupListeners() {
-        binding.switchEnableBlocker.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) {
-                viewModel.setIsActive(isChecked)
-            }
+        binding.btnMenu.setOnClickListener { view ->
+            showPopupMenu(view)
         }
 
-        binding.btnAddKeyword.setOnClickListener {
-            var keyword = binding.etKeyword.text.toString()
-            if (keyword.isNotBlank()) {
-                if (Patterns.WEB_URL.matcher(keyword).matches()) {
-                    keyword = keyword
-                        .removePrefix("https://")
-                        .removePrefix("http://")
-                        .removePrefix("www.")
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.warning_link_blocker_may_not_work),
-                        Toast.LENGTH_LONG
-                    ).show()
+        binding.fabAddGroup.setOnClickListener {
+            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("fragment", CreateKeywordGroupFragment.FRAGMENT_ID)
+            }
+            startActivity(intent)
+        }
+    }
+
+    private fun showPopupMenu(view: View) {
+        val popup = PopupMenu(requireContext(), view)
+        popup.menuInflater.inflate(R.menu.menu_keyword_blocker, popup.menu)
+
+        val config = viewModel.keywordBlockerConfig.value
+        popup.menu.findItem(R.id.menu_block_unsupported_browsers).isChecked = config.blockAllExceptSupported
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.menu_block_unsupported_browsers -> {
+                    val newValue = !item.isChecked
+                    item.isChecked = newValue
+                    viewModel.setBlockAllExceptSupported(newValue)
+                    true
                 }
-                viewModel.addKeyword(keyword)
-                binding.etKeyword.setText("")
-            }
-        }
-
-        binding.etRedirectUrl.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                if (!isUpdatingUi) {
-                    viewModel.setRedirectUrl(s.toString())
+                R.id.menu_help -> {
+                    val url = "https://curbox.app/docs/reducers/keyword-blocker/"
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    true
                 }
-            }
-        })
-
-        binding.cbSearchRecursively.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) {
-                viewModel.setSearchRecursively(isChecked)
+                else -> false
             }
         }
+<<<<<<< HEAD
 
         binding.cbMatchSubstrings.setOnCheckedChangeListener { _, isChecked ->
             if (!isUpdatingUi) {
@@ -139,6 +145,9 @@ class KeywordBlockerFragment : Fragment() {
                 }
             }
         })
+=======
+        popup.show()
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     }
 
     private fun observeViewModel() {
@@ -146,9 +155,15 @@ class KeywordBlockerFragment : Fragment() {
             viewModel.keywordBlockerConfig.collectLatest { config ->
                 isUpdatingUi = true
 
-                if (binding.switchEnableBlocker.isChecked != config.isActive) {
-                    binding.switchEnableBlocker.isChecked = config.isActive
+                if (config.keywordGroups.isEmpty()) {
+                    binding.tvEmptyState.visibility = View.VISIBLE
+                    binding.rvKeywordGroups.visibility = View.GONE
+                } else {
+                    binding.tvEmptyState.visibility = View.GONE
+                    binding.rvKeywordGroups.visibility = View.VISIBLE
+                    binding.rvKeywordGroups.adapter = KeywordGroupAdapter(config.keywordGroups)
                 }
+<<<<<<< HEAD
 
                 if (binding.etRedirectUrl.text.toString() != config.redirectUrl) {
                     binding.etRedirectUrl.setText(config.redirectUrl)
@@ -179,11 +194,14 @@ class KeywordBlockerFragment : Fragment() {
 
                 updateKeywordsList(config.blockedKeywords)
 
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
                 isUpdatingUi = false
             }
         }
     }
 
+<<<<<<< HEAD
     private fun updateKeywordsList(keywords: List<String>) {
         binding.cgKeywords.removeAllViews()
         for (keyword in keywords) {
@@ -198,7 +216,45 @@ class KeywordBlockerFragment : Fragment() {
                 }
             }
             binding.cgKeywords.addView(chip)
+=======
+    inner class KeywordGroupAdapter(private val groupList: List<KeywordGroup>) :
+        RecyclerView.Adapter<KeywordGroupAdapter.ViewHolder>() {
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val tvName: TextView = view.findViewById(R.id.tv_group_name)
+            val tvDetails: TextView = view.findViewById(R.id.tv_group_details)
+            val switchActive: SwitchMaterial = view.findViewById(R.id.switch_group_active)
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_app_group, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val group = groupList[position]
+            holder.tvName.text = group.name
+            val typeText = if (group.blockingType == AppBlockingType.Usage) "Usage Based" else "Time Based"
+            holder.tvDetails.text = "${group.selectedKeywords.size} Keywords • $typeText"
+            
+            holder.switchActive.setOnCheckedChangeListener(null)
+            holder.switchActive.isChecked = group.isActive
+            holder.switchActive.setOnCheckedChangeListener { _, isChecked ->
+                viewModel.updateGroupActiveState(group.id, isChecked)
+            }
+            
+            holder.itemView.setOnClickListener {
+                val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                    putExtra("fragment", CreateKeywordGroupFragment.FRAGMENT_ID)
+                    putExtra("group_id", group.id)
+                }
+                startActivity(intent)
+            }
+        }
+
+        override fun getItemCount() = groupList.size
     }
 
     private fun showKeywordTimeSettings(keyword: String) {

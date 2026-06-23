@@ -1,40 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground">
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical">
 
-    <!-- Minimal Setup Section -->
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/setupContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="32dp"
-        android:paddingBottom="132dp"
-        android:visibility="visible">
+        android:padding="12dp">
 
-        <!-- Top bar containing stats button -->
+        <TextView
+            android:id="@+id/tvActiveGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.7"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@+id/tvMinutes"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/tvMinutes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/coolvetica"
+            android:includeFontPadding="false"
+            android:text="@string/default_focus_duration_value"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="150sp"
+            android:textStyle="bold"
+            app:fontWeight="900"
+            app:layout_constraintBottom_toTopOf="@+id/flRuler"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/tvSeconds"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="@string/label_mins"
+            android:textSize="20sp"
+            app:layout_constraintStart_toEndOf="@+id/tvMinutes"
+            app:layout_constraintTop_toTopOf="@+id/tvMinutes" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_help"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:icon="@drawable/baseline_question_mark_24"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageButton
+            android:id="@+id/btnGoToStats"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="end"
+            android:layout_marginHorizontal="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/focus_stats"
+            android:src="@drawable/ic_baseline_bar_chart_24"
+            app:layout_constraintBottom_toBottomOf="@+id/btnStartConfig"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/btnStartConfig"
+            app:tint="?attr/colorOnSurface" />
+
         <FrameLayout
+            android:id="@+id/flRuler"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            
-            <ImageButton
-                android:id="@+id/btnGoToStats"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="end"
-                android:layout_marginTop="-16dp"
-                android:layout_marginEnd="-8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/focus_stats"
-                android:src="@drawable/ic_baseline_bar_chart_24"
-                app:tint="?attr/colorOnSurface" />
+            android:layout_height="70dp"
+            android:layout_marginHorizontal="8dp"
+            android:layout_marginBottom="32dp"
+            app:layout_constraintBottom_toTopOf="@+id/btnStartConfig"
+            app:layout_constraintStart_toStartOf="parent">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvRuler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:overScrollMode="never" />
+
+            <View
+                android:id="@+id/vSeparator"
+                android:layout_width="3dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="?attr/colorPrimary" />
         </FrameLayout>
 
+<<<<<<< HEAD
                 <com.google.android.material.card.MaterialCardView
             android:id="@+id/cvActiveAutoFocus"
             android:layout_width="match_parent"
@@ -249,67 +308,19 @@
             android:layout_weight="1" />
 
         <!-- Base Start Button (Opens Dialog) -->
+=======
+>>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStartConfig"
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_marginTop="16dp"
-            android:text="@string/focus_start" />
-    </LinearLayout>
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="8dp"
+            android:layout_marginBottom="150dp"
+            android:text="@string/focus_start"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/btnGoToStats" />
 
-    <!-- ====== ACTIVE SESSION CONTAINER ====== -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/activeContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone"
-        app:cardCornerRadius="0dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="0dp">
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingTop="24dp"
-            android:paddingEnd="24dp"
-            android:paddingBottom="100dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="@string/focus_active"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-            <TextView
-                android:id="@+id/tvCountdown"
-                style="@style/TextAppearance.Material3.HeadlineLarge"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="@string/val_0000"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvActiveGroup"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:alpha="0.7"
-                android:gravity="center"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnStop"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="16dp"
-                android:text="@string/focus_end_session" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

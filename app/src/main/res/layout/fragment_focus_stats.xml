@@ -32,7 +32,6 @@
             android:paddingTop="16dp"
             android:paddingBottom="32dp">
 
-            <!-- Group Filter -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
@@ -54,11 +53,9 @@
                     android:textAppearance="?attr/textAppearanceBodyMedium" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Stats Row 1: Sessions / Total Time / Streak -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_height="wrap_content">
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
@@ -80,7 +77,7 @@
                             android:id="@+id/tvTotalSessions"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/val_0"
+                            android:text="@string/value_zero"
                             android:textColor="?attr/colorPrimary"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -115,7 +112,7 @@
                             android:id="@+id/tvTotalDuration"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/val_0m"
+                            android:text="@string/value_zero_minutes"
                             android:textColor="?attr/colorPrimary"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -150,7 +147,7 @@
                             android:id="@+id/tvStreak"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/val_0"
+                            android:text="@string/value_zero"
                             android:textColor="?attr/colorPrimary"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -166,12 +163,10 @@
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <!-- Stats Row 2: Avg Duration / Completion Rate -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:layout_marginTop="8dp">
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="0dp"
@@ -193,7 +188,7 @@
                             android:id="@+id/tvAvgDuration"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/val_0m"
+                            android:text="@string/value_zero_minutes"
                             android:textColor="?attr/colorTertiary"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -228,7 +223,7 @@
                             android:id="@+id/tvCompletionRate"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/val_0_1"
+                            android:text="@string/value_zero_percent"
                             android:textColor="?attr/colorTertiary"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -244,7 +239,6 @@
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <!-- Weekly Graph -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -268,7 +262,6 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Top Tags -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardTopTags"
                 android:layout_width="match_parent"

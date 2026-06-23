@@ -1,29 +1,59 @@
-Tired of losing hours to endless scrolling and Screen Time? Meet Curbox – the ultimate app to cure screen addiction!
+Curbox is a free and open source app blocker and screen time tracker built for digital wellbeing and a real digital detox. Block apps, websites, reels and shorts, then watch your screen time drop and your focus come back.
+
+Everything runs on your phone. Curbox has no internet permission, so your usage data can never leave your device. No ads, no accounts, no tracking, fully open source.
 
 
-<b>Features</b>
+<b>Block apps and websites</b>
 
-- <b>Versatile Blockers</b>: Everything Packed in a single app
-- <b>App Blocker</b> : Block apps, set cheat hours, and more
-- <b>Keyword Blocker</b> : Block custom keywords, Porn blocker , and setup custom link redirection
-- <b>In App blocker</b> : Block youtube shorts or instagram reels while allowing access to other app features
+• <b>App and Website Blocker</b>: block any distracting app or website completely
+• <b>URL Path Blocking</b>: block just one part of a site, like m.youtube.com/shorts, while the rest of YouTube still works
+• <b>Short Form Content Blocker</b>: shut off Instagram Reels and YouTube Shorts so the feed stops pulling you back
 
-- <b>Grayscale Filter</b> : Turn specific apps black and white to make them boring
 
-- <b>Reels Tracker</b> : Track the number of Intagram reels or tiktoks you scroll
-- <b>App Usage Tracker</b> : Track how you are spending your time on phone
-- <b>Homescreen Widgets</b> : Display statistics on your homescreen
+<b>Hide only the distracting parts</b>
 
-- <b>Anti-Uninstall</b>: Put password or block uninstallation for a few days
+Granular UI Hiding lets you remove the trap inside an app without losing the app. Curbox lays a clean overlay over the exact area you pick, so everything else keeps working. For example, hide the YouTube home feed but keep search, blank out the Instagram explore tab, or the entire home feed while allowing posts from friends. You stay in control of what you see.
 
-- <b>Focus Mode</b> : Block all apps except the whitelisted ones or vice versa
-- <b>Auto Focus</b> : Automatically block selected apps at specified hours of the day
 
-- <b>Extremely Customisable</b> : Setup custom warning messages, cooldowns, and more
-- <b>Privacy Oriented</b> : Everything stays secure on your local device without the need of INTERNET permission
-<b>Usage</b>
+<b>Stay focused</b>
 
-1. Launch Curbox on your Android device.
-2. Provide all necessary permissions like Accessibility service, Notification, Draw over other apps etc
-3. On Android 13+ devices, you need to additionally allow restricted settings before enabling the accessibility permission. Watch a tutorial here -> https://youtu.be/91B72lEpcqc?si=PCKKUSwM1aLdELqJ
-4. It is highly recommended to download the app directly from f-droid rather than a .apk from github or f-droid website
+• <b>Focus Mode</b>: pause apps and websites for a set time so you can study or work in peace
+• <b>Scheduled DND</b>: turn on Do Not Disturb automatically at the hours you set
+• <b>App Specific Grayscale</b>: drain the color out of Instagram while your Camera stays full color, so dull apps lose their pull
+• <b>Usage Based Limits</b>: block an app or site after a set amount of use, like WhatsApp after 1 hour
+• <b>Time Based Access</b>: allow an app only during set hours, like WhatsApp from 7 AM to 9 PM
+• <b>Mindful Messages</b>: gentle nudges that run as overlay when you use an app
+
+
+<b>See your time</b>
+
+• <b>Usage Analytics</b>: clear breakdowns of how long you spend in each app and website
+• <b>Focus Statistics</b>: track your focus sessions and your progress over time
+• <b>Live Scroll Counter</b>: a real time count of how many short videos you have scrolled
+• <b>Session Timer</b>: a live timer of how long the current app has been open
+• <b>Home Screen Widgets</b>: keep your stats and quick controls on your home screen
+
+
+<b>Choose how hard it is to give in</b>
+
+When you try to open something outside its schedule, you decide what it takes to get back in.
+
+• <b>Strict Blockade</b>: no access at all
+• <b>Timed Unlocks</b>: each unlock lasts a short set time, like 5 minutes
+• <b>Dynamic Unlocks</b>: pick the unlock length yourself each time
+• <b>QR or Barcode Unlock</b>: scan a real barcode, like one on a book, so you have to get up and move
+• <b>Sentence Retyping</b>: type out a full sentence before the app will open
+• <b>Unlock Limits</b>: cap how many unlocks you get every few hours
+
+
+<b>Private by design</b>
+
+Most screen time apps use the Accessibility service to see everything you do, and they also connect to the internet. Curbox uses the same Accessibility service to block and track, but it never asks for internet permission. Your data stays on your phone, and the full source code is public so anyone can verify it.
+
+
+<b>Setup</b>
+
+1. Open Curbox on your Android phone
+2. Grant the permissions it asks for, like Accessibility, Notifications and Draw over other apps
+3. On Android 13 and above, allow restricted settings before you turn on the Accessibility permission. Watch a short guide here: https://youtu.be/91B72lEpcqc?si=PCKKUSwM1aLdELqJ
+4. For the smoothest setup and updates, install Curbox from the F-Droid app (please avoid website)

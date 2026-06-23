@@ -2,7 +2,6 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
     android:padding="8dp">
 
@@ -15,10 +14,9 @@
         android:gravity="center"
         android:padding="8dp"
         android:textSize="24sp"
-        android:textStyle="bold"
-        tools:text="TextView" />
+        android:textStyle="bold" />
 
-    <neth.iecal.curbox.views.HorizontalNumberPicker
+    <neth.iecal.curbox.ui.views.HorizontalNumberPicker
         android:id="@+id/mins_picker"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -27,7 +25,7 @@
         android:gravity="center"
         android:visibility="gone">
 
-    </neth.iecal.curbox.views.HorizontalNumberPicker>
+    </neth.iecal.curbox.ui.views.HorizontalNumberPicker>
 
     <TextView
         android:id="@+id/proceed_seconds"
@@ -37,6 +35,49 @@
         android:layout_marginBottom="16dp"
         android:gravity="center"
         android:text="@string/proceed_in" />
+
+    <TextView
+        android:id="@+id/typing_target_sentence"
+        style="@style/TextAppearance.Material3.BodyMedium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:visibility="gone"
+        android:textStyle="italic" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/typing_input_layout"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:visibility="gone"
+        android:hint="@string/hint_type_sentence">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/typing_input_edit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/intent_input_layout"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:visibility="gone"
+        android:hint="@string/hint_unlock_reason">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/intent_input_edit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textMultiLine"
+            android:minLines="3"
+            android:gravity="top" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <Button
         android:id="@+id/btn_proceed"

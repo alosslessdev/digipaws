@@ -28,7 +28,7 @@ data class ReelUsageConfig(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as AppUsageConfig
+        other as ReelUsageConfig
 
         if (isDailyUniform != other.isDailyUniform) return false
         if (uniformLimit != other.uniformLimit) return false

@@ -1,13 +1,11 @@
 package neth.iecal.curbox.ui.fragments.installation.onboarding.screens
 
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.google.android.material.card.MaterialCardView
 import neth.iecal.curbox.databinding.FragmentTargetSelectionBinding
 import neth.iecal.curbox.R
 import neth.iecal.curbox.ui.fragments.installation.onboarding.OnboardingFragment
@@ -31,34 +29,20 @@ class TargetSelectionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val strokeColorDefault = getThemeColor(com.google.android.material.R.attr.colorOutline)
-        val strokeColorChecked = getThemeColor(com.google.android.material.R.attr.colorPrimary)
+        viewModel.setTargetApp("Instagram")
+        viewModel.setDailyLimit(30L)
 
-        val cards = listOf(
-            binding.cardInstagram to "Instagram",
-            binding.cardTiktok to "TikTok",
-            binding.cardYoutube to "YouTube",
-            binding.cardReddit to "Reddit",
-            binding.cardOther to "Other"
-        )
-
-        cards.forEach { (card, value) ->
-            card.setOnClickListener {
-                // Clear all
-                cards.forEach { (c, _) ->
-                    c.isChecked = false
-                    c.strokeColor = strokeColorDefault
-                    c.invalidate()
-                }
-                
-                // Check this one
-                card.isChecked = true
-                card.strokeColor = strokeColorChecked
-                card.invalidate()
-                
-                viewModel.setTargetApp(value)
-                binding.btnAction.isEnabled = true
+        binding.targetChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
+            val target = when (checkedIds.first()) {
+                R.id.chip_instagram -> "Instagram"
+                R.id.chip_tiktok -> "TikTok"
+                R.id.chip_youtube -> "YouTube"
+                R.id.chip_reddit -> "Reddit"
+                R.id.chip_other -> "Other"
+                else -> "Instagram"
             }
+            viewModel.setTargetApp(target)
         }
 
         binding.limitChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
@@ -76,12 +60,6 @@ class TargetSelectionFragment : Fragment() {
         binding.btnAction.setOnClickListener {
             (parentFragment as? OnboardingFragment)?.goToNextPage()
         }
-    }
-
-    private fun getThemeColor(attr: Int): Int {
-        val typedValue = TypedValue()
-        requireContext().theme.resolveAttribute(attr, typedValue, true)
-        return typedValue.data
     }
 
     override fun onDestroyView() {

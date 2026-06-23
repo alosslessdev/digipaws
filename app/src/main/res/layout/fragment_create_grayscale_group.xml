@@ -3,44 +3,61 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface">
+    android:padding="16dp">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        app:elevation="0dp">
-
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="@string/create_grayscale_group" />
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.core.widget.NestedScrollView
+    <ScrollView
+        android:id="@+id/scrollView2"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:scrollbars="none"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp"
             android:paddingBottom="100dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="24dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/textView"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/create_grayscale_group"
+                    android:textSize="25sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_delete_group"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:padding="0dp"
+                    android:visibility="gone"
+                    app:icon="@drawable/baseline_delete_24"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="24dp" />
+            </LinearLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
                 android:hint="@string/group_name"
+                app:boxBackgroundColor="?attr/colorSurfaceContainer"
                 app:boxCornerRadiusBottomEnd="16dp"
                 app:boxCornerRadiusBottomStart="16dp"
                 app:boxCornerRadiusTopEnd="16dp"
                 app:boxCornerRadiusTopStart="16dp"
-                app:boxStrokeWidth="0dp"
-                app:boxBackgroundColor="?attr/colorSurfaceContainerHigh"
-                android:layout_marginBottom="24dp">
+                app:boxStrokeWidth="0dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_group_name"
@@ -52,38 +69,38 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:letterSpacing="0.1"
                 android:text="@string/apps_to_greyscale"
                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:letterSpacing="0.1"
-                android:layout_marginBottom="12dp"/>
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_select_apps"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
+                android:layout_marginBottom="24dp"
                 android:text="@string/select_apps_0"
-                app:icon="@drawable/ic_app_blocker_aesthetic"
-                app:backgroundTint="?attr/colorSurfaceContainerHigh"
                 android:textColor="?attr/colorOnSurface"
-                app:iconTint="?attr/colorPrimary"
+                app:backgroundTint="?attr/colorSurfaceContainer"
                 app:cornerRadius="16dp"
-                android:layout_marginBottom="24dp" />
+                app:icon="@drawable/ic_app_blocker_aesthetic"
+                app:iconTint="?attr/colorPrimary" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_configure_schedule"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
+                android:layout_marginBottom="24dp"
                 android:text="@string/configure_schedule"
-                app:icon="@drawable/ic_timer_aesthetic"
-                app:backgroundTint="?attr/colorSurfaceVariant"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                app:iconTint="?attr/colorOnSurfaceVariant"
+                app:backgroundTint="?attr/colorSurfaceContainer"
                 app:cornerRadius="16dp"
-                android:layout_marginBottom="24dp" />
+                app:icon="@drawable/ic_timer_aesthetic"
+                app:iconTint="?attr/colorOnSurfaceVariant" />
 
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+    </ScrollView>
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fab_save_group"
@@ -92,9 +109,9 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="24dp"
         android:text="@string/done"
-        app:icon="@drawable/baseline_done_24"
-        app:backgroundTint="?attr/colorPrimary"
         android:textColor="?attr/colorOnPrimary"
+        app:backgroundTint="?attr/colorPrimary"
+        app:icon="@drawable/baseline_done_24"
         app:iconTint="?attr/colorOnPrimary" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

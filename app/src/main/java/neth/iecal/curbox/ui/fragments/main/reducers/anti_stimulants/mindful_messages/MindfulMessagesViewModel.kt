@@ -28,30 +28,44 @@ class MindfulMessagesViewModel(application: Application) : AndroidViewModel(appl
 
     fun updateIsActive(isActive: Boolean) {
         val current = _configState.value
-        if (current.isActive != isActive) {
-            updateConfig(current.copy(isActive = isActive))
-        }
+        if (current.isActive != isActive) updateConfig(current.copy(isActive = isActive))
     }
 
     fun updateMessages(messages: String) {
         val current = _configState.value
-        if (current.messages != messages) {
-            updateConfig(current.copy(messages = messages))
-        }
+        if (current.messages != messages) updateConfig(current.copy(messages = messages))
     }
 
-    fun updatePosition(position: Int) {
+    fun updateTextSize(textSize: Float) {
         val current = _configState.value
-        if (current.position != position) {
-            updateConfig(current.copy(position = position))
+        if (current.textSize != textSize) updateConfig(current.copy(textSize = textSize))
+    }
+
+    fun updateBgColor(bgColor: Int) {
+        val current = _configState.value
+        if (current.bgColor != bgColor) updateConfig(current.copy(bgColor = bgColor))
+    }
+
+    fun updateBgOpacity(bgOpacity: Int) {
+        val current = _configState.value
+        if (current.bgOpacity != bgOpacity) updateConfig(current.copy(bgOpacity = bgOpacity))
+    }
+
+    fun updateTextOpacity(textOpacity: Int) {
+        val current = _configState.value
+        if (current.textOpacity != textOpacity) updateConfig(current.copy(textOpacity = textOpacity))
+    }
+
+    fun updatePosition(positionX: Float, positionY: Float) {
+        val current = _configState.value
+        if (current.positionX != positionX || current.positionY != positionY) {
+            updateConfig(current.copy(positionX = positionX, positionY = positionY))
         }
     }
 
     fun updateSelectedApps(selectedApps: List<String>) {
         val current = _configState.value
-        if (current.selectedApps != selectedApps) {
-            updateConfig(current.copy(selectedApps = selectedApps))
-        }
+        if (current.selectedApps != selectedApps) updateConfig(current.copy(selectedApps = selectedApps))
     }
 
     private fun updateConfig(config: MindfulMessageConfig) {

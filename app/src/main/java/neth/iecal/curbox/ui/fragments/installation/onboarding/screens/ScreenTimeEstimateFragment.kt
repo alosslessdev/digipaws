@@ -29,7 +29,6 @@ class ScreenTimeEstimateFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        // Initial setup
         updateRealityText(viewModel.estimatedHours.value ?: 4)
         
         binding.hoursSlider.addOnChangeListener { _, value, _ ->
@@ -55,7 +54,7 @@ class ScreenTimeEstimateFragment : Fragment() {
         
         val weeks = daysPerYear / 7
         
-        binding.tvRealitySubtext.text = "Over a year, that is $weeks full weeks of your life staring at a screen."
+        binding.tvRealitySubtext.text = "That is $weeks full weeks of your life staring at a screen per year."
     }
 
     override fun onDestroyView() {

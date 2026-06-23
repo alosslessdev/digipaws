@@ -1,24 +1,29 @@
 package neth.iecal.curbox.ui.fragments.installation.onboarding.screens
 
 import android.Manifest
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.text.TextUtils
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import neth.iecal.curbox.R
@@ -30,11 +35,9 @@ import neth.iecal.curbox.data.models.AppUsageConfig
 import neth.iecal.curbox.services.AppBlockerService
 import neth.iecal.curbox.services.UsageTrackingService
 import neth.iecal.curbox.ui.activity.FragmentActivity
-import neth.iecal.curbox.ui.fragments.installation.AccessibilityGuide
-import neth.iecal.curbox.ui.fragments.installation.onboarding.OnboardingFragment
 import neth.iecal.curbox.ui.fragments.installation.onboarding.OnboardingViewModel
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.AppBlockerSettingViewModel
-import neth.iecal.curbox.ui.fragments.usage.AllAppsUsageFragment
+import neth.iecal.curbox.ui.fragments.main.usage.AllAppsUsageFragment
 import neth.iecal.curbox.utils.PermissionUtils
 import neth.iecal.curbox.utils.ZipUtils
 import neth.iecal.curbox.utils.ZipUtils.unzipSharedPreferencesFromUri
@@ -135,8 +138,8 @@ class OnboardingPermissionsFragment : Fragment() {
             if (Settings.canDrawOverlays(requireContext())) return@setOnClickListener
             showExplanationDialog(
                 title = "Screen Overlay",
-                rationale = "To break your scrolling habit, we need permission to show a 'pause' screen over distracting apps when you open them.",
-                openSourceExplanation = "\uD83D\uDEE1\uFE0F Open Source: Think of our app like a restaurant with an 'open kitchen'. Our entire codebase is public. Anyone can look through it to verify we aren't doing anything sneaky. There are no closed doors here."
+                rationale = "Curbox needs this to show a calm pause screen on top of distracting apps when you open them. Without it, Curbox cannot place anything over those apps to help you stop and think.",
+                openSourceExplanation = "\uD83D\uDEE1\uFE0F Open Source: Think of Curbox like a restaurant with an open kitchen. The whole codebase is public, so anyone can check that Curbox is not doing anything sneaky. There are no closed doors here."
             ) {
                 val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
                     data = Uri.parse("package:${requireContext().packageName}")
@@ -145,24 +148,13 @@ class OnboardingPermissionsFragment : Fragment() {
             }
         }
 
-        binding.usageStatsPermRoot.setOnClickListener {
-            if (neth.iecal.curbox.utils.PermissionUtils.hasUsageStatsPermission(requireContext())) return@setOnClickListener
-            showExplanationDialog(
-                title = "Usage Access",
-                rationale = "Curbox needs to know which app you are currently using so we can intervene exactly when you open a distracting app.",
-                openSourceExplanation = "\uD83D\uDEE1\uFE0F Verified by the Community: Because our 'kitchen' is open, independent developers and privacy advocates can inspect our work. If we ever tried to track you, the community would find out immediately."
-            ) {
-                startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            }
-        }
-
         binding.notifPermRoot.setOnClickListener {
             if (neth.iecal.curbox.utils.PermissionUtils.isNotificationPermissionGiven(requireContext())) return@setOnClickListener
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 showExplanationDialog(
                     title = "Notifications",
-                    rationale = "We need this to keep the application running reliably in the background and to gently remind you of your goals.",
-                    openSourceExplanation = "\uD83D\uDEE1\uFE0F Not a Data Broker: Most apps hide their code because their true business is harvesting your data. Since our code is 100% public, you can verify yourself that there is no hidden code sending your personal information away."
+                    rationale = "Curbox needs this to stay running in the background so your blocks keep working, and to gently remind you of your goals. Without it, Android can stop Curbox and your blocks may fail.",
+                    openSourceExplanation = "\uD83D\uDEE1\uFE0F Not a Data Broker: Many apps hide their code because they make money by harvesting your data. Curbox keeps all its code public, so you can check yourself that nothing is quietly sending your information away."
                 ) {
                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
@@ -175,8 +167,8 @@ class OnboardingPermissionsFragment : Fragment() {
             
             showExplanationDialog(
                 title = "Do Not Disturb",
-                rationale = "Curbox needs permission to control Do Not Disturb to automatically hide distractions when you are focusing.",
-                openSourceExplanation = "\uD83D\uDEE1\uFE0F We respect your peace: Curbox uses this permission to mute distractions exactly when you want."
+                rationale = "Curbox needs this to turn on Do Not Disturb for you, so it can mute calls and alerts while you focus. Without it, Curbox cannot silence distractions on its own.",
+                openSourceExplanation = "\uD83D\uDEE1\uFE0F Curbox respects your peace: It uses this only to mute distractions when you ask it to."
             ) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
@@ -189,8 +181,8 @@ class OnboardingPermissionsFragment : Fragment() {
             if (neth.iecal.curbox.utils.PermissionUtils.isAccessibilityServiceEnabled(requireContext(), AppBlockerService::class.java)) return@setOnClickListener
             showExplanationDialog(
                 title = "App Blocker (Accessibility API)",
-                rationale = "Curbox uses the Android AccessibilityService API to detect when you launch a target app and draw the blocker screen. This is crucial for the core app blocking to function.",
-                openSourceExplanation = "\uD83D\uDEE1\uFE0F Transparency for Deep Access: This is a powerful permission, which is why being open source is so critical. You don't have to just trust our word that we only block apps—the global community has reviewed our public code to guarantee it."
+                rationale = "Curbox needs this to notice when you open a blocked app and show the blocker screen. Without it, app blocking cannot work at all.",
+                openSourceExplanation = "\uD83D\uDEE1\uFE0F Transparency for Deep Access: This is a powerful permission, which is why being open source matters so much. You do not have to take Curbox at its word. The global community has reviewed its public code and confirmed it only blocks apps."
             ) {
                 PermissionUtils.openAccessibilityServiceScreen(requireContext(),AppBlockerService::class.java)
             }
@@ -200,37 +192,20 @@ class OnboardingPermissionsFragment : Fragment() {
             if (neth.iecal.curbox.utils.PermissionUtils.isAccessibilityServiceEnabled(requireContext(), UsageTrackingService::class.java)) return@setOnClickListener
             showExplanationDialog(
                 title = "Usage Tracker (Accessibility API)",
-                rationale = "Curbox uses the Android AccessibilityService API to accurately measure your screen time and reel scrolling so we can provide you with honest reality-check statistics.",
-                openSourceExplanation = "\uD83D\uDEE1\uFE0F Built for You, Not Advertisers: Curbox is a community-driven project built to help people, not to sell data. Our open source nature proves that our only goal is giving you your time back. Your data is yours alone."
+                rationale = "Curbox needs this to count how many reels and short videos you scroll and show you mindful nudges. Without it, usage tracking cannot work at all.",
+                openSourceExplanation = "\uD83D\uDEE1\uFE0F Transparency for Deep Access: This is a powerful permission, which is why being open source matters so much. You do not have to take Curbox at its word. The global community has reviewed its public code and confirmed it only tracks usage."
             ) {
-                PermissionUtils.openAccessibilityServiceScreen(requireContext(),
-                    UsageTrackingService::class.java)
+                PermissionUtils.openAccessibilityServiceScreen(requireContext(),UsageTrackingService::class.java)
             }
         }
 
-        binding.shizukuPermRoot.setOnClickListener {
-            if (neth.iecal.curbox.utils.PermissionUtils.hasShizukuPermission()) return@setOnClickListener
-            showExplanationDialog(
-                title = "Shizuku Permission",
-                rationale = "This permission is optional. It allows Curbox to perform more complex tasks and operations efficiently.",
-                openSourceExplanation = "\uD83D\uDEE1\uFE0F Optional Power: While basic features work without this, granting Shizuku access enables deeper system-level integrations transparently."
-            ) {
-                if (neth.iecal.curbox.utils.PermissionUtils.isShizukuAvailable()) {
-                    try {
-                        rikka.shizuku.Shizuku.requestPermission(1001)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                } else {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/"))
-                    startActivity(intent)
-                }
-            }
+        binding.btnShowRestrictedTutorial.setOnClickListener {
+            val manufacturer = Build.MANUFACTURER
+            val query = Uri.encode("How to enable restricted setting on $manufacturer android 13")
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=$query"))
+            startActivity(intent)
         }
 
-        binding.restoreRoot.setOnClickListener {
-            ZipUtils.showRestorePicker(restorePicker)
-        }
 
         binding.btnShizukuGrantAll.setOnClickListener {
             if (!neth.iecal.curbox.utils.PermissionUtils.hasShizukuPermission()) {
@@ -244,7 +219,37 @@ class OnboardingPermissionsFragment : Fragment() {
             }
         }
 
+        setupDescText()
         updatePermissionsState()
+    }
+
+    private fun setupDescText() {
+        val baseText = getString(R.string.to_create_friction_and_give_you)
+        val actionText = " Read Documentation"
+        val fullText = "$baseText $actionText"
+        val spannableString = SpannableString(fullText)
+
+        val clickableSpan = object : ClickableSpan() {
+            override fun onClick(view: View) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://curbox.app/docs"))
+                startActivity(intent)
+            }
+        }
+
+        val start = fullText.indexOf(actionText)
+        val end = start + actionText.length
+
+        spannableString.setSpan(clickableSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spannableString.setSpan(
+            ForegroundColorSpan(MaterialColors.getColor(binding.desc, com.google.android.material.R.attr.colorPrimary)),
+            start,
+            end,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        spannableString.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        binding.desc.text = spannableString
+        binding.desc.movementMethod = LinkMovementMethod.getInstance()
     }
 
     override fun onResume() {
@@ -273,7 +278,7 @@ class OnboardingPermissionsFragment : Fragment() {
     }
 
     private fun showExplanationDialog(title: String, rationale: String, openSourceExplanation: String, onProceed: () -> Unit) {
-        val privacy = "\n\n\uD83D\uDD12 100% Private: We do not collect, send, or store any of your data on our servers. All processing stays strictly on your phone.\n\n"
+        val privacy = "\n\n\uD83D\uDD12 100% Private: Curbox does not collect, send, or store any of your data on a server. Everything stays on your phone.\n\n"
         
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(title)
@@ -293,7 +298,6 @@ class OnboardingPermissionsFragment : Fragment() {
 
         val command = """
             appops set $pkg SYSTEM_ALERT_WINDOW allow
-            appops set $pkg GET_USAGE_STATS allow
             pm grant $pkg android.permission.POST_NOTIFICATIONS
             cmd notification allow_dnd $pkg
             
@@ -306,7 +310,7 @@ class OnboardingPermissionsFragment : Fragment() {
                     *"$svc1"*) ;;
                     *) NEW_SVCS="${'$'}NEW_SVCS:$svc1" ;;
                 esac
-                case "${'$'}CURRENT_ACC_SVCS" in
+                case "${'$'}NEW_SVCS" in
                     *"$svc2"*) ;;
                     *) NEW_SVCS="${'$'}NEW_SVCS:$svc2" ;;
                 esac
@@ -338,12 +342,26 @@ class OnboardingPermissionsFragment : Fragment() {
 
     private fun updatePermissionsState() {
         val hasOverlay = Settings.canDrawOverlays(requireContext())
-        val hasUsageStats = neth.iecal.curbox.utils.PermissionUtils.hasUsageStatsPermission(requireContext())
         val hasNotif = neth.iecal.curbox.utils.PermissionUtils.isNotificationPermissionGiven(requireContext())
         val hasDnd = (requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager).isNotificationPolicyAccessGranted
         val hasBlocker = neth.iecal.curbox.utils.PermissionUtils.isAccessibilityServiceEnabled(requireContext(), AppBlockerService::class.java)
         val hasTracker = neth.iecal.curbox.utils.PermissionUtils.isAccessibilityServiceEnabled(requireContext(), UsageTrackingService::class.java)
         val hasShizuku = neth.iecal.curbox.utils.PermissionUtils.hasShizukuPermission()
+
+        val isNonSession = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                val info = requireContext().packageManager.getInstallSourceInfo(requireContext().packageName)
+                val initiatingPackage = info.initiatingPackageName
+                initiatingPackage != "com.android.vending" && initiatingPackage != "org.fdroid.fdroid"
+            } catch (e: Exception) {
+                false
+            }
+        } else {
+            false
+        }
+
+        val showRestrictedWarning = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (!hasBlocker || !hasTracker) && isNonSession
+        binding.restrictedSettingsWarning.visibility = if (showRestrictedWarning) View.VISIBLE else View.GONE
         
         if (neth.iecal.curbox.utils.PermissionUtils.isShizukuAvailable()) {
             binding.btnShizukuGrantAll.visibility = View.VISIBLE
@@ -352,22 +370,16 @@ class OnboardingPermissionsFragment : Fragment() {
         }
 
         setPermissionIcon(hasOverlay, binding.overlayPermIcon)
-        setPermissionIcon(hasUsageStats, binding.usageStatsPermIcon)
         setPermissionIcon(hasNotif, binding.notifPermIcon)
         setPermissionIcon(hasDnd, binding.dndPermIcon)
         setPermissionIcon(hasBlocker, binding.blockerAccPermIcon)
         setPermissionIcon(hasTracker, binding.trackerAccPermIcon)
-        setPermissionIcon(hasShizuku, binding.shizukuPermIcon)
 
         // Enforce Sequence
         binding.overlayPermRoot.isEnabled = !hasOverlay
         binding.overlayPermRoot.alpha = if (hasOverlay) 0.5f else 1.0f
 
-        val canDoUsage = hasOverlay
-        binding.usageStatsPermRoot.isEnabled = canDoUsage && !hasUsageStats
-        binding.usageStatsPermRoot.alpha = if (canDoUsage) (if (hasUsageStats) 0.5f else 1.0f) else 0.3f
-
-        val canDoNotif = canDoUsage && hasUsageStats
+        val canDoNotif = hasOverlay
         binding.notifPermRoot.isEnabled = canDoNotif && !hasNotif
         binding.notifPermRoot.alpha = if (canDoNotif) (if (hasNotif) 0.5f else 1.0f) else 0.3f
 
@@ -383,16 +395,12 @@ class OnboardingPermissionsFragment : Fragment() {
         binding.trackerAccPermRoot.isEnabled = canDoTracker && !hasTracker
         binding.trackerAccPermRoot.alpha = if (canDoTracker) (if (hasTracker) 0.5f else 1.0f) else 0.3f
 
-        val canDoShizuku = canDoTracker && hasTracker
-        binding.shizukuPermRoot.isEnabled = canDoShizuku && !hasShizuku
-        binding.shizukuPermRoot.alpha = if (canDoShizuku) (if (hasShizuku) 0.5f else 1.0f) else 0.3f
-
-        val allGranted = hasOverlay && hasUsageStats && hasNotif && hasDnd && hasBlocker && hasTracker
+        val allGranted = hasOverlay && hasNotif && hasDnd && hasBlocker && hasTracker
         binding.btnAction.isEnabled = allGranted
         if (allGranted) {
-            binding.btnAction.text = "Finish Onboarding"
+            binding.btnAction.text = "Curb me!"
         } else {
-            binding.btnAction.text = "Enable Permissions"
+            binding.btnAction.text = "I still need more permissions"
         }
     }
 

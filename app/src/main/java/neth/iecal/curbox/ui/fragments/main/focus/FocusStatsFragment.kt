@@ -64,7 +64,7 @@ class FocusStatsFragment : Fragment() {
                     viewModel.groups.collectLatest { updateSpinner() }
                 }
                 launch {
-                    viewModel.autoFocusGroups.collectLatest { updateSpinner() }
+                    viewModel.autoDndGroups.collectLatest { updateSpinner() }
                 }
             }
         }
@@ -73,7 +73,7 @@ class FocusStatsFragment : Fragment() {
             val allGroups = mutableListOf<Pair<String?, String>>()
             allGroups.add(null to "All Groups")
             viewModel.groups.value.forEach { allGroups.add(it.groupId to it.groupName) }
-            viewModel.autoFocusGroups.value.forEach { allGroups.add(it.groupId to it.groupName) }
+            viewModel.autoDndGroups.value.forEach { allGroups.add(it.groupId to it.groupName) }
             
             if (position < allGroups.size) {
                 selectedGroupId = allGroups[position].first
@@ -88,7 +88,7 @@ class FocusStatsFragment : Fragment() {
     private fun updateSpinner() {
         val names = mutableListOf("All Groups")
         viewModel.groups.value.forEach { names.add(it.groupName) }
-        viewModel.autoFocusGroups.value.forEach { names.add(it.groupName) }
+        viewModel.autoDndGroups.value.forEach { names.add(it.groupName) }
         
         if (!isAdded) return
         
@@ -97,7 +97,7 @@ class FocusStatsFragment : Fragment() {
         
         val selectedName = if (selectedGroupId == null) "All Groups" else {
             viewModel.groups.value.find { it.groupId == selectedGroupId }?.groupName
-                ?: viewModel.autoFocusGroups.value.find { it.groupId == selectedGroupId }?.groupName
+                ?: viewModel.autoDndGroups.value.find { it.groupId == selectedGroupId }?.groupName
                 ?: "All Groups"
         }
         binding.spinGroups.setText(selectedName, false)
@@ -249,7 +249,7 @@ class FocusStatsFragment : Fragment() {
         
         val sortedTags = tagCounts.entries.sortedByDescending { it.value }.take(3)
         val manualGroups = viewModel.groups.value
-        val autoGroups = viewModel.autoFocusGroups.value
+        val autoGroups = viewModel.autoDndGroups.value
         
         for (entry in sortedTags) {
             val groupId = entry.key
