@@ -29,15 +29,6 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- Enable Switch -->
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/switch_enable_blocker"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/enable_keyword_blocker"
-                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                android:layout_marginBottom="24dp" />
-
             <!-- Add Keyword Input -->
             <TextView
                 android:layout_width="match_parent"

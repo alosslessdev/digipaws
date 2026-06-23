@@ -366,7 +366,7 @@ class KeywordBlocker : BaseBlocker() {
                             redirectUrl != config.redirectUrl ||
                             isSubstringMatchEnabled != config.matchSubstrings ||
                             isUnsupportedBrowserBlockingOn != config.blockAllExceptSupported ||
-                            isTurnedOn != config.isActive ||
+                            isTurnedOn != (activeFocusGroupIds.isNotEmpty()) ||
                             ignoredApps != config.ignoredApps.toHashSet()
 
                 blockedKeywords = normalizedKeywords
@@ -376,7 +376,7 @@ class KeywordBlocker : BaseBlocker() {
                 redirectUrl = config.redirectUrl
                 isSubstringMatchEnabled = config.matchSubstrings
                 isUnsupportedBrowserBlockingOn = config.blockAllExceptSupported
-                isTurnedOn = config.isActive
+                isTurnedOn = activeFocusGroupIds.isNotEmpty()
                 ignoredApps = config.ignoredApps.toHashSet()
                 isTimeTrackingEnabled = config.isTimeTrackingEnabled
                 keywordTimeLimits = config.keywordTimeLimits
@@ -394,7 +394,7 @@ class KeywordBlocker : BaseBlocker() {
 
     private fun isKeywordActiveInFocusGroup(keyword: String): Boolean {
         val groupIds = keywordFocusGroups[keyword]
-        if (groupIds.isNullOrEmpty()) return true
+        if (groupIds.isNullOrEmpty()) return activeFocusGroupIds.isNotEmpty()
         return groupIds.any { it in activeFocusGroupIds }
     }
 

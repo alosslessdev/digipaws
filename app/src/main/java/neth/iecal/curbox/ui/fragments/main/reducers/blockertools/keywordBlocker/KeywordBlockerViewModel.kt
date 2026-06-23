@@ -53,10 +53,6 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    fun setIsActive(isActive: Boolean) {
-        updateConfig(_keywordBlockerConfig.value.copy(isActive = isActive))
-    }
-
     fun addKeyword(keyword: String) {
         val currentKeywords = _keywordBlockerConfig.value.blockedKeywords.toMutableList()
         val normalizedKeyword = KeywordBlockerMatchUtils.normalizeBlockedEntry(keyword)

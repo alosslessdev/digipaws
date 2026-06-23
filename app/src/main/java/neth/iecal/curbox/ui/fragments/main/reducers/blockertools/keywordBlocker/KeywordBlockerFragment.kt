@@ -63,12 +63,6 @@ class KeywordBlockerFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        binding.switchEnableBlocker.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) {
-                viewModel.setIsActive(isChecked)
-            }
-        }
-
         binding.btnAddKeyword.setOnClickListener {
             var keyword = binding.etKeyword.text.toString()
             if (keyword.isNotBlank()) {
@@ -146,10 +140,6 @@ class KeywordBlockerFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.keywordBlockerConfig.collectLatest { config ->
                 isUpdatingUi = true
-
-                if (binding.switchEnableBlocker.isChecked != config.isActive) {
-                    binding.switchEnableBlocker.isChecked = config.isActive
-                }
 
                 if (binding.etRedirectUrl.text.toString() != config.redirectUrl) {
                     binding.etRedirectUrl.setText(config.redirectUrl)
