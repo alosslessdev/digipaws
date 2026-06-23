@@ -4,6 +4,8 @@
     <string name="add">Aggiungi</string>
     <string name="save">Salva</string>
     <string name="write_down_a_keyword">Scrivi una parola chiave</string>
+    <string name="write_a_new_keyword">Scrivi una nuova parola chiave</string>
+    <string name="empty_keywords_hint">Le parole chiave e i siti web che aggiungi appariranno qui</string>
     <string name="warning_message">Messaggio di avviso</string>
     <string name="minutes">minuti</string>
     <string name="app_icon">app_icon</string>

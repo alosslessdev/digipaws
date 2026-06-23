@@ -4,6 +4,7 @@
     <string name="add">Add</string>
     <string name="save">Save</string>
     <string name="write_down_a_keyword">Write down a keyword</string>
+    <string name="write_a_new_keyword">Write a new keyword</string>
     <string name="warning_message">Warning message</string>
     <string name="minutes">minutes</string>
     <string name="app_icon">app_icon</string>
@@ -935,6 +936,7 @@
     <string name="api_permission_allow">Allow</string>
     <string name="api_permission_deny">Deny</string>
 
+    <string name="empty_keywords_hint">Keywords and websites you add will appear here</string>
     <string name="unsaved_changes_dialog_title">Unsaved Changes</string>
     <string name="unsaved_changes_dialog_message">You have unsaved changes. Would you like to save them before leaving?</string>
     <string name="btn_discard">Discard</string>

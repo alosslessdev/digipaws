@@ -77,6 +77,7 @@ class CreateKeywordGroupFragment : Fragment() {
             viewModel.currentTimeConfig = AppTimeConfig()
             viewModel.warningScrnConfig = AppBlockerWarningScreenConfig()
             captureInitialState()
+            updateKeywordsList()
         }
 
         setupListeners()
@@ -188,6 +189,11 @@ class CreateKeywordGroupFragment : Fragment() {
                 selectedKeywords.add(kw)
                 updateKeywordsList()
                 binding.etKeyword.setText("")
+            } else if (kw.isEmpty()) {
+                Toast.makeText(requireContext(), R.string.write_a_new_keyword, Toast.LENGTH_SHORT).apply {
+                    setGravity(android.view.Gravity.CENTER, -200, 0)
+                    show()
+                }
             }
         }
 
@@ -310,6 +316,7 @@ class CreateKeywordGroupFragment : Fragment() {
 
     private fun updateKeywordsList() {
         keywordAdapter.submitList(selectedKeywords.toList())
+        binding.tvEmptyKeywords.visibility = if (selectedKeywords.isEmpty()) View.VISIBLE else View.GONE
     }
 
     inner class KeywordAdapter : RecyclerView.Adapter<KeywordAdapter.ViewHolder>() {
