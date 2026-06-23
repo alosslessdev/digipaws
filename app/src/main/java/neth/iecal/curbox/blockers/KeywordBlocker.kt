@@ -278,7 +278,7 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         val rootNode = service.rootInActiveWindow ?: return
-        var detectedAdultKeyword: String? = null
+        var detectedKeyword: String? = null
 
         if (isSearchAllTextFields) {
             recursionResultNodes.clear()
@@ -290,7 +290,7 @@ class KeywordBlocker : BaseBlocker() {
                     if (nodeText.isEmpty()) continue
                     val word = containsBlockedKeyword(nodeText)
                     if (word != null) {
-                        detectedAdultKeyword = word
+                        detectedKeyword = word
                         break
                     }
                 }
@@ -300,54 +300,40 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         val urlBarInfo = URL_BAR_ID_LIST[event.packageName.toString()]
-        if (urlBarInfo == null && detectedAdultKeyword != null) {
-            lastEventTimeStamp = SystemClock.uptimeMillis()
-            if (isTimeTrackingEnabled) {
-                handleKeywordDetected(detectedAdultKeyword, event.packageName?.toString() ?: "")
-                if (!isTimeLimitReached(detectedAdultKeyword)) {
-                    safeRecycle(recursionResultNodes)
-                    return
-                }
-            }
-            pressHome(detectedAdultKeyword)
-            safeRecycle(recursionResultNodes)
-            return
-        }
-
-        if (urlBarInfo == null) {
-            safeRecycle(recursionResultNodes)
-            return
-        }
-
         val idPrefixPart = event.packageName.toString() + ":id/"
-        val displayUrlTextNode =
+        val displayUrlTextNode = if (urlBarInfo != null)
             ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
+        else null
 
-        if (detectedAdultKeyword == null) {
+        if (detectedKeyword == null && urlBarInfo != null) {
             val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
             val displayText = displayUrlTextNode?.text?.toString() ?: ""
 
-            detectedAdultKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
+            detectedKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
                 containsBlockedKeyword(displayText)
             else null)
-            
-            if (detectedAdultKeyword == null) {
-                safeRecycle(displayUrlTextNode)
-                safeRecycle(recursionResultNodes)
-                return
-            }
         }
 
-        val finalDetectedKeyword = detectedAdultKeyword
+        if (detectedKeyword == null) {
+            safeRecycle(displayUrlTextNode)
+            safeRecycle(recursionResultNodes)
+            return
+        }
+
+        val packageName = event.packageName?.toString() ?: ""
+        if (!isKeywordEffectivelyBlocked(detectedKeyword, packageName)) {
+            safeRecycle(displayUrlTextNode)
+            safeRecycle(recursionResultNodes)
+            return
+        }
+
         lastEventTimeStamp = SystemClock.uptimeMillis()
-        if (isTimeTrackingEnabled) {
-            val packageName = event.packageName?.toString() ?: ""
-            handleKeywordDetected(finalDetectedKeyword, packageName)
-            if (!isTimeLimitReached(finalDetectedKeyword)) {
-                safeRecycle(displayUrlTextNode)
-                safeRecycle(recursionResultNodes)
-                return
-            }
+
+        if (urlBarInfo == null) {
+            pressHome(detectedKeyword)
+            safeRecycle(displayUrlTextNode)
+            safeRecycle(recursionResultNodes)
+            return
         }
 
         performSmallUpwardScroll()
@@ -358,7 +344,7 @@ class KeywordBlocker : BaseBlocker() {
         val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
         val editUrlBar = ReelBlocker.findElementById(rootNode, idPrefixPart + editUrlBarId)
             ?: run {
-                pressHome(detectedAdultKeyword)
+                pressHome(detectedKeyword)
                 safeRecycle(displayUrlTextNode)
                 safeRecycle(recursionResultNodes)
                 return
@@ -386,7 +372,7 @@ class KeywordBlocker : BaseBlocker() {
         safeRecycle(recursionResultNodes)
 
         Thread.sleep(300)
-        pressHome(detectedAdultKeyword)
+        pressHome(detectedKeyword)
     }
 
     private fun searchKeywordsInWebViewTitle(rootNode: AccessibilityNodeInfo): String? {
@@ -520,15 +506,16 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         if (isBlocked(matchedGroup, entry.packageName)) {
-            handleBlocking(matchedGroup)
+            val keyword = containsBlockedKeyword(entry.urlIdentifier) ?: entry.urlIdentifier
+            handleBlocking(matchedGroup, keyword)
         }
         calculateAndSetNextRecheck(matchedGroup, entry.packageName)
     }
 
-    private fun handleBlocking(group: KeywordGroup) {
+    private fun handleBlocking(group: KeywordGroup, word: String) {
         service.pressBack()
         Thread.sleep(1000)
-        pressHome(group.name)
+        pressHome(word)
         Handler(Looper.getMainLooper()).postDelayed({
             val intent = Intent(service, WarningActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -541,8 +528,32 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun isBlocked(group: KeywordGroup, packageName: String): Boolean =
-        if (group.blockingType == AppBlockingType.Timed) isTimedBlockActive(group)
-        else isUsageLimitExceeded(group, packageName)
+        when (group.blockingType) {
+            AppBlockingType.Timed -> isTimedBlockActive(group)
+            AppBlockingType.Usage -> isUsageLimitExceeded(group, packageName)
+            AppBlockingType.OnOpen -> true
+        }
+
+    private fun isKeywordEffectivelyBlocked(keyword: String, packageName: String): Boolean {
+        var blockedByGroup = false
+        for (group in activeGroups) {
+            val patterns = groupPatternMap[group.id] ?: continue
+            if (matchesPatterns(patterns, keyword)) {
+                if (isBlocked(group, packageName)) {
+                    blockedByGroup = true
+                    break
+                }
+            }
+        }
+
+        if (isTimeTrackingEnabled) {
+            handleKeywordDetected(keyword, packageName)
+            if (isTimeLimitReached(keyword)) return true
+            return blockedByGroup
+        }
+
+        return blockedByGroup
+    }
 
     private fun isTimedBlockActive(group: KeywordGroup): Boolean {
         val config = Gson().fromJson(group.setting, AppTimeConfig::class.java) ?: return false
