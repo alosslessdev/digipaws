@@ -40,14 +40,18 @@ class ReelBlocker : BaseBlocker() {
             "neth.iecal.curbox.refresh.reelblocker.cooldown"
 
         fun findElementById(node: AccessibilityNodeInfo?, id: String?): AccessibilityNodeInfo? {
-            if (node == null) return null
-            var targetNode: AccessibilityNodeInfo? = null
+            if (node == null || id == null) return null
             try {
-                targetNode = node.findAccessibilityNodeInfosByViewId(id!!)[0]
-            } catch (e: Exception) {
-                //e.printStackTrace();
-            }
-            return targetNode
+                val nodes = node.findAccessibilityNodeInfosByViewId(id)
+                if (nodes.isNotEmpty()) {
+                    val result = nodes[0]
+                    for (i in 1 until nodes.size) {
+                        try { nodes[i].recycle() } catch (_: Exception) {}
+                    }
+                    return result
+                }
+            } catch (_: Exception) {}
+            return null
         }
 
         val BLOCKED_VIEW_ID_LIST = mutableListOf(

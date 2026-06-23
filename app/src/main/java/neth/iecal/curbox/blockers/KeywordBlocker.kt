@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.LruCache
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -93,8 +94,7 @@ class KeywordBlocker : BaseBlocker() {
     private var clusteringThresholdMinutes = 5
     private var usageTracker: KeywordUsageTracker? = null
     private var lastDetectedKeyword: String? = null
-    private var lastReminderTime: Long = 0L
-    private var lastReminderKeyword: String? = null
+    private val lastReminderTimes = mutableMapOf<String, Long>()
 
 
     private fun containsBlockedKeyword(url: String): String? {
@@ -190,11 +190,23 @@ class KeywordBlocker : BaseBlocker() {
 
         val urlBarInfo = URL_BAR_ID_LIST[event.packageName]
         if (urlBarInfo == null && detectedAdultKeyword != null) {
+            lastEventTimeStamp = SystemClock.uptimeMillis()
+            if (isTimeTrackingEnabled) {
+                handleKeywordDetected(detectedAdultKeyword, event.packageName?.toString() ?: "")
+                if (!isTimeLimitReached(detectedAdultKeyword)) {
+                    safeRecycle(recursionResultNodes)
+                    return
+                }
+            }
             pressHome(detectedAdultKeyword)
+            safeRecycle(recursionResultNodes)
             return
         }
 
-        if (urlBarInfo == null) return
+        if (urlBarInfo == null) {
+            safeRecycle(recursionResultNodes)
+            return
+        }
 
         val idPrefixPart = event.packageName.toString() + ":id/"
         val displayUrlTextNode =
@@ -206,13 +218,25 @@ class KeywordBlocker : BaseBlocker() {
 
             detectedAdultKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
                 containsBlockedKeyword(displayText)
-            else null) ?: return
+            else null)
+            
+            if (detectedAdultKeyword == null) {
+                safeRecycle(displayUrlTextNode)
+                safeRecycle(recursionResultNodes)
+                return
+            }
         }
 
         val finalDetectedKeyword = detectedAdultKeyword
-        if (isTimeTrackingEnabled && finalDetectedKeyword != null) {
+        lastEventTimeStamp = SystemClock.uptimeMillis()
+        if (isTimeTrackingEnabled) {
             val packageName = event.packageName?.toString() ?: ""
             handleKeywordDetected(finalDetectedKeyword, packageName)
+            if (!isTimeLimitReached(finalDetectedKeyword)) {
+                safeRecycle(displayUrlTextNode)
+                safeRecycle(recursionResultNodes)
+                return
+            }
         }
 
         performSmallUpwardScroll()
@@ -222,7 +246,12 @@ class KeywordBlocker : BaseBlocker() {
 
         val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
         val editUrlBar = ReelBlocker.findElementById(rootNode, idPrefixPart + editUrlBarId)
-            ?: return pressHome(detectedAdultKeyword)
+            ?: run {
+                pressHome(detectedAdultKeyword!!)
+                safeRecycle(displayUrlTextNode)
+                safeRecycle(recursionResultNodes)
+                return
+            }
 
         editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
             putCharSequence(
@@ -237,8 +266,13 @@ class KeywordBlocker : BaseBlocker() {
             idPrefixPart = idPrefixPart,
             urlBarInfo = urlBarInfo
         )
+        
+        safeRecycle(editUrlBar)
+        safeRecycle(displayUrlTextNode)
+        safeRecycle(recursionResultNodes)
+
         if (!didSubmitRedirect) {
-            return pressHome(detectedAdultKeyword)
+            return pressHome(detectedAdultKeyword!!)
         }
 
         Thread.sleep(2000)
@@ -283,9 +317,13 @@ class KeywordBlocker : BaseBlocker() {
         val didClickGo = if (urlBarInfo.isSuggestionEqualToGo) {
             goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         } else {
-            goBtnNode.getChild(urlBarInfo.suggestionBoxIndexOfGoBtn)
-                ?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
+            val child = goBtnNode.getChild(urlBarInfo.suggestionBoxIndexOfGoBtn)
+            val result = child?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
+            safeRecycle(child)
+            result
         }
+        
+        safeRecycle(goBtnNode)
 
         if (didClickGo) {
             AppLogger.logDebug("KeywordBlocker", "Submitted redirect via browser go button")
@@ -301,13 +339,15 @@ class KeywordBlocker : BaseBlocker() {
         node ?: return
 
         if (node.className == targetClassName) {
-            recursionResultNodes.add(node)
+            recursionResultNodes.add(AccessibilityNodeInfo.obtain(node))
         }
 
-        for (i in 0 until node.childCount) {
-            findNodesByClassName(node.getChild(i), targetClassName)
-        }
         if (returnOnFirstResult && recursionResultNodes.isNotEmpty()) return
+
+        for (i in 0 until node.childCount) {
+            findNodesByClassName(node.getChild(i), targetClassName, returnOnFirstResult)
+            if (returnOnFirstResult && recursionResultNodes.isNotEmpty()) return
+        }
     }
 
     fun performSmallUpwardScroll() {
@@ -337,6 +377,7 @@ class KeywordBlocker : BaseBlocker() {
         this.service = service
         this.browserBlocker = BrowserBlocker(service)
         this.usageTracker = KeywordUsageTracker(service)
+        usageTracker?.checkAndResetIfNewDay()
         AppLogger.logDebug("KeywordBlocker", "Setting up kw blocker")
         settingsJob?.cancel()
         settingsJob = CoroutineScope(Dispatchers.IO).launch {
@@ -423,36 +464,33 @@ class KeywordBlocker : BaseBlocker() {
 
     private fun handleKeywordDetected(keyword: String, packageName: String) {
         val tracker = usageTracker ?: return
-
+        tracker.checkAndResetIfNewDay()
         tracker.recordDetection(keyword, packageName)
         lastDetectedKeyword = keyword
 
         val timeLimit = keywordTimeLimits[keyword] ?: 0
         val reminderInterval = keywordReminderIntervals[keyword] ?: 5
 
-        if (timeLimit > 0) {
-            val clusteringThresholdMs = clusteringThresholdMinutes * 60 * 1000L
-            val currentUsageSeconds = tracker.calculateTotalUsageTimeForToday(keyword, clusteringThresholdMs)
-            val usageMinutes = currentUsageSeconds / 60.0
+        val clusteringThresholdMs = clusteringThresholdMinutes * 60 * 1000L
+        val currentUsageSeconds = tracker.calculateTotalUsageTimeForToday(keyword, clusteringThresholdMs)
+        val usageMinutes = currentUsageSeconds / 60.0
 
-            if (usageMinutes >= timeLimit) {
-                AppLogger.logDebug("KeywordBlocker", "Time limit reached for keyword: $keyword ($usageMinutes min)")
-                return
-            }
+        if (timeLimit > 0 && usageMinutes >= timeLimit) {
+            AppLogger.logDebug("KeywordBlocker", "Time limit reached for keyword: $keyword ($usageMinutes min)")
+            return
+        }
 
-            if (reminderInterval > 0 && reminderInterval < timeLimit) {
-                checkAndShowReminder(keyword, usageMinutes, reminderInterval)
-            }
+        if (reminderInterval > 0) {
+            checkAndShowReminder(keyword, usageMinutes, reminderInterval)
         }
     }
 
     private fun checkAndShowReminder(keyword: String, currentUsageMinutes: Double, reminderInterval: Int) {
         val currentTime = System.currentTimeMillis()
         val reminderIntervalMs = reminderInterval * 60 * 1000L
+        val lastReminderTime = lastReminderTimes[keyword] ?: 0L
 
-        if (lastReminderKeyword == keyword &&
-            currentTime - lastReminderTime < reminderIntervalMs
-        ) {
+        if (currentTime - lastReminderTime < reminderIntervalMs) {
             return
         }
 
@@ -461,8 +499,7 @@ class KeywordBlocker : BaseBlocker() {
             Toast.makeText(service, message, Toast.LENGTH_LONG).show()
         }
 
-        lastReminderTime = currentTime
-        lastReminderKeyword = keyword
+        lastReminderTimes[keyword] = currentTime
     }
 
     fun getTodayUsageMinutes(keyword: String): Double {
