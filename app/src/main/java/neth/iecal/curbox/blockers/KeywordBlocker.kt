@@ -105,6 +105,7 @@ class KeywordBlocker : BaseBlocker() {
     private var ignoredApps: HashSet<String> = hashSetOf()
     private var settingsJob: Job? = null
 
+    @Volatile
     private var lastEventTimeStamp = 0L
     private var refreshCooldown : Int = 1000
 
@@ -284,6 +285,7 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         if (isUnsupportedBrowserBlockingOn && browserBlocker.isAppBrowser(event)) {
+            lastEventTimeStamp = SystemClock.uptimeMillis()
             return pressHome("/ unsupported browser")
         }
 
@@ -309,9 +311,11 @@ class KeywordBlocker : BaseBlocker() {
             }
         }
 
-        val urlBarInfo = URL_BAR_ID_LIST[event.packageName.toString()]
-        val idPrefixPart = event.packageName.toString() + ":id/"
-        val displayUrlTextNode = if (urlBarInfo != null)
+        val packageName = event.packageName.toString()
+        val urlBarInfo = URL_BAR_ID_LIST[packageName]
+        val idPrefixPart = "$packageName:id/"
+        
+        var displayUrlTextNode: AccessibilityNodeInfo? = if (urlBarInfo != null)
             ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
         else null
 
@@ -344,7 +348,6 @@ class KeywordBlocker : BaseBlocker() {
             return
         }
 
-        val packageName = event.packageName?.toString() ?: ""
         if (!isKeywordEffectivelyBlocked(detectedKeyword, packageName)) {
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
@@ -354,15 +357,31 @@ class KeywordBlocker : BaseBlocker() {
         // Lock other blocking mechanisms (like DB observer) immediately
         lastEventTimeStamp = SystemClock.uptimeMillis()
 
-        if (urlBarInfo == null || displayUrlTextNode == null) {
+        if (urlBarInfo == null) {
             pressHome(detectedKeyword)
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
             return
         }
 
+        // If it's a supported browser but we didn't find the URL bar, try one more time
+        if (displayUrlTextNode == null) {
+            Thread.sleep(100)
+            val freshRoot = service.rootInActiveWindow
+            if (freshRoot != null) {
+                displayUrlTextNode = ReelBlocker.findElementById(freshRoot, idPrefixPart + urlBarInfo.displayUrlBarId)
+                if (freshRoot != rootNode) safeRecycle(freshRoot)
+            }
+        }
+
+        if (displayUrlTextNode == null) {
+            pressHome(detectedKeyword)
+            safeRecycle(recursionResultNodes)
+            return
+        }
+
         performSmallUpwardScroll()
-        Thread.sleep(200)
+        Thread.sleep(250)
         displayUrlTextNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         
         var editUrlBar: AccessibilityNodeInfo? = null
@@ -544,6 +563,13 @@ class KeywordBlocker : BaseBlocker() {
 
     private fun evaluateAndBlock(entry: WebsiteStatsEntity) {
         if (SystemClock.uptimeMillis() - lastEventTimeStamp < 2000) return
+        
+        // Give UI thread a small head start for supported browsers
+        if (URL_BAR_ID_LIST.containsKey(entry.packageName)) {
+            Thread.sleep(200)
+            if (SystemClock.uptimeMillis() - lastEventTimeStamp < 2000) return
+        }
+
         val matchedGroup = findMatchingGroup(entry.urlIdentifier) ?: return
 
         val cooldownEnd = cooldownGroupsList[matchedGroup.id]
@@ -554,14 +580,20 @@ class KeywordBlocker : BaseBlocker() {
 
         if (isBlocked(matchedGroup, entry.packageName)) {
             val keyword = containsBlockedKeyword(entry.urlIdentifier) ?: entry.urlIdentifier
-            handleBlocking(matchedGroup, keyword)
+            handleBlocking(matchedGroup, keyword, entry.packageName)
         }
         calculateAndSetNextRecheck(matchedGroup, entry.packageName)
     }
 
-    private fun handleBlocking(group: KeywordGroup, word: String) {
+    private fun handleBlocking(group: KeywordGroup, word: String, packageName: String) {
+        if (URL_BAR_ID_LIST.containsKey(packageName)) {
+             // If it's a browser, redirection should be handled by UI thread.
+             // We only proceed here if the UI thread lock has expired or wasn't set.
+             if (SystemClock.uptimeMillis() - lastEventTimeStamp < 5000) return
+        }
+
         service.pressBack()
-        Thread.sleep(1000)
+        Thread.sleep(500)
         pressHome(word)
         Handler(Looper.getMainLooper()).postDelayed({
             val intent = Intent(service, WarningActivity::class.java).apply {
