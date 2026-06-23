@@ -89,13 +89,15 @@ class AppBlocker() : BaseBlocker() {
         }
 
         if (timeBlockedAppsList.containsKey(packageName)) {
-            val endAllowedRealTime = getEndTimeInRealTimeMillis(packageName)
-            if (endAllowedRealTime == null) {
+            if (isTimedBlockActive(packageName)) {
                 notificationManager.stopTimer()
                 showWarningScreen(packageName)
                 return
             } else {
-                setUpForcedRefreshChecker(packageName, endAllowedRealTime)
+                val nextChange = getNextTimeStateChangeMillis(packageName)
+                if (nextChange != null) {
+                    setUpForcedRefreshChecker(packageName, nextChange)
+                }
             }
         }
 
@@ -272,7 +274,30 @@ class AppBlocker() : BaseBlocker() {
         persistCooldownData()
     }
 
-    private fun getEndTimeInRealTimeMillis(packageName: String): Long? {
+    private fun isTimedBlockActive(packageName: String): Boolean {
+        val config = timeBlockedAppsList[packageName] ?: return false
+        val calendar = Calendar.getInstance()
+        val currentMinutes = TimeTools.convertToMinutesFromMidnight(
+            calendar.get(Calendar.HOUR_OF_DAY),
+            calendar.get(Calendar.MINUTE)
+        )
+        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1
+        val intervals = if (config.isEveryday) config.everydayIntervals else config.dailyIntervals[dayOfWeek] ?: emptyList()
+
+        for (interval in intervals) {
+            val startMinutes = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
+            val endMinutes = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
+
+            if (startMinutes <= endMinutes) {
+                if (currentMinutes in startMinutes until endMinutes) return true
+            } else {
+                if (currentMinutes >= startMinutes || currentMinutes < endMinutes) return true
+            }
+        }
+        return false
+    }
+
+    private fun getNextTimeStateChangeMillis(packageName: String): Long? {
         val config = timeBlockedAppsList[packageName] ?: return null
         val calendar = Calendar.getInstance()
         val currentMinutes = TimeTools.convertToMinutesFromMidnight(
@@ -282,23 +307,28 @@ class AppBlocker() : BaseBlocker() {
         val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1
         val intervals = if (config.isEveryday) config.everydayIntervals else config.dailyIntervals[dayOfWeek] ?: emptyList()
 
-        intervals.forEach { interval ->
-            val startMinutes = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
-            val endMinutes = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
+        if (intervals.isEmpty()) return null
 
-            if (startMinutes <= endMinutes) {
-                if (currentMinutes in startMinutes until endMinutes) {
-                    return System.currentTimeMillis() + ((endMinutes - currentMinutes) * 60_000L)
-                }
+        var minMinutesUntilChange = Int.MAX_VALUE
+        for (interval in intervals) {
+            val start = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
+            val end = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
+
+            val minutesUntilChange = if (start <= end) {
+                if (currentMinutes in start until end) end - currentMinutes
+                else if (currentMinutes < start) start - currentMinutes
+                else (1440 - currentMinutes) + start
             } else {
-                if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
-                    val remainingMins = if (currentMinutes >= startMinutes) (1440 - currentMinutes) + endMinutes
-                                          else endMinutes - currentMinutes
-                    return System.currentTimeMillis() + (remainingMins * 60_000L)
-                }
+                if (currentMinutes >= start || currentMinutes < end) {
+                    if (currentMinutes >= start) (1440 - currentMinutes) + end
+                    else end - currentMinutes
+                } else start - currentMinutes
             }
+            minMinutesUntilChange = minOf(minMinutesUntilChange, minutesUntilChange)
         }
-        return null
+
+        return System.currentTimeMillis() + (minMinutesUntilChange * 60_000L) - 
+               (calendar.get(Calendar.SECOND) * 1000L) - calendar.get(Calendar.MILLISECOND)
     }
 
     private fun setUpForcedRefreshChecker(coolPackage: String, realTimeEndMillis: Long) {

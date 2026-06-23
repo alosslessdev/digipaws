@@ -521,9 +521,8 @@ class KeywordBlocker : BaseBlocker() {
 
         if (isBlocked(matchedGroup, entry.packageName)) {
             handleBlocking(matchedGroup)
-        } else {
-            calculateAndSetNextRecheck(matchedGroup, entry.packageName)
         }
+        calculateAndSetNextRecheck(matchedGroup, entry.packageName)
     }
 
     private fun handleBlocking(group: KeywordGroup) {
@@ -558,11 +557,11 @@ class KeywordBlocker : BaseBlocker() {
         for (interval in intervals) {
             val start = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
             val end = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
-            val withinAllowed = if (start <= end) currentMinutes in start until end
-                                else currentMinutes >= start || currentMinutes < end
-            if (withinAllowed) return false
+            val withinInterval = if (start <= end) currentMinutes in start until end
+                                 else currentMinutes >= start || currentMinutes < end
+            if (withinInterval) return true
         }
-        return true
+        return false
     }
 
     private fun isUsageLimitExceeded(group: KeywordGroup, packageName: String): Boolean {
@@ -618,20 +617,33 @@ class KeywordBlocker : BaseBlocker() {
                 val intervals = if (config.isEveryday) config.everydayIntervals
                                 else config.dailyIntervals[dayOfWeek] ?: emptyList()
 
-                var minMinutesUntilEnd = Int.MAX_VALUE
+                var minMinutesUntilChange = Int.MAX_VALUE
                 for (interval in intervals) {
                     val start = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
                     val end = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
-                    val withinAllowed = if (start <= end) currentMinutes in start until end
-                                        else currentMinutes >= start || currentMinutes < end
-                    if (withinAllowed) {
-                        val minutesUntilEnd = if (start <= end || currentMinutes < end) end - currentMinutes
-                                              else (1440 - currentMinutes) + end
-                        minMinutesUntilEnd = minOf(minMinutesUntilEnd, minutesUntilEnd)
+                    
+                    val minutesUntilChange = if (start <= end) {
+                        if (currentMinutes in start until end) {
+                            end - currentMinutes
+                        } else if (currentMinutes < start) {
+                            start - currentMinutes
+                        } else {
+                            (1440 - currentMinutes) + start
+                        }
+                    } else {
+                        // Overnight interval
+                        if (currentMinutes >= start || currentMinutes < end) {
+                            if (currentMinutes >= start) (1440 - currentMinutes) + end
+                            else end - currentMinutes
+                        } else {
+                            start - currentMinutes
+                        }
                     }
+                    minMinutesUntilChange = minOf(minMinutesUntilChange, minutesUntilChange)
                 }
-                if (minMinutesUntilEnd != Int.MAX_VALUE) {
-                    val recheckAt = now + (minMinutesUntilEnd * 60_000L) -
+
+                if (minMinutesUntilChange != Int.MAX_VALUE) {
+                    val recheckAt = now + (minMinutesUntilChange * 60_000L) -
                         (calendar.get(Calendar.SECOND) * 1000L) - calendar.get(Calendar.MILLISECOND)
                     if (nextRecheck == 0L || recheckAt < nextRecheck) nextRecheck = recheckAt
                 }

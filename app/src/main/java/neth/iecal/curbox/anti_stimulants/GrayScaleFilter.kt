@@ -54,8 +54,7 @@ class GrayScaleFilter : BaseBlocker() {
         lastPackageName = currentPackageName
 
         val now = Calendar.getInstance()
-        val calDay = now.get(Calendar.DAY_OF_WEEK)
-        val currentDay = if (calDay == Calendar.SUNDAY) 6 else calDay - 2
+        val currentDay = now.get(Calendar.DAY_OF_WEEK) - 1
         val currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
 
         var shouldGrayscale = false

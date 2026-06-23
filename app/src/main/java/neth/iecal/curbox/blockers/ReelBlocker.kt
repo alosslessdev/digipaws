@@ -123,7 +123,7 @@ class ReelBlocker : BaseBlocker() {
 
             when (reelBlockerConfig.blockingType) {
                 ReelBlockingType.TIMED -> {
-                    if (getEndTimeInMillis() == null) {
+                    if (isTimedBlockActive()) {
                         showWarningScreen(viewId)
                     }
                 }
@@ -275,29 +275,24 @@ class ReelBlocker : BaseBlocker() {
         }
     }
 
-    private fun getEndTimeInMillis(): Long? {
-        if (timeBAsedConfig == null) return null
+    private fun isTimedBlockActive(): Boolean {
+        if (timeBAsedConfig == null) return false
+        val config = timeBAsedConfig!!
         val calendar = Calendar.getInstance()
         val currentMinutes = TimeTools.convertToMinutesFromMidnight(calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE))
         val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1
-        val intervals = if (timeBAsedConfig!!.isEveryday) timeBAsedConfig!!.everydayIntervals
-                        else timeBAsedConfig!!.dailyIntervals[dayOfWeek] ?: emptyList()
+        val intervals = if (config.isEveryday) config.everydayIntervals
+                        else config.dailyIntervals[dayOfWeek] ?: emptyList()
 
-        intervals.forEach { interval ->
+        for (interval in intervals) {
             val startMinutes = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
             val endMinutes = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
             if (startMinutes <= endMinutes) {
-                if (currentMinutes in startMinutes until endMinutes) {
-                    return SystemClock.uptimeMillis() + ((endMinutes - currentMinutes) * 60 * 1000L)
-                }
+                if (currentMinutes in startMinutes until endMinutes) return true
             } else {
-                if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
-                    val remainingMins = if (currentMinutes >= startMinutes) (1440 - currentMinutes) + endMinutes
-                                          else endMinutes - currentMinutes
-                    return SystemClock.uptimeMillis() + (remainingMins * 60 * 1000L)
-                }
+                if (currentMinutes >= startMinutes || currentMinutes < endMinutes) return true
             }
         }
-        return null
+        return false
     }
 }
