@@ -164,6 +164,10 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun matchesPatterns(patterns: Pair<List<Regex>, List<String>>, urlIdentifier: String): Boolean {
+        val normalizedInput = KeywordBlockerMatchUtils.normalizeBlockedEntry(urlIdentifier)
+        val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
+        if (normalizedInput == normalizedRedirect || normalizedInput.startsWith("$normalizedRedirect/")) return false
+
         val (regexes, literals) = patterns
         return regexes.any { it.containsMatchIn(urlIdentifier) } ||
                literals.any { matchesLiteral(it, urlIdentifier) }
@@ -215,9 +219,15 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun containsBlockedKeyword(url: String): String? {
+        val normalizedInput = KeywordBlockerMatchUtils.normalizeBlockedEntry(url)
+        if (normalizedInput.isEmpty() || isInternalBrowserPage(normalizedInput)) return null
+
+        val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
+        if (normalizedInput == normalizedRedirect || normalizedInput.startsWith("$normalizedRedirect/")) return null
+
         val cacheKey = buildString {
             append(if (isSubstringMatchEnabled) "1|" else "0|")
-            append(KeywordBlockerMatchUtils.normalizeBlockedEntry(url))
+            append(normalizedInput)
         }
 
         val cachedResult = detectionCache.get(cacheKey)
@@ -226,7 +236,7 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         val matchedKeyword = KeywordBlockerMatchUtils.findBlockedEntry(
-            input = url,
+            input = normalizedInput,
             blockedEntries = blockedKeywords,
             allowSubstringMatch = isSubstringMatchEnabled
         )
@@ -305,6 +315,20 @@ class KeywordBlocker : BaseBlocker() {
             ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
         else null
 
+        // Bypass if we are already at the redirect URL
+        if (displayUrlTextNode != null) {
+            val displayText = displayUrlTextNode.text?.toString() ?: ""
+            if (displayText.isNotEmpty()) {
+                val normalizedCurrent = KeywordBlockerMatchUtils.normalizeBlockedEntry(displayText)
+                val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
+                if (normalizedCurrent == normalizedRedirect || normalizedCurrent.startsWith("$normalizedRedirect/")) {
+                    safeRecycle(displayUrlTextNode)
+                    safeRecycle(recursionResultNodes)
+                    return
+                }
+            }
+        }
+
         if (detectedKeyword == null && urlBarInfo != null) {
             val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
             val displayText = displayUrlTextNode?.text?.toString() ?: ""
@@ -327,9 +351,10 @@ class KeywordBlocker : BaseBlocker() {
             return
         }
 
+        // Lock other blocking mechanisms (like DB observer) immediately
         lastEventTimeStamp = SystemClock.uptimeMillis()
 
-        if (urlBarInfo == null) {
+        if (urlBarInfo == null || displayUrlTextNode == null) {
             pressHome(detectedKeyword)
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
@@ -337,8 +362,8 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         performSmallUpwardScroll()
-        Thread.sleep(100)
-        displayUrlTextNode?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        Thread.sleep(200)
+        displayUrlTextNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         
         var editUrlBar: AccessibilityNodeInfo? = null
         val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
@@ -401,6 +426,7 @@ class KeywordBlocker : BaseBlocker() {
         if (!redirectionSuccessful) {
             pressHome(detectedKeyword)
         }
+        lastEventTimeStamp = SystemClock.uptimeMillis()
     }
 
     private fun searchKeywordsInWebViewTitle(rootNode: AccessibilityNodeInfo): String? {
@@ -492,12 +518,7 @@ class KeywordBlocker : BaseBlocker() {
         val gestureStroke = GestureDescription.StrokeDescription(path, 0, 200)
         val gesture = gestureBuilder.addStroke(gestureStroke).build()
 
-        service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
-            override fun onCancelled(gestureDescription: GestureDescription?) {
-                super.onCancelled(gestureDescription)
-                service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)
-            }
-        }, null)
+        service.dispatchGesture(gesture, null, null)
     }
 
     fun startObservingDatabase() {

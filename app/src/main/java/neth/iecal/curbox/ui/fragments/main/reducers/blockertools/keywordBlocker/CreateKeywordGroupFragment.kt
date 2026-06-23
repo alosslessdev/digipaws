@@ -6,12 +6,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -39,6 +41,13 @@ class CreateKeywordGroupFragment : Fragment() {
     private val keywordAdapter by lazy { KeywordAdapter() }
     private var isEditing = false
     private var existingGroupId: String? = null
+    private var isGroupActive = true
+
+    private var initialGroupName: String = ""
+    private var initialKeywords: List<String> = emptyList()
+    private var initialBlockingType: AppBlockingType = AppBlockingType.Usage
+    private var initialSetting: String = ""
+    private var initialWarningConfig: String = ""
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { importKeywordsFromFile(it) }
@@ -63,9 +72,64 @@ class CreateKeywordGroupFragment : Fragment() {
         
         if (existingGroupId != null) {
             loadExistingGroup(existingGroupId!!)
+        } else {
+            viewModel.currentUsageConfig = AppUsageConfig()
+            viewModel.currentTimeConfig = AppTimeConfig()
+            viewModel.warningScrnConfig = AppBlockerWarningScreenConfig()
+            captureInitialState()
         }
 
         setupListeners()
+        setupBackPressHandling()
+    }
+
+    private fun setupBackPressHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasChanges()) {
+                    showUnsavedChangesDialog()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    private fun showUnsavedChangesDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.unsaved_changes_dialog_title)
+            .setMessage(R.string.unsaved_changes_dialog_message)
+            .setPositiveButton(R.string.save) { dialog, _ ->
+                saveGroup()
+            }
+            .setNegativeButton(R.string.btn_discard) { _, _ ->
+                requireActivity().finish()
+            }
+            .setNeutralButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun hasChanges(): Boolean {
+        val currentGroupName = binding.etGroupName.text.toString().trim()
+        val currentKeywords = selectedKeywords.toList()
+        val currentBlockingType = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
+        val currentSetting = if (currentBlockingType == AppBlockingType.Usage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig)
+        val currentWarningConfig = Gson().toJson(viewModel.warningScrnConfig)
+
+        return currentGroupName != initialGroupName ||
+                currentKeywords != initialKeywords ||
+                currentBlockingType != initialBlockingType ||
+                currentSetting != initialSetting ||
+                currentWarningConfig != initialWarningConfig
+    }
+
+    private fun captureInitialState() {
+        initialGroupName = binding.etGroupName.text.toString().trim()
+        initialKeywords = selectedKeywords.toList()
+        initialBlockingType = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
+        initialSetting = if (initialBlockingType == AppBlockingType.Usage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig)
+        initialWarningConfig = Gson().toJson(viewModel.warningScrnConfig)
     }
 
     private fun loadExistingGroup(groupId: String) {
@@ -74,6 +138,7 @@ class CreateKeywordGroupFragment : Fragment() {
                 val group = config.keywordGroups.find { it.id == groupId }
                 if (group != null && !isEditing) {
                     isEditing = true
+                    isGroupActive = group.isActive
                     binding.tvTitle.text = "Edit Keyword Group"
                     binding.etGroupName.setText(group.name)
                     selectedKeywords = group.selectedKeywords.toMutableList()
@@ -88,6 +153,8 @@ class CreateKeywordGroupFragment : Fragment() {
                     }
 
                     viewModel.warningScrnConfig = group.warningScreenConfig
+                    
+                    captureInitialState()
                 }
             }
         }
@@ -297,7 +364,7 @@ class CreateKeywordGroupFragment : Fragment() {
             name = name,
             selectedKeywords = selectedKeywords.toList(),
             blockingType = blockingType,
-            isActive = true,
+            isActive = isGroupActive,
             setting = if (blockingType == AppBlockingType.Usage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig),
             warningScreenConfig = viewModel.warningScrnConfig
         )

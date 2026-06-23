@@ -934,5 +934,8 @@
     <string name="api_permission_message">%1$s wants to control Curbox. It can start focus sessions, turn blockers on or off, and read your screen time. You can remove this any time.</string>
     <string name="api_permission_allow">Allow</string>
     <string name="api_permission_deny">Deny</string>
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
+
+    <string name="unsaved_changes_dialog_title">Unsaved Changes</string>
+    <string name="unsaved_changes_dialog_message">You have unsaved changes. Would you like to save them before leaving?</string>
+    <string name="btn_discard">Discard</string>
 </resources>
