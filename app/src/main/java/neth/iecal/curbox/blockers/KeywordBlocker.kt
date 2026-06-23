@@ -98,7 +98,7 @@ class KeywordBlocker : BaseBlocker() {
     private var observationJob: Job? = null
 
     private var blockedKeywords: List<String> = emptyList()
-    private var redirectUrl: String = ""
+    private var redirectUrl: String = "https://curbox.life"
     var isSearchAllTextFields = false
     private var isSubstringMatchEnabled = false
     var recursionResultNodes: MutableList<AccessibilityNodeInfo> = mutableListOf()
@@ -106,7 +106,7 @@ class KeywordBlocker : BaseBlocker() {
     private var settingsJob: Job? = null
 
     private var lastEventTimeStamp = 0L
-    private var refreshCooldown : Int = 2000
+    private var refreshCooldown : Int = 1000
 
     private var isTimeTrackingEnabled = false
     private var keywordTimeLimits: Map<String, Int> = emptyMap()
@@ -337,31 +337,41 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         performSmallUpwardScroll()
-        Thread.sleep(200)
+        Thread.sleep(100)
         displayUrlTextNode?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        Thread.sleep(200)
-
-        val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
-        val editUrlBar = ReelBlocker.findElementById(rootNode, idPrefixPart + editUrlBarId)
-            ?: run {
-                pressHome(detectedKeyword)
-                safeRecycle(displayUrlTextNode)
-                safeRecycle(recursionResultNodes)
-                return
-            }
-
-        Thread.sleep(50)
-        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-        Thread.sleep(50)
-        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
-            putCharSequence(
-                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, redirectUrl
-            )
-        })
-        Thread.sleep(50)
         
+        var editUrlBar: AccessibilityNodeInfo? = null
+        val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
+        
+        // Try finding the edit bar for up to 1 second
+        for (i in 1..5) {
+            Thread.sleep(200)
+            val freshRoot = service.rootInActiveWindow
+            if (freshRoot != null) {
+                editUrlBar = ReelBlocker.findElementById(freshRoot, idPrefixPart + editUrlBarId)
+                if (editUrlBar != null) {
+                    if (freshRoot != rootNode) safeRecycle(freshRoot)
+                    break
+                }
+                safeRecycle(freshRoot)
+            }
+        }
+
+        if (editUrlBar == null) {
+            pressHome(detectedKeyword)
+            safeRecycle(displayUrlTextNode)
+            safeRecycle(recursionResultNodes)
+            return
+        }
+
+        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        val arguments = Bundle()
+        arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, redirectUrl)
+        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+        
+        Thread.sleep(100)
         submitEditedUrlBar(
-            rootNode = rootNode,
+            rootNode = service.rootInActiveWindow ?: rootNode,
             editUrlBar = editUrlBar,
             idPrefixPart = idPrefixPart,
             urlBarInfo = urlBarInfo
@@ -371,8 +381,26 @@ class KeywordBlocker : BaseBlocker() {
         safeRecycle(displayUrlTextNode)
         safeRecycle(recursionResultNodes)
 
-        Thread.sleep(300)
-        pressHome(detectedKeyword)
+        // Verify redirection
+        var redirectionSuccessful = false
+        for (i in 1..5) {
+            Thread.sleep(300)
+            val finalRoot = service.rootInActiveWindow ?: continue
+            val finalUrlNode = ReelBlocker.findElementById(finalRoot, idPrefixPart + urlBarInfo.displayUrlBarId)
+            val finalUrl = finalUrlNode?.text?.toString() ?: ""
+            if (finalUrl.isNotEmpty() && containsBlockedKeyword(finalUrl) == null) {
+                redirectionSuccessful = true
+                safeRecycle(finalUrlNode)
+                safeRecycle(finalRoot)
+                break
+            }
+            safeRecycle(finalUrlNode)
+            safeRecycle(finalRoot)
+        }
+
+        if (!redirectionSuccessful) {
+            pressHome(detectedKeyword)
+        }
     }
 
     private fun searchKeywordsInWebViewTitle(rootNode: AccessibilityNodeInfo): String? {
@@ -402,25 +430,21 @@ class KeywordBlocker : BaseBlocker() {
         idPrefixPart: String,
         urlBarInfo: BrowserUrlBarInfo
     ): Boolean {
-        Thread.sleep(50)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val imeEnterActionId = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id
             val supportsImeEnter = editUrlBar.actionList.any { it.id == imeEnterActionId }
             if (supportsImeEnter) {
-                Thread.sleep(50)
                 if (editUrlBar.performAction(imeEnterActionId)) {
                     return true
                 }
             }
         }
 
-        Thread.sleep(200)
         val currentRootNode = service.rootInActiveWindow ?: rootNode
         val goBtnNode =
             ReelBlocker.findElementById(currentRootNode, idPrefixPart + urlBarInfo.browserSugggestionBoxId)
                 ?: return false
 
-        Thread.sleep(50)
         val didClickGo = if (urlBarInfo.isSuggestionEqualToGo) {
             goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         } else {
@@ -431,6 +455,7 @@ class KeywordBlocker : BaseBlocker() {
         }
         
         safeRecycle(goBtnNode)
+        if (currentRootNode != rootNode) safeRecycle(currentRootNode)
         return didClickGo
     }
 
@@ -497,6 +522,7 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun evaluateAndBlock(entry: WebsiteStatsEntity) {
+        if (SystemClock.uptimeMillis() - lastEventTimeStamp < 2000) return
         val matchedGroup = findMatchingGroup(entry.urlIdentifier) ?: return
 
         val cooldownEnd = cooldownGroupsList[matchedGroup.id]
@@ -704,7 +730,7 @@ class KeywordBlocker : BaseBlocker() {
                     .distinct()
                 
                 isSearchAllTextFields = config.searchRecursively
-                redirectUrl = config.redirectUrl
+                redirectUrl = config.redirectUrl.ifBlank { "https://curbox.life" }
                 isSubstringMatchEnabled = config.matchSubstrings
                 ignoredApps = config.ignoredApps.toHashSet()
                 isTimeTrackingEnabled = config.isTimeTrackingEnabled
