@@ -248,23 +248,23 @@ class KeywordBlocker : BaseBlocker() {
         nodes.clear()
     }
 
+    private fun showMessage(word: String) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(
+                service,
+                service.getString(R.string.blocked_keyword_word_was_found).replace("-word", word),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun pressHome(word: String) {
+        showMessage(word)
+        Thread.sleep(1000)
+        service.pressHome()
+    }
+
     fun checkIfUserGettingFreaky(event: AccessibilityEvent?) {
-        fun showMessage(word: String) {
-            Handler(Looper.getMainLooper()).post {
-                Toast.makeText(
-                    service,
-                    service.getString(R.string.blocked_keyword_word_was_found).replace("-word", word),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-
-        fun pressHome(word: String) {
-            showMessage(word)
-            Thread.sleep(300)
-            service.pressHome()
-        }
-
         if (!isTurnedOn) return
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) return
 
@@ -524,7 +524,7 @@ class KeywordBlocker : BaseBlocker() {
     private fun handleBlocking(group: KeywordGroup) {
         service.pressBack()
         Thread.sleep(1000)
-        service.pressHome()
+        pressHome(group.name)
         Handler(Looper.getMainLooper()).postDelayed({
             val intent = Intent(service, WarningActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
