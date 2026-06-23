@@ -565,14 +565,16 @@ class KeywordBlocker : BaseBlocker() {
         val intervals = if (config.isEveryday) config.everydayIntervals
                         else config.dailyIntervals[dayOfWeek] ?: emptyList()
 
+        if (intervals.isEmpty()) return true
+
         for (interval in intervals) {
             val start = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
             val end = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
             val withinInterval = if (start <= end) currentMinutes in start until end
                                  else currentMinutes >= start || currentMinutes < end
-            if (withinInterval) return true
+            if (withinInterval) return false
         }
-        return false
+        return true
     }
 
     private fun isUsageLimitExceeded(group: KeywordGroup, packageName: String): Boolean {

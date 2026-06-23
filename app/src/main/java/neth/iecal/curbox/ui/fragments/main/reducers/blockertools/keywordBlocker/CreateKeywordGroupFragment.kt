@@ -281,7 +281,8 @@ class CreateKeywordGroupFragment : Fragment() {
     private fun saveGroup() {
         val name = binding.etGroupName.text.toString().trim()
         if (name.isEmpty()) {
-            binding.etGroupName.error = "Enter group name"
+            Toast.makeText(requireContext(), getString(R.string.please_add_a_name), Toast.LENGTH_SHORT).show()
+            binding.etGroupName.error = getString(R.string.please_add_a_name)
             return
         }
         if (selectedKeywords.isEmpty()) {

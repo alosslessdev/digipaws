@@ -284,15 +284,17 @@ class ReelBlocker : BaseBlocker() {
         val intervals = if (config.isEveryday) config.everydayIntervals
                         else config.dailyIntervals[dayOfWeek] ?: emptyList()
 
+        if (intervals.isEmpty()) return true
+
         for (interval in intervals) {
             val startMinutes = TimeTools.convertToMinutesFromMidnight(interval.startHour, interval.startMinute)
             val endMinutes = TimeTools.convertToMinutesFromMidnight(interval.endHour, interval.endMinute)
             if (startMinutes <= endMinutes) {
-                if (currentMinutes in startMinutes until endMinutes) return true
+                if (currentMinutes in startMinutes until endMinutes) return false
             } else {
-                if (currentMinutes >= startMinutes || currentMinutes < endMinutes) return true
+                if (currentMinutes >= startMinutes || currentMinutes < endMinutes) return false
             }
         }
-        return false
+        return true
     }
 }
