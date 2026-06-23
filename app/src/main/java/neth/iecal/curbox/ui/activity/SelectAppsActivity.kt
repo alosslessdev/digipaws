@@ -222,25 +222,7 @@ class SelectAppsActivity : AppCompatActivity() {
             appItemList.sortBy { it.displayName.lowercase() }
             updateSelectAllButton()
 
-            // Add web apps to the selection list
-            lifecycleScope.launch(Dispatchers.IO) {
-                val settings = dataStoreManager.settings.first()
-                val webApps = settings.webApps
-                withContext(Dispatchers.Main) {
-                    webApps.forEach { webApp ->
-                        val packageName = "webapp:${webApp.id}"
-                        if (appItemList.none { it.packageName == packageName }) {
-                            appItemList.add(AppItem(
-                                packageName = packageName,
-                                displayName = "🌐 ${webApp.name}"
-                            ))
-                        }
-                    }
-                    val sortedList = sortSelectedItemsToTop(appItemList)
-                    (binding.appList.adapter as? ApplicationAdapter)?.updateData(sortedList)
-                    updateSelectAllButton()
-                }
-            }
+
         }
 
         binding.confirmSelection.setOnClickListener {

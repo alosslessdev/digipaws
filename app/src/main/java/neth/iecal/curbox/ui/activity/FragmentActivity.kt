@@ -34,8 +34,6 @@ import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.CreateKeywordGroupFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderEditorFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.webApps.WebAppsFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.webApps.AddWebAppFragment
 
 class FragmentActivity : AppCompatActivity() {
 
@@ -87,8 +85,6 @@ class FragmentActivity : AppCompatActivity() {
             neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID,
             KeywordBlockerFragment.FRAGMENT_ID,
             CreateKeywordGroupFragment.FRAGMENT_ID,
-            WebAppsFragment.FRAGMENT_ID,
-            AddWebAppFragment.FRAGMENT_ID,
             neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID -> {
                 
                 bottomNav.visibility = android.view.View.GONE
@@ -108,8 +104,6 @@ class FragmentActivity : AppCompatActivity() {
                     GrayscaleFragment.FRAGMENT_ID -> GrayscaleFragment()
                     CreateGrayscaleGroupFragment.FRAGMENT_ID -> CreateGrayscaleGroupFragment()
                     neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment()
-                    WebAppsFragment.FRAGMENT_ID -> WebAppsFragment()
-                    AddWebAppFragment.FRAGMENT_ID -> AddWebAppFragment()
                     IntentsLogFragment.FRAGMENT_ID -> IntentsLogFragment()
                     neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment()
                     else -> AccessibilityGuide()

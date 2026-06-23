@@ -120,29 +120,31 @@ class KeywordBlocker : BaseBlocker() {
         val regexes = mutableListOf<Regex>()
         val literals = mutableListOf<String>()
         for (kw in keywords) {
-            val lower = kw.lowercase(Locale.ROOT)
+            val trimmed = kw.trim()
             when {
-                lower.startsWith("r:") ->
-                    runCatching { Regex(lower.removePrefix("r:")) }.getOrNull()
+                trimmed.startsWith("r:", ignoreCase = true) ->
+                    runCatching { Regex(trimmed.removePrefix("r:"), RegexOption.IGNORE_CASE) }.getOrNull()
                         ?.let { regexes.add(it) }
-                lower.contains('*') || lower.contains('?') ->
-                    regexes.add(wildcardToRegex(lower))
-                else -> literals.add(lower)
+                trimmed.contains('*') || trimmed.contains('?') ->
+                    regexes.add(wildcardToRegex(trimmed))
+                else -> literals.add(trimmed.lowercase(Locale.ROOT))
             }
         }
         return regexes to literals
     }
 
     private fun wildcardToRegex(pattern: String): Regex {
-        val escaped = pattern
+        val escaped = pattern.lowercase(Locale.ROOT)
             .replace(Regex("""[.+^$()|\[\]{}\\]"""), """\\$0""")
             .replace("?", ".")
             .replace("*", ".*")
-        val prefix = if (!pattern.startsWith("http") && !pattern.startsWith("*") &&
-                        !pattern.startsWith("/") && !pattern.startsWith("?")) {
+        val prefix = if (!pattern.startsWith("http", ignoreCase = true) &&
+                        !pattern.startsWith("*") &&
+                        !pattern.startsWith("/") &&
+                        !pattern.startsWith("?")) {
             """(?:https?://)?(?:www\.)?"""
         } else ""
-        return Regex(prefix + escaped)
+        return Regex(prefix + escaped, RegexOption.IGNORE_CASE)
     }
 
     private fun matchesLiteral(keyword: String, urlIdentifier: String): Boolean {
@@ -162,9 +164,8 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun matchesPatterns(patterns: Pair<List<Regex>, List<String>>, urlIdentifier: String): Boolean {
-        val lower = urlIdentifier.lowercase(Locale.ROOT)
         val (regexes, literals) = patterns
-        return regexes.any { it.containsMatchIn(lower) } ||
+        return regexes.any { it.containsMatchIn(urlIdentifier) } ||
                literals.any { matchesLiteral(it, urlIdentifier) }
     }
 

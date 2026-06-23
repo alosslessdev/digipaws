@@ -43,12 +43,11 @@ object AppSuspendHelper {
         groupPackages: Set<String>,
         essentialPackages: Set<String>
     ): List<String> {
-        val realPackages = groupPackages.filter { !it.startsWith("webapp:") }.toSet()
         return if (blockMode == FocusBlockMode.BLOCK_SELECTED) {
-            realPackages.toList()
+            groupPackages.toList()
         } else {
             val allPackages = getInstalledPackagesSafe(context)
-            allPackages.filter { it !in realPackages && it !in essentialPackages }
+            allPackages.filter { it !in groupPackages && it !in essentialPackages }
         }
     }
 

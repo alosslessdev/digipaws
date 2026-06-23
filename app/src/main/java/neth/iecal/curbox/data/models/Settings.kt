@@ -21,6 +21,5 @@ data class Settings(
     val uiHiderConfig: UiHiderConfig = UiHiderConfig(),
     val reelCounterOverlayConfig: ReelCounterOverlayConfig = ReelCounterOverlayConfig(),
     val nextWebsiteRecheckTime: Long = 0L,
-    val appBlockerCooldowns: Map<String, Long> = mapOf(),
-    val webApps: List<WebApp> = listOf()
+    val appBlockerCooldowns: Map<String, Long> = mapOf()
 )
