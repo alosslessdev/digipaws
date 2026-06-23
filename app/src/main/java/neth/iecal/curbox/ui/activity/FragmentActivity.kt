@@ -1,10 +1,21 @@
 package neth.iecal.curbox.ui.activity
 
+import android.animation.ValueAnimator
+import android.content.Context
+import android.content.Intent
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import neth.iecal.curbox.R
 import neth.iecal.curbox.ui.fragments.installation.AccessibilityGuide
 import neth.iecal.curbox.ui.fragments.installation.onboarding.OnboardingFragment
@@ -20,31 +31,16 @@ import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.AutoDnd
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.CreateAutoDndGroupFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.reelBlocker.ReelBlockerFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordBlockerFragment
-<<<<<<< HEAD
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.viewBlocker.ViewBlockerFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.webApps.WebAppsFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.webApps.AddWebAppFragment
-=======
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.CreateKeywordGroupFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderEditorFragment
-import androidx.core.view.isVisible
-import android.animation.ValueAnimator
-import android.content.Context
-import android.content.Intent
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.net.Uri
-import android.os.Build
-import android.widget.TextView
-import androidx.fragment.app.Fragment
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.webApps.WebAppsFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.webApps.AddWebAppFragment
 
 class FragmentActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val sharedPreferences = getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
         val isFirstLaunchComplete = sharedPreferences.getBoolean("isFirstLaunchComplete", false)
         val selectedFragment = intent.getStringExtra("fragment") ?: if (!isFirstLaunchComplete) OnboardingFragment.FRAGMENT_ID else AllAppsUsageFragment.FRAGMENT_ID
 
@@ -64,10 +60,8 @@ class FragmentActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
 
-            // If bottom navigation is visible, it handles the bottom system bar inset itself.
-            // We only apply the bottom padding from system bars if the bottom nav is hidden.
             val bottomPadding = if (bottomNav.isVisible) {
-                ime.bottom // Only pad for keyboard if nav is visible
+                ime.bottom
             } else {
                 maxOf(systemBars.bottom, ime.bottom)
             }
@@ -87,19 +81,16 @@ class FragmentActivity : AppCompatActivity() {
             neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.reel_counter.ReelCounterFragment.FRAGMENT_ID,
             GrayscaleFragment.FRAGMENT_ID,
             CreateGrayscaleGroupFragment.FRAGMENT_ID,
-                UiHiderFragment.FRAGMENT_ID,
-                UiHiderEditorFragment.FRAGMENT_ID,
-                IntentsLogFragment.FRAGMENT_ID,
+            UiHiderFragment.FRAGMENT_ID,
+            UiHiderEditorFragment.FRAGMENT_ID,
+            IntentsLogFragment.FRAGMENT_ID,
             neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID,
             KeywordBlockerFragment.FRAGMENT_ID,
-<<<<<<< HEAD
+            CreateKeywordGroupFragment.FRAGMENT_ID,
             WebAppsFragment.FRAGMENT_ID,
-            AddWebAppFragment.FRAGMENT_ID -> {
-=======
-            neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID,
-            CreateKeywordGroupFragment.FRAGMENT_ID -> {
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
-                // Hide bottom nav for these standalone fragments
+            AddWebAppFragment.FRAGMENT_ID,
+            neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID -> {
+                
                 bottomNav.visibility = android.view.View.GONE
                 
                 val fragment = when (selectedFragment) {
@@ -117,13 +108,10 @@ class FragmentActivity : AppCompatActivity() {
                     GrayscaleFragment.FRAGMENT_ID -> GrayscaleFragment()
                     CreateGrayscaleGroupFragment.FRAGMENT_ID -> CreateGrayscaleGroupFragment()
                     neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment()
-<<<<<<< HEAD
                     WebAppsFragment.FRAGMENT_ID -> WebAppsFragment()
                     AddWebAppFragment.FRAGMENT_ID -> AddWebAppFragment()
-=======
                     IntentsLogFragment.FRAGMENT_ID -> IntentsLogFragment()
                     neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment()
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
                     else -> AccessibilityGuide()
                 }
                 fragment.arguments = intent.extras
@@ -133,7 +121,6 @@ class FragmentActivity : AppCompatActivity() {
                     .commit()
             }
             else -> {
-                // Show bottom nav for main fragments
                 bottomNav.visibility = android.view.View.VISIBLE
 
                 neth.iecal.curbox.utils.DonationPrompt.maybeShow(this)
@@ -200,17 +187,13 @@ class FragmentActivity : AppCompatActivity() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val animator = ValueAnimator.ofFloat(0f, 1f)
-            animator.duration = 500 // Slightly longer for a more "premium" feel
+            animator.duration = 500 
 
             var fragmentReplaced = false
 
             animator.addUpdateListener { animation ->
                 val fraction = animation.animatedFraction
-                
-                // Animate blur: 0 -> 40 -> 0
                 val blurRadius = if (fraction < 0.5f) fraction * 2 * 40f else (1f - fraction) * 2 * 40f
-                
-                // Animate alpha: 1.0 -> 0.0 -> 1.0 (Full dip to 0 to hide the swap)
                 val alphaValue = if (fraction < 0.5f) 1f - (fraction * 2f) else (fraction - 0.5f) * 2f
 
                 container.alpha = alphaValue
@@ -227,7 +210,6 @@ class FragmentActivity : AppCompatActivity() {
 
                 if (fraction >= 0.5f && !fragmentReplaced) {
                     fragmentReplaced = true
-                    // Remove the built-in fade animation here to avoid conflict with our manual alpha animation
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.fragment_holder, fragment)
                         .commitNow()

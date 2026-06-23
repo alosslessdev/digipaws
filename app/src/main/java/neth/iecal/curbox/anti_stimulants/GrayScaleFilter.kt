@@ -7,12 +7,9 @@ import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-<<<<<<< HEAD
-=======
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,8 +47,6 @@ class GrayScaleFilter : BaseBlocker() {
 
         val currentPackageName = event.packageName?.toString() ?: return
         
-        // Skip check if it's the same package or system UI or keyboard
-        // We don't skip Curbox here because we want to disable grayscale when user is in the app
         if (currentPackageName == lastPackageName || 
             currentPackageName == "com.android.systemui" ||
             ignoredGrayScalePackages.contains(currentPackageName)) return
@@ -60,46 +55,40 @@ class GrayScaleFilter : BaseBlocker() {
 
         val now = Calendar.getInstance()
         val calDay = now.get(Calendar.DAY_OF_WEEK)
-        // Monday=0, ..., Sunday=6 mapping (matches GrayscaleTimeSettingsFragment)
         val currentDay = if (calDay == Calendar.SUNDAY) 6 else calDay - 2
         val currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
 
         var shouldGrayscale = false
 
-        // Don't grayscale Curbox itself to ensure usability
-            for (group in grayscaleGroups) {
-                if (!group.isActive) continue
+        for (group in grayscaleGroups) {
+            if (!group.isActive) continue
 
-                if (group.packages.contains(currentPackageName)) {
-                    val config = group.timeConfig
-                    val intervals = if (config.isEveryday) {
-                        config.everydayIntervals
-                    } else {
-                        config.dailyIntervals[currentDay]
-                    }
+            if (group.packages.contains(currentPackageName)) {
+                val config = group.timeConfig
+                val intervals = if (config.isEveryday) {
+                    config.everydayIntervals
+                } else {
+                    config.dailyIntervals[currentDay]
+                }
 
-                    if (intervals == null || intervals.isEmpty()) {
+                if (intervals == null || intervals.isEmpty()) {
+                    shouldGrayscale = true
+                    break
+                } else {
+                    val isInInterval = intervals.any { isWithinInterval(currentMinutes, it) }
+                    if (isInInterval) {
                         shouldGrayscale = true
                         break
-                    } else {
-                        val isInInterval = intervals.any { isWithinInterval(currentMinutes, it) }
-                        if (isInInterval) {
-                            shouldGrayscale = true
-                            break
-                        }
                     }
                 }
             }
+        }
 
         if (shouldGrayscale) {
-<<<<<<< HEAD
             AppLogger.logDebug("GrayScaleFilter", "Enabling monochrome for $currentPackageName")
-=======
-            Log.d("GrayScaleFilter", "Enabling monochrome for $currentPackageName")
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             grayscaleControl.enableGrayscale()
         } else {
-            Log.d("GrayScaleFilter", "Disabling monochrome for $currentPackageName")
+            AppLogger.logDebug("GrayScaleFilter", "Disabling monochrome for $currentPackageName")
             grayscaleControl.disableGrayscale()
         }
     }
@@ -126,27 +115,22 @@ class GrayScaleFilter : BaseBlocker() {
         settingsJob = CoroutineScope(Dispatchers.IO).launch {
             service.dataStoreManager.settings.collectLatest { settings ->
                 grayscaleGroups = settings.grayscaleGroups
-<<<<<<< HEAD
-                AppLogger.logDebug("GrayScaleFilter", "GrayScale Groups loaded: $grayscaleGroups")
-=======
-                Log.d("GrayScaleFilter", "Grayscale Groups loaded: $grayscaleGroups")
+                AppLogger.logDebug("GrayScaleFilter", "Grayscale Groups loaded: $grayscaleGroups")
                 
-                // Force a check for the current package to apply changes immediately
                 handler.post {
                     try {
                         val currentPackage = service.rootInActiveWindow?.packageName?.toString()
                         if (currentPackage != null) {
-                            lastPackageName = null // Reset to force re-check
+                            lastPackageName = null 
                             val dummyEvent = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
                             dummyEvent.packageName = currentPackage
                             doGrayscaleCheck(dummyEvent)
                             dummyEvent.recycle()
                         }
                     } catch (e: Exception) {
-                        Log.e("GrayScaleFilter", "Error in forced re-check", e)
+                        AppLogger.functionError("GrayScaleFilter", "Error in forced re-check", e)
                     }
                 }
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             }
         }
     }

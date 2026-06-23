@@ -27,6 +27,7 @@ import neth.iecal.curbox.data.models.TimeInterval
 import neth.iecal.curbox.databinding.DialogFocusSessionConfigBinding
 import neth.iecal.curbox.hardcoded.URL_BAR_ID_LIST
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
+import java.util.UUID
 
 class FocusSetupBottomSheet : BottomSheetDialogFragment() {
 
@@ -70,7 +71,6 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.btnCreateGroup.setOnClickListener {
-            // clear if creating new
             viewModel.selectedGroup = null
             binding.groupName.setText("")
             viewModel.newGroupSelectedApps = HashSet()
@@ -102,7 +102,6 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
 
         binding.btnEditGroup.setOnClickListener {
             val group = viewModel.selectedGroup ?: return@setOnClickListener
-            // Pre-fill the create group form with this group's details
             binding.createGroup.visibility = View.VISIBLE
             binding.selectGrouo.visibility = View.GONE
             
@@ -118,9 +117,7 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             }
             binding.exitable.isChecked = group.exitable
             binding.autoTurnOnDnd.isChecked = group.autoTurnOnDnd
-<<<<<<< HEAD
             
-            // Pre-fill recurring settings
             binding.recurringToggle.isChecked = group.isRecurring
             binding.recurringSettings.visibility = if (group.isRecurring) View.VISIBLE else View.GONE
             binding.recurringIntervalsContainer.removeAllViews()
@@ -132,10 +129,6 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
                     addRecurringIntervalRow(interval.startHour, interval.startMinute, interval.endHour, interval.endMinute)
                 }
             }
-            // Note: we can either save as new or overwrite
-            // To overwrite, we delete the old group before saving
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         }
 
         binding.btnDeleteGroup.setOnClickListener {
@@ -154,8 +147,6 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
                 .show()
         }
 
-<<<<<<< HEAD
-        // Recurring toggle
         binding.recurringToggle.setOnCheckedChangeListener { _, isChecked ->
             binding.recurringSettings.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
@@ -164,9 +155,6 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             addRecurringIntervalRow()
         }
 
-        // code dealing with new group creation
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         binding.btnSelectApps.setOnClickListener {
             val intent = Intent(requireContext(), SelectAppsActivity::class.java)
             intent.putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(viewModel.newGroupSelectedApps))
@@ -191,25 +179,7 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
 
         binding.saveGroup.setOnClickListener {
             val isEditing = viewModel.selectedGroup != null
-<<<<<<< HEAD
-            val dailyIntervals = if (binding.recurringToggle.isChecked) {
-                collectDailyIntervals()
-            } else {
-                mutableMapOf()
-            }
-            val newGroup = ManualFocusGroup(
-                groupId = if (isEditing) viewModel.selectedGroup!!.groupId else java.util.UUID.randomUUID().toString(),
-                groupName = binding.groupName.text.toString(),
-                packages = viewModel.newGroupSelectedApps,
-                blockMode = if(binding.selectedBlockAction.checkedButtonId == R.id.btn_selected) FocusBlockMode.BLOCK_SELECTED else FocusBlockMode.BLOCK_ALL_EXCEPT_SELECTED,
-                exitable = binding.exitable.isChecked,
-                autoTurnOnDnd = binding.autoTurnOnDnd.isChecked,
-                isRecurring = binding.recurringToggle.isChecked,
-                dailyIntervals = dailyIntervals
-            )
-=======
             val blockMode = if(binding.selectedBlockAction.checkedButtonId == R.id.btn_selected) FocusBlockMode.BLOCK_SELECTED else FocusBlockMode.BLOCK_ALL_EXCEPT_SELECTED
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             
             if (viewModel.newGroupSelectedKeywords.isNotEmpty()) {
                 val supportedBrowsers = URL_BAR_ID_LIST.keys
@@ -248,14 +218,21 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun saveFocusGroup(isEditing: Boolean, blockMode: FocusBlockMode) {
+        val dailyIntervals = if (binding.recurringToggle.isChecked) {
+            collectDailyIntervals()
+        } else {
+            mutableMapOf()
+        }
         val newGroup = ManualFocusGroup(
-            groupId = if (isEditing) viewModel.selectedGroup!!.groupId else java.util.UUID.randomUUID().toString(),
+            groupId = if (isEditing) viewModel.selectedGroup!!.groupId else UUID.randomUUID().toString(),
             groupName = binding.groupName.text.toString(),
             packages = viewModel.newGroupSelectedApps,
             keywords = viewModel.newGroupSelectedKeywords,
             blockMode = blockMode,
             exitable = binding.exitable.isChecked,
-            autoTurnOnDnd = binding.autoTurnOnDnd.isChecked
+            autoTurnOnDnd = binding.autoTurnOnDnd.isChecked,
+            isRecurring = binding.recurringToggle.isChecked,
+            dailyIntervals = dailyIntervals
         )
 
         if (isEditing) {
@@ -267,7 +244,6 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
         binding.createGroup.visibility = View.GONE
         binding.selectGrouo.visibility = View.VISIBLE
 
-        // Select it after it was created/edited
         viewModel.selectedGroup = newGroup
         binding.groupDropdown.setText(newGroup.toString(), false)
         binding.btnEditGroup.visibility = View.VISIBLE
@@ -341,32 +317,32 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun addRecurringIntervalRow(startHour: Int = 9, startMinute: Int = 0, endHour: Int = 17, endMinute: Int = 0) {
-        var startHour = startHour
-        var startMinute = startMinute
-        var endHour = endHour
-        var endMinute = endMinute
+        var sh = startHour
+        var sm = startMinute
+        var eh = endHour
+        var em = endMinute
         val row = layoutInflater.inflate(R.layout.item_time_range_interval, binding.recurringIntervalsContainer, false)
         val rowBinding = neth.iecal.curbox.databinding.ItemTimeRangeIntervalBinding.bind(row)
 
         fun updateTexts() {
-            rowBinding.llStartTime.text = String.format("%02d:%02d", startHour, startMinute)
-            rowBinding.llEndTime.text = String.format("%02d:%02d", endHour, endMinute)
+            rowBinding.llStartTime.text = String.format("%02d:%02d", sh, sm)
+            rowBinding.llEndTime.text = String.format("%02d:%02d", eh, em)
         }
 
         updateTexts()
 
         rowBinding.llStartTime.setOnClickListener {
             showTimePicker { hour, minute ->
-                startHour = hour
-                startMinute = minute
+                sh = hour
+                sm = minute
                 updateTexts()
             }
         }
 
         rowBinding.llEndTime.setOnClickListener {
             showTimePicker { hour, minute ->
-                endHour = hour
-                endMinute = minute
+                eh = hour
+                em = minute
                 updateTexts()
             }
         }
@@ -413,10 +389,10 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
         if (intervals.isNotEmpty()) {
             if (binding.everydayToggle.isChecked) {
                 for (day in 0..6) {
-                    result[day] = intervals.toMutableList()
+                    result[day] = ArrayList(intervals)
                 }
             } else {
-                result[0] = intervals.toMutableList()
+                result[0] = ArrayList(intervals)
             }
         }
 
@@ -429,7 +405,6 @@ class FocusSetupBottomSheet : BottomSheetDialogFragment() {
             android.R.layout.simple_dropdown_item_1line,
             mutableListOf()
         )
-
         binding.groupDropdown.setAdapter(autoCompleteAdapter)
     }
 

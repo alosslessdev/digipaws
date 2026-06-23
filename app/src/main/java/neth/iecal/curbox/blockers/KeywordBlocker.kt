@@ -1,5 +1,7 @@
 package neth.iecal.curbox.blockers
 
+import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context

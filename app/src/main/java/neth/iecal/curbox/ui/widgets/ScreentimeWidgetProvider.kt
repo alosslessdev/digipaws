@@ -42,7 +42,6 @@ class ScreentimeWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-
         try {
             when (intent.action) {
                 ACTION_WIDGET_REFRESH -> handleRefresh(context, intent)
@@ -119,19 +118,6 @@ class ScreentimeWidgetProvider : AppWidgetProvider() {
         }
     }
 
-<<<<<<< HEAD
-    fun setAppUsageText(remoteViews: RemoteViews,index: Int, list: List<AllAppsUsageFragment.Stat>, textViewId: Int, context: Context) {
-        val item = list.getOrNull(index) // Safely get the item
-        if (item != null) {
-            val usage =  (TimeTools.formatTimeForWidget(item.totalTime))
-            val appName = try {
-                context.packageManager.getApplicationLabel(
-                    context.packageManager.getApplicationInfo(item.packageName, 0)
-                )
-            } catch (_: Exception) {
-                item.snapshotLabel ?: item.packageName
-            }
-=======
     private fun setAppUsageText(
         remoteViews: RemoteViews,
         index: Int,
@@ -149,9 +135,8 @@ class ScreentimeWidgetProvider : AppWidgetProvider() {
             val appName = context.packageManager.getApplicationLabel(
                 context.packageManager.getApplicationInfo(item.packageName, 0)
             )
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             remoteViews.setTextViewText(textViewId, "$usage : $appName")
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (e: Exception) {
             val usage = TimeTools.formatTimeForWidget(item.totalTime)
             remoteViews.setTextViewText(textViewId, "$usage : ${item.packageName}")
         }
@@ -175,9 +160,4 @@ class ScreentimeWidgetProvider : AppWidgetProvider() {
             if (minutes > 0) append(" ${minutes}m")
         }.trim()
     }
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 }

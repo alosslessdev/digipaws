@@ -1,29 +1,22 @@
 package neth.iecal.curbox.utils
 
 import android.content.Context
-<<<<<<< HEAD
+import android.content.Intent
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-=======
-import android.content.Intent
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
-import rikka.shizuku.Shizuku
 import neth.iecal.curbox.data.models.FocusBlockMode
-import android.util.Log
+import rikka.shizuku.Shizuku
 
 object AppSuspendHelper {
 
-<<<<<<< HEAD
     private var scope: CoroutineScope? = null
 
     fun init(coroutineScope: CoroutineScope) {
         scope = coroutineScope
     }
 
-=======
-    // Todo: Sometimes user start focus mode, apps get suspended but in midst of that, they turn off shizuku. This creates a forever suspend bug
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     fun suspendApps(packages: List<String>) {
         executePmCommand(packages, "suspend")
     }
@@ -39,11 +32,7 @@ object AppSuspendHelper {
                 val allPackages = getInstalledPackagesSafe(context)
                 executePmCommand(allPackages, "unsuspend")
             } catch (e: Exception) {
-<<<<<<< HEAD
                 AppLogger.functionError("AppSuspendHelper", "unsuspendAllApps", e)
-=======
-                Log.e("AppSuspendHelper", "Failed to unsuspend all apps", e)
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             }
         }
     }
@@ -58,13 +47,8 @@ object AppSuspendHelper {
         return if (blockMode == FocusBlockMode.BLOCK_SELECTED) {
             realPackages.toList()
         } else {
-<<<<<<< HEAD
-            val allPackages = context.packageManager.getInstalledPackages(0).map { it.packageName }
-            allPackages.filter { it !in realPackages && it !in essentialPackages }
-=======
             val allPackages = getInstalledPackagesSafe(context)
-            allPackages.filter { it !in groupPackages && it !in essentialPackages }
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
+            allPackages.filter { it !in realPackages && it !in essentialPackages }
         }
     }
 
@@ -94,7 +78,6 @@ object AppSuspendHelper {
                 })
             }
         } ?: run {
-            // Fallback for when scope is not initialized (not ideal)
             Thread {
                 packages.chunked(40).forEach { chunk ->
                     val command = "pm $commandType ${chunk.joinToString(" ")}"

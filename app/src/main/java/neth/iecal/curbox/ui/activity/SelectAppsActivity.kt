@@ -21,11 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
-<<<<<<< HEAD
-import kotlinx.coroutines.flow.firstOrNull
-=======
 import kotlinx.coroutines.flow.first
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import neth.iecal.curbox.R
@@ -228,8 +224,8 @@ class SelectAppsActivity : AppCompatActivity() {
 
             // Add web apps to the selection list
             lifecycleScope.launch(Dispatchers.IO) {
-                val webApps = neth.iecal.curbox.utils.DataStoreManager(this@SelectAppsActivity)
-                    .settings.firstOrNull()?.webApps ?: emptyList()
+                val settings = dataStoreManager.settings.first()
+                val webApps = settings.webApps
                 withContext(Dispatchers.Main) {
                     webApps.forEach { webApp ->
                         val packageName = "webapp:${webApp.id}"

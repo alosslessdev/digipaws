@@ -16,14 +16,12 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 object ZipUtils {
-    // Register this in your activity
     fun registerDirectoryPicker(
         activity: AppCompatActivity,
         onDirectoryPicked: (Uri) -> Unit
     ): ActivityResultLauncher<Intent> {
         return activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             result.data?.data?.let { uri ->
-                // Persist permission for future access
                 val takeFlags =
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 activity.contentResolver.takePersistableUriPermission(uri, takeFlags)
@@ -31,7 +29,6 @@ object ZipUtils {
             }
         }
     }
-
 
     fun showDirectoryPicker(launcher: ActivityResultLauncher<Intent>) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
@@ -43,7 +40,6 @@ object ZipUtils {
             context.contentResolver.openOutputStream(outputUri)?.use { outputStream ->
                 ZipOutputStream(BufferedOutputStream(outputStream)).use { zos ->
                     val sharedPrefsDir = File(context.filesDir.parent, "shared_prefs")
-
                     for (file in sharedPrefsDir.listFiles() ?: emptyArray()) {
                         FileInputStream(file).use { fis ->
                             val entry = ZipEntry(file.name)
@@ -52,7 +48,6 @@ object ZipUtils {
                             zos.closeEntry()
                         }
                     }
-
                 }
             }
         } catch (e: Exception) {
@@ -65,52 +60,35 @@ object ZipUtils {
             context.contentResolver.openInputStream(inputUri)?.use { inputStream ->
                 ZipInputStream(BufferedInputStream(inputStream)).use { zis ->
                     val sharedPrefsDir = File(context.filesDir.parent, "shared_prefs")
-
                     if (!sharedPrefsDir.exists()) {
                         sharedPrefsDir.mkdir()
                     }
-
                     var entry = zis.nextEntry
-
                     while (entry != null) {
                         val outputFile = File(sharedPrefsDir, entry.name)
                         AppLogger.logDebug("ZipUtils", "Unzipping ${entry.name} to ${outputFile.path}")
-
-<<<<<<< HEAD
-                        // Ensure the file is deleted if it already exists
-=======
-                        Log.d("Unzipping", entry.name + " to ${outputFile.path}")
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
                         if (outputFile.exists()) {
                             outputFile.delete()
                         }
-
                         AppLogger.logDebug(
                             "ZipUtils",
                             "Permissions Can read: ${sharedPrefsDir.canRead()}, Can write: ${sharedPrefsDir.canWrite()}"
                         )
-
                         FileOutputStream(outputFile).use { outputStream ->
                             zis.copyTo(outputStream)
                         }
-
                         zis.closeEntry()
-                        // Reload the SharedPreferences for this file
                         if (entry.name.endsWith(".xml")) {
                             val prefsName = entry.name.removeSuffix(".xml")
                             val sharedPreferences =
                                 context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-
-                            // Force a reload by accessing the preferences
-                            sharedPreferences.all // This forces a read from disk
+                            sharedPreferences.all 
                             AppLogger.logDebug("ZipUtils", "Reloaded preferences: $prefsName")
                         }
                         entry = zis.nextEntry
                     }
                 }
             }
-
-
         } catch (e: Exception) {
             AppLogger.functionError("ZipUtils", "unzipSharedPreferencesFromUri", e)
         }

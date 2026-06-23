@@ -11,28 +11,11 @@ import java.io.InputStreamReader
 class ShizukuRunner {
 
     interface CommandResultListener {
-        /**
-         * Called when the command produces output.
-         * @param output The output from the command execution
-         * @param done True if the command execution is complete, false otherwise
-         */
         fun onCommandResult(output: String, done: Boolean) {}
-
-        /**
-         * Called when an error occurs during command execution.
-         * @param error The error message
-         */
         fun onCommandError(error: String) {}
     }
 
     companion object {
-
-        /**
-         * Executes a shell command using Shizuku.
-         * @param command The shell command to execute
-         * @param listener Listener for command results and errors
-         * @param lineBundle Number of lines to batch before invoking the listener
-         */
         fun executeCommand(command: String, listener: CommandResultListener, lineBundle: Int = 50) {
             if (!Shizuku.pingBinder()) {
                 listener.onCommandError("Shizuku binder not available")
@@ -41,18 +24,13 @@ class ShizukuRunner {
 
             Thread {
                 try {
-<<<<<<< HEAD
                     val binder = Shizuku.getBinder()
                     if (binder == null) {
                         listener.onCommandError("Shizuku binder is null")
                         return@Thread
                     }
 
-                    // Initialize the Shizuku process
                     val process = IShizukuService.Stub.asInterface(binder)
-=======
-                    val process = IShizukuService.Stub.asInterface(Shizuku.getBinder())
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
                         .newProcess(arrayOf("sh", "-c", command), null, null)
 
                     val outputReader = BufferedReader(InputStreamReader(FileInputStream(process.inputStream.fileDescriptor)))
@@ -68,7 +46,6 @@ class ShizukuRunner {
                         lineCount++
                         outputBuffer.append(line).append("\n")
 
-                        // Send partial results if lineBundle is reached
                         if (lineCount == lineBundle) {
                             lineCount = 0
                             listener.onCommandResult(outputBuffer.toString(), false)

@@ -86,7 +86,6 @@ class ReducersFragment : Fragment() {
             startActivity(intent)
         }
 
-<<<<<<< HEAD
         val webAppsCard = view.findViewById<MaterialCardView>(R.id.card_web_apps)
         webAppsCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
@@ -95,12 +94,8 @@ class ReducersFragment : Fragment() {
             startActivity(intent)
         }
 
-        val viewBlockingCard = view.findViewById<MaterialCardView>(R.id.card_view_blocker)
-        viewBlockingCard.setOnClickListener {
-=======
         val uiHiderCard = view.findViewById<MaterialCardView>(R.id.card_ui_hider)
         uiHiderCard.setOnClickListener {
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
                 putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderFragment.FRAGMENT_ID)
             }

@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import neth.iecal.curbox.ui.views.WeeklyBarGraphView
 import neth.iecal.curbox.utils.UsageStatsHelper
@@ -33,8 +34,6 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
     private val packageManager = application.packageManager
     private val websiteStatsDao = AppDatabase.getInstance(application).websiteStatsDao()
 
-    // Search keywords typed in the URL bar get stored with the raw text as the domain.
-    // A real website domain has no spaces and contains at least one dot (e.g. "youtube.com").
     private val domainRegex = Regex("^[a-z0-9-]+(\\.[a-z0-9-]+)+$", RegexOption.IGNORE_CASE)
 
     private fun WebsiteStatsEntity.isWebsite(): Boolean =
@@ -44,7 +43,6 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
 
     private val dayStatsCache = ConcurrentHashMap<LocalDate, List<AllAppsUsageFragment.Stat>>()
     private val appMetadataCache = ConcurrentHashMap<String, AppMetadata>()
-    private val snapshotMetadataCache = ConcurrentHashMap<String, AppMetadata>()
 
     data class AppMetadata(
         val label: CharSequence,
@@ -58,38 +56,30 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
-    // Current week offset: 0 = current week, -1 = last week, etc.
     private val _weekOffset = MutableLiveData(0)
     val weekOffset: LiveData<Int> = _weekOffset
 
-    // Week range label like "Mar 10 – Mar 16"
     private val _weekRangeLabel = MutableLiveData<String>()
     val weekRangeLabel: LiveData<String> = _weekRangeLabel
 
-    // Weekly bar data (7 entries)
     private val _weeklyData = MutableLiveData<List<WeeklyBarGraphView.DayData>>()
     val weeklyData: LiveData<List<WeeklyBarGraphView.DayData>> = _weeklyData
 
-    // Selected day index within the week (0-6)
-    private val _selectedDayIndex = MutableLiveData(6) // default to last day (Sunday) or today
+    private val _selectedDayIndex = MutableLiveData(6) 
     val selectedDayIndex: LiveData<Int> = _selectedDayIndex
 
-    // Stats for the selected day
     private val _selectedDayStats = MutableLiveData<List<AllAppsUsageFragment.Stat>>()
     val selectedDayStats: LiveData<List<AllAppsUsageFragment.Stat>> = _selectedDayStats
 
     private val _selectedDayWebsiteStats = MutableLiveData<List<WebsiteStatsEntity>>()
     val selectedDayWebsiteStats: LiveData<List<WebsiteStatsEntity>> = _selectedDayWebsiteStats
 
-    // Total usage time in millis for selected day
     private val _totalTime = MutableLiveData<Long>(0L)
     val totalTime: LiveData<Long> = _totalTime
 
-    // Date sublabel ("TOTAL TODAY" or "TOTAL · Mar 15")
     private val _dateSublabel = MutableLiveData("TOTAL TODAY")
     val dateSublabel: LiveData<String> = _dateSublabel
 
-    // Can navigate forward?
     private val _canGoNext = MutableLiveData(false)
     val canGoNext: LiveData<Boolean> = _canGoNext
 
@@ -183,7 +173,6 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
             if (date == today) todayIndex = i
         }
 
-        // Choose the selected day: today if in this week, else last day of the week
         val defaultSelected = if (isCurrentWeek && todayIndex >= 0) todayIndex else 6
 
         withContext(Dispatchers.Main) {
@@ -191,7 +180,6 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
             _selectedDayIndex.value = defaultSelected
         }
 
-        // Load stats for the selected day
         val selectedDate = weekStart.plusDays(defaultSelected.toLong())
         loadDayStats(selectedDate)
 
@@ -200,7 +188,6 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
 
     private suspend fun loadDayStats(date: LocalDate) {
         val stats = getFilteredStatsForDay(date)
-        rememberSnapshotMetadata(stats)
         preloadAppMetadata(stats.map { it.packageName })
         val total = stats.sumOf { it.totalTime }
         val today = LocalDate.now()
@@ -229,8 +216,7 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
             .plusWeeks(offset.toLong())
     }
 
-<<<<<<< HEAD:app/src/main/java/neth/iecal/curbox/ui/fragments/usage/AllAppsUsageViewModel.kt
-    private fun getStatsForDay(date: LocalDate): List<AllAppsUsageFragment.Stat> {
+    private suspend fun getStatsForDay(date: LocalDate): List<AllAppsUsageFragment.Stat> {
         val today = LocalDate.now()
         val shouldBypassLongCache = !date.isBefore(today.minusDays(1))
 
@@ -241,15 +227,8 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
         }
 
         return dayStatsCache.computeIfAbsent(date) {
-            usageStatsHelper.getForegroundStatsByDay(it)
+            runBlocking { usageStatsHelper.getForegroundStatsByDay(it) }
         }
-=======
-    private suspend fun getStatsForDay(date: LocalDate): List<AllAppsUsageFragment.Stat> {
-        dayStatsCache[date]?.let { return it }
-        val stats = usageStatsHelper.getForegroundStatsByDay(date)
-        dayStatsCache[date] = stats
-        return stats
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26:app/src/main/java/neth/iecal/curbox/ui/fragments/main/usage/AllAppsUsageViewModel.kt
     }
 
     private suspend fun getFilteredStatsForDay(date: LocalDate): List<AllAppsUsageFragment.Stat> {
@@ -263,63 +242,6 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
             packageNames.distinct().forEach { packageName ->
                 getAppMetadata(packageName)
             }
-        }
-    }
-
-<<<<<<< HEAD:app/src/main/java/neth/iecal/curbox/ui/fragments/usage/AllAppsUsageViewModel.kt
-    private fun rememberSnapshotMetadata(stats: Collection<AllAppsUsageFragment.Stat>) {
-        stats.forEach { stat ->
-            if (stat.snapshotLabel.isNullOrBlank() && stat.snapshotCategory.isNullOrBlank()) {
-                return@forEach
-=======
-    fun getAppMetadata(packageName: String): AppMetadata {
-        return appMetadataCache.computeIfAbsent(packageName) {
-            try {
-                val appInfo = packageManager.getApplicationInfo(it, 0)
-                val packageInfo = packageManager.getPackageInfo(it, 0)
-                val category = when (appInfo.category) {
-                    ApplicationInfo.CATEGORY_GAME -> "GAME"
-                    ApplicationInfo.CATEGORY_SOCIAL -> "SOCIAL NETWORKING"
-                    ApplicationInfo.CATEGORY_PRODUCTIVITY -> "PRODUCTIVITY"
-                    ApplicationInfo.CATEGORY_VIDEO -> "VIDEO"
-                    ApplicationInfo.CATEGORY_AUDIO -> "AUDIO"
-                    ApplicationInfo.CATEGORY_NEWS -> "NEWS"
-                    ApplicationInfo.CATEGORY_IMAGE -> "IMAGE"
-                    ApplicationInfo.CATEGORY_MAPS -> "MAPS"
-                    else -> "APP"
-                }
-
-                AppMetadata(
-                    label = appInfo.loadLabel(packageManager),
-                    category = category,
-                    isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                    installDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                        .format(Date(packageInfo.firstInstallTime)),
-                    lastUpdate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                        .format(Date(packageInfo.lastUpdateTime)),
-                    icon = appInfo.loadIcon(packageManager)
-                )
-            } catch (e: Exception) {
-                AppMetadata(
-                    label = packageName,
-                    category = "APP",
-                    isSystemApp = false,
-                    installDate = "N/A",
-                    lastUpdate = "N/A",
-                    icon = null
-                )
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26:app/src/main/java/neth/iecal/curbox/ui/fragments/main/usage/AllAppsUsageViewModel.kt
-            }
-
-            snapshotMetadataCache[stat.packageName] = AppMetadata(
-                label = stat.snapshotLabel ?: stat.packageName,
-                category = stat.snapshotCategory ?: "APP",
-                isSystemApp = false,
-                installDate = "N/A",
-                lastUpdate = "N/A",
-                icon = null
-            )
-            appMetadataCache.remove(stat.packageName)
         }
     }
 
@@ -351,14 +273,14 @@ class AllAppsUsageViewModel(application: Application) : AndroidViewModel(applica
                 label = appInfo.loadLabel(packageManager),
                 category = category,
                 isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                installDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                    .format(java.util.Date(packageInfo.firstInstallTime)),
-                lastUpdate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                    .format(java.util.Date(packageInfo.lastUpdateTime)),
+                installDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(Date(packageInfo.firstInstallTime)),
+                lastUpdate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(Date(packageInfo.lastUpdateTime)),
                 icon = appInfo.loadIcon(packageManager)
             )
-        } catch (_: Exception) {
-            snapshotMetadataCache[packageName] ?: AppMetadata(
+        } catch (e: Exception) {
+            AppMetadata(
                 label = packageName,
                 category = "APP",
                 isSystemApp = false,

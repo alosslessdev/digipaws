@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import androidx.core.view.isNotEmpty
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -19,13 +20,9 @@ import kotlinx.coroutines.launch
 import neth.iecal.curbox.utils.ViewUtils
 import neth.iecal.curbox.R
 import neth.iecal.curbox.databinding.FragmentFocusBinding
-<<<<<<< HEAD
 import neth.iecal.curbox.utils.TimeTools
 import neth.iecal.curbox.utils.BridgeServiceManager
-=======
-import androidx.core.view.isNotEmpty
 import kotlin.math.abs
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
 class FocusFragment : Fragment() {
 
@@ -100,31 +97,19 @@ class FocusFragment : Fragment() {
                             b.tvSeconds.text = String.format(Locale.getDefault(), ":%02d", seconds)
 
                             if (b.rvRuler.width > 0 && b.rvRuler.isNotEmpty()) {
-                                // Dynamically fetch the exact physical width of a rendered item
                                 if (itemWidthPx > 0) {
                                     if (lastTotalMinutesLeft < 0 || abs(lastTotalMinutesLeft - totalMinutesLeft) > 1.0) {
-                                        // Absolute (re)sync: place the centered tick on the remaining time.
-                                        // scrollToPositionWithOffset places the item's left edge at
-                                        // paddingLeft + offset, and paddingLeft already equals the
-                                        // centering padding, so offset 0 centers integerPart. Shift it
-                                        // left by the fractional part to land between two ticks.
                                         val fractionalPart = (totalMinutesLeft - totalMinutesLeft.toInt()).toFloat()
                                         val offset = -(fractionalPart * itemWidthPx).toInt()
-
                                         isProgrammaticScroll = true
                                         (b.rvRuler.layoutManager as LinearLayoutManager)
                                             .scrollToPositionWithOffset(totalMinutesLeft.toInt(), offset)
-                                        isProgrammaticScroll = false // Reset instantly, onScrolled is synchronous
-
+                                        isProgrammaticScroll = false 
                                         floatPixelAccumulator = 0.0
                                     } else {
-                                        // Smoothly scroll the per-tick delta to prevent layout thrashing.
-                                        // Time decreases, so deltaMinutes > 0 and we scroll back (negative
-                                        // dx) toward lower values, keeping the strip in sync with tvMinutes.
                                         val deltaMinutes = lastTotalMinutesLeft - totalMinutesLeft
                                         floatPixelAccumulator += deltaMinutes * itemWidthPx
                                         val pixelsToScroll = floatPixelAccumulator.toInt()
-
                                         if (pixelsToScroll != 0) {
                                             isProgrammaticScroll = true
                                             b.rvRuler.scrollBy(-pixelsToScroll, 0)
@@ -134,33 +119,11 @@ class FocusFragment : Fragment() {
                                     }
                                     lastTotalMinutesLeft = totalMinutesLeft
                                 }
-<<<<<<< HEAD
-                                if (activeInterval != null) {
-                                    val startStr = String.format("%02d:%02d", activeInterval.startHour, activeInterval.startMinute)
-                                    val endStr = String.format("%02d:%02d", activeInterval.endHour, activeInterval.endMinute)
-                                    binding.tvAutoFocusTimeRange.text = "${group.groupName} (${startStr} - ${endStr})"
-                                } else {
-                                    binding.tvAutoFocusTimeRange.text = group.groupName
-                                }
-                                
-                                binding.btnExitAutoFocus.visibility = if (group.exitable) View.VISIBLE else View.GONE
-                                binding.btnExitAutoFocus.setOnClickListener {
-                                    val intent = android.content.Intent(neth.iecal.curbox.blockers.FocusModeBlocker.INTENT_ACTION_EXIT_AUTO_FOCUS)
-                                    intent.setPackage(requireContext().packageName)
-                                    BridgeServiceManager.sendBridgedBroadcast(requireContext(), intent)
-                                }
-                            } else {
-                                binding.cvActiveAutoFocus.visibility = View.GONE
-                                binding.textHeader.visibility = View.VISIBLE
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
                             }
                         } else {
-                            // Reset state when timer stops
                             lastTotalMinutesLeft = -1.0
                         }
 
-                        // Show active recurring manual focus groups
                         val now = java.util.Calendar.getInstance()
                         val calDay = now.get(java.util.Calendar.DAY_OF_WEEK)
                         val currentDay = if (calDay == java.util.Calendar.SUNDAY) 6 else calDay - 2
@@ -198,7 +161,7 @@ class FocusFragment : Fragment() {
         setupRuler()
         setupClicks()
     }
-<<<<<<< HEAD
+
     override fun onResume() {
         super.onResume()
         viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -211,8 +174,6 @@ class FocusFragment : Fragment() {
             }
         }
     }
-=======
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
     private fun setupClicks() {
         binding.btnGoToStats.setOnClickListener {
@@ -295,7 +256,6 @@ class FocusFragment : Fragment() {
         if (smooth) {
             b.rvRuler.smoothScrollToPosition(targetPos)
         } else {
-            // paddingLeft already equals the centering padding, so offset 0 centers targetPos.
             (b.rvRuler.layoutManager as LinearLayoutManager)
                 .scrollToPositionWithOffset(targetPos, 0)
         }

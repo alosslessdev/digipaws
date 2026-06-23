@@ -1,6 +1,11 @@
 package neth.iecal.curbox.services
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.CancellationException
@@ -10,8 +15,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import neth.iecal.curbox.CrashLogger
 import neth.iecal.curbox.anti_stimulants.AutoDnd
 import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
@@ -19,15 +22,9 @@ import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.blockers.FocusModeBlocker
 import neth.iecal.curbox.blockers.KeywordBlocker
 import neth.iecal.curbox.blockers.ReelBlocker
-<<<<<<< HEAD
-import neth.iecal.curbox.blockers.viewblocker.ElementPickerNotification
-import neth.iecal.curbox.blockers.viewblocker.ViewBlocker
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.viewBlocker.ViewBlockerFragment
-import neth.iecal.curbox.utils.AppLogger
-=======
 import neth.iecal.curbox.blockers.uihider.NodePicker
 import neth.iecal.curbox.blockers.uihider.UiHider
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
+import neth.iecal.curbox.utils.AppLogger
 
 @Suppress("DEPRECATION")
 class AppBlockerService : BaseBlockingService() {
@@ -38,38 +35,8 @@ class AppBlockerService : BaseBlockingService() {
     private val autoDnd = AutoDnd()
     private val reelBlocker = ReelBlocker()
     private var keywordBlocker = KeywordBlocker()
-<<<<<<< HEAD
-    private val viewBlocker = ViewBlocker()
-    private var pickerNotification: ElementPickerNotification? = null
-
-    private val pickerReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            try {
-                when (intent?.action) {
-                    ViewBlockerFragment.INTENT_ACTION_SHOW_PICKER_NOTIFICATION -> {
-                        pickerNotification?.showNotification()
-                    }
-                    ElementPickerNotification.ACTION_START_PICKER -> {
-                        val picker = viewBlocker.elementPicker
-                        if (picker != null && !picker.isActive) {
-                            picker.show()
-                            pickerNotification?.showPickerActiveNotification()
-                        }
-                    }
-                    ElementPickerNotification.ACTION_STOP_PICKER -> {
-                        viewBlocker.elementPicker?.hide()
-                        pickerNotification?.cancelNotification()
-                    }
-                }
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "pickerReceiver.onReceive", e)
-            }
-        }
-    }
-=======
     private val uiHider = UiHider()
     private val nodePicker = NodePicker()
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
     private var grayScaleFilter = GrayScaleFilter()
 
@@ -101,7 +68,6 @@ class AppBlockerService : BaseBlockingService() {
             AppLogger.logWarn(TAG, "Failed to bind Shizuku in non-provider process: ${e.message}")
         }
 
-        // Initialize AppSuspendHelper with service scope
         neth.iecal.curbox.utils.AppSuspendHelper.init(serviceScope)
     }
 
@@ -109,101 +75,65 @@ class AppBlockerService : BaseBlockingService() {
         event ?: return
         super.onAccessibilityEvent(event)
 
-<<<<<<< HEAD
-=======
-        try {
-            appBlocker.doAppBlockerCheck(event)
-            grayScaleFilter.doGrayscaleCheck(event)
-            focusModeBlocker.doFocusModeCheck(event)
-        } catch (t: Throwable) {
-            Log.e("error", t.message ?: "Unknown error")
-            crashLogger.logNonFatalError(Exception(t))
-        }
-
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
         val eventCopy = AccessibilityEvent.obtain(event)
         val result = eventChannel.trySend(eventCopy)
 
-        // If the channel is closed or rejected it, recycle immediately
         if (result.isFailure) {
             eventCopy.recycle()
         }
     }
 
     override fun onInterrupt() {
-        android.util.Log.e("AppBlockerService", "onInterrupt() called - service interrupted")
+        Log.e(TAG, "onInterrupt() called - service interrupted")
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        android.util.Log.e("AppBlockerService", "onUnbind() called - service unbinding")
-        
-        // Ensure cleanup happens even if onDestroy isn't reached immediately
-        try {
-            cleanup()
-        } catch (e: Exception) {
-            android.util.Log.e("AppBlockerService", "Error during cleanup in onUnbind", e)
-        }
-        
+        Log.e(TAG, "onUnbind() called - service unbinding")
+        cleanup()
         return super.onUnbind(intent)
     }
 
-    private fun cleanup() {
-        // Move common cleanup logic here if needed
-    }
+    private fun cleanup() {}
 
     private fun startBackgroundWorker() {
         serviceScope.launch {
-<<<<<<< HEAD
             try {
                 for (event in eventChannel) {
                     try {
-                        // Process blockers in background
                         try {
                             appBlocker.doAppBlockerCheck(event)
                         } catch (t: Throwable) {
-                            android.util.Log.e(TAG, "Error in appBlocker.doAppBlockerCheck", t)
+                            Log.e(TAG, "Error in appBlocker.doAppBlockerCheck", t)
                         }
-=======
-            for (event in eventChannel) {
-                try {
-                    reelBlocker.doViewBlockerCheck(event)
-                    keywordBlocker.checkIfUnsupportedBrowser(event)
-                    uiHider.doUiHiderCheck(event)
-                } catch (t: Throwable) {
-                    // Don't log normal coroutine cancellations as crashes
-                    if (t is CancellationException) throw t
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
                         try {
                             grayScaleFilter.doGrayscaleCheck(event)
                         } catch (t: Throwable) {
-                            android.util.Log.e(TAG, "Error in grayScaleFilter.doGrayscaleCheck", t)
+                            Log.e(TAG, "Error in grayScaleFilter.doGrayscaleCheck", t)
                         }
 
                         try {
                             focusModeBlocker.doFocusModeCheck(event)
                         } catch (t: Throwable) {
-                            android.util.Log.e(TAG, "Error in focusModeBlocker.doFocusModeCheck", t)
+                            Log.e(TAG, "Error in focusModeBlocker.doFocusModeCheck", t)
                         }
                         
                         reelBlocker.doViewBlockerCheck(event)
                         keywordBlocker.checkIfUserGettingFreaky(event)
-                        viewBlocker.doViewBlockerCheck(event)
+                        uiHider.doUiHiderCheck(event)
                         
                     } catch (t: Throwable) {
                         if (t is CancellationException) throw t
-                        android.util.Log.e(TAG, "Critical error in background worker loop", t)
+                        Log.e(TAG, "Critical error in background worker loop", t)
                     } finally {
                         try {
                             event.recycle()
-                        } catch (e: Exception) {
-                            // Already recycled or invalid
-                        }
+                        } catch (e: Exception) {}
                     }
                 }
             } catch (t: Throwable) {
                 if (t !is CancellationException) {
-                    android.util.Log.e(TAG, "Background worker terminated unexpectedly", t)
+                    Log.e(TAG, "Background worker terminated unexpectedly", t)
                 }
             }
         }
@@ -211,17 +141,16 @@ class AppBlockerService : BaseBlockingService() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onServiceConnected() {
-<<<<<<< HEAD
         try {
             super.onServiceConnected()
             
             appBlocker.setupAppBlocker(this)
             focusModeBlocker.setupFocusMode(this)
+            autoDnd.setup(this)
             reelBlocker.setupBlocker(this)
             keywordBlocker.setupBlocker(this)
-            viewBlocker.setupBlocker(this)
-            viewBlocker.setupElementPicker()
-            pickerNotification = ElementPickerNotification(this)
+            uiHider.setupBlocker(this)
+            nodePicker.setupBlocker(this)
             grayScaleFilter.setup(this)
 
             focusModeBlocker.setupReceivers()
@@ -229,122 +158,36 @@ class AppBlockerService : BaseBlockingService() {
             reelBlocker.setupReceivers()
             keywordBlocker.setupReceivers()
             grayScaleFilter.setupReceivers()
-            viewBlocker.setupReceivers()
-
-            val pickerFilter = IntentFilter().apply {
-                addAction(ViewBlockerFragment.INTENT_ACTION_SHOW_PICKER_NOTIFICATION)
-                addAction(ElementPickerNotification.ACTION_START_PICKER)
-                addAction(ElementPickerNotification.ACTION_STOP_PICKER)
-            }
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(pickerReceiver, pickerFilter, Context.RECEIVER_EXPORTED)
-            } else {
-                registerReceiver(pickerReceiver, pickerFilter)
-            }
+            uiHider.setupReceivers()
+            nodePicker.setupReceivers()
 
             startBackgroundWorker()
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "onServiceConnected", e)
             crashLogger.logNonFatalError(Exception(e))
         }
-=======
-        super.onServiceConnected()
-        appBlocker.setupAppBlocker(this)
-        focusModeBlocker.setupFocusMode(this)
-        autoDnd.setup(this)
-        reelBlocker.setupBlocker(this)
-        keywordBlocker.setupBlocker(this)
-        uiHider.setupBlocker(this)
-        nodePicker.setupBlocker(this)
-        grayScaleFilter.setup(this)
-
-        focusModeBlocker.setupReceivers()
-        appBlocker.setupReceivers()
-        reelBlocker.setupReceivers()
-        keywordBlocker.setupReceivers()
-        grayScaleFilter.setupReceivers()
-        uiHider.setupReceivers()
-        nodePicker.setupReceivers()
-
-        startBackgroundWorker()
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     }
 
     override fun onDestroy() {
         try {
             super.onDestroy()
 
-<<<<<<< HEAD
-            try {
-                focusModeBlocker.removeReceivers()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "focusModeBlocker.removeReceivers", e)
-            }
-            
-            try {
-                reelBlocker.removeReceivers()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "reelBlocker.removeReceivers", e)
-            }
-            
-            try {
-                appBlocker.onDestroy()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "appBlocker.onDestroy", e)
-            }
-            
-            try {
-                keywordBlocker.removeReceivers()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "keywordBlocker.removeReceivers", e)
-            }
-            
-            try {
-                grayScaleFilter.unregisterReceivers()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "grayScaleFilter.unregisterReceivers", e)
-            }
-            
-            try {
-                viewBlocker.removeReceivers()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "viewBlocker.removeReceivers", e)
-            }
-            
-            try {
-                unregisterReceiver(pickerReceiver)
-            } catch (e: Exception) {
-                AppLogger.logWarn(TAG, "Failed to unregister picker receiver: ${e.message}")
-            }
-            
-            try {
-                pickerNotification?.cancelNotification()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "pickerNotification.cancelNotification", e)
-            }
-=======
-            focusModeBlocker.removeReceivers()
-            autoDnd.stop()
-            reelBlocker.removeReceivers()
-            appBlocker.onDestroy()
-            keywordBlocker.removeReceivers()
-            grayScaleFilter.unregisterReceivers()
-            uiHider.removeReceivers()
-            nodePicker.removeReceivers()
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
+            try { focusModeBlocker.removeReceivers() } catch (e: Exception) {}
+            try { autoDnd.stop() } catch (e: Exception) {}
+            try { reelBlocker.removeReceivers() } catch (e: Exception) {}
+            try { appBlocker.onDestroy() } catch (e: Exception) {}
+            try { keywordBlocker.removeReceivers() } catch (e: Exception) {}
+            try { grayScaleFilter.unregisterReceivers() } catch (e: Exception) {}
+            try { uiHider.removeReceivers() } catch (e: Exception) {}
+            try { nodePicker.removeReceivers() } catch (e: Exception) {}
 
             try {
                 eventChannel.close()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "eventChannel.close", e)
-            }
+            } catch (e: Exception) {}
             
             try {
                 serviceScope.cancel()
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "serviceScope.cancel", e)
-            }
+            } catch (e: Exception) {}
         } catch (e: Exception) {
             AppLogger.functionError(TAG, "onDestroy", e)
         }

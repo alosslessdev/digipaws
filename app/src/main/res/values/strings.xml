@@ -170,12 +170,8 @@
     <string name="redirection_url">Redirection URL</string>
     <string name="configuration">Configuration</string>
     <string name="search_recursively_for_blocked_keywords_on">Search recursively for blocked keywords on every text field on screen</string>
-<<<<<<< HEAD
     <string name="also_match_inside_longer_words_and_links">Also match inside longer words and links after exact matches (example: youtube.com matches m.youtube.com)</string>
     <string name="block_all_browsers_except_supported_ones">Block all browsers except supported ones</string>
-=======
-    <string name="block_all_browsers_except_supported_ones">Block unsupported browser</string>
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
     <string name="select_ignored_apps">Select Ignored Apps</string>
     <string name="time_tracking">Time Tracking</string>
     <string name="enable_time_tracking">Enable usage time tracking</string>
@@ -314,7 +310,6 @@
     <string name="picker_notification_text">Tap to start picking an element</string>
     <string name="picker_active_title">Element Picker Active</string>
     <string name="picker_active_text">Tap elements on screen to select them</string>
-<<<<<<< HEAD
     <string name="communication_bridge_desc">Maintains communication with accessibility services</string>
     
     <!-- Web Apps -->
@@ -338,7 +333,6 @@
     <string name="everyday">Everyday</string>
     <string name="no_recurring_intervals">No time intervals set</string>
     <string name="recurring_focus_active">Recurring focus active</string>
-=======
 
     <string name="appearance">Appearance</string>
     <string name="btn_set_position">Set Position</string>
@@ -463,7 +457,6 @@
     <string name="desc_add_group">Add Group</string>
     <string name="desc_remove">Remove</string>
     <string name="desc_remove_interval">Remove interval</string>
-
     <string name="ascii_brain" translatable="false">"\n
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⠤⠤⠤⠤⣄⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣶⡊⠉⠉⣉⣱⡷⠶⢢⣠⢴⣶⡝⠒⠉⢉⣭⡽⠟⢉⣀⡀⠹⢭⠒⢤⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀

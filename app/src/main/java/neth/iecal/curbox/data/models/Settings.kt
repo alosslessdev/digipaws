@@ -18,13 +18,9 @@ data class Settings(
     val usageTrackerIgnoredApps: List<String> = listOf(),
     val keepUninstalledUsageUntilNextDay: Boolean = true,
     val mindfulMessageConfig: MindfulMessageConfig = MindfulMessageConfig(),
-<<<<<<< HEAD
-    val viewBlockerConfig: ViewBlockerConfig = ViewBlockerConfig(),
-    val appBlockerCooldowns: Map<String, Long> = mapOf(),
-    val webApps: List<WebApp> = listOf()
-=======
     val uiHiderConfig: UiHiderConfig = UiHiderConfig(),
     val reelCounterOverlayConfig: ReelCounterOverlayConfig = ReelCounterOverlayConfig(),
-    val nextWebsiteRecheckTime: Long = 0L
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
+    val nextWebsiteRecheckTime: Long = 0L,
+    val appBlockerCooldowns: Map<String, Long> = mapOf(),
+    val webApps: List<WebApp> = listOf()
 )

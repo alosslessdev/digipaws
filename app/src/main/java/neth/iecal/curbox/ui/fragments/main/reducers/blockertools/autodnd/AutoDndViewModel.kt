@@ -70,10 +70,6 @@ class AutoDndViewModel(application: Application) : AndroidViewModel(application)
 
     private fun requestFocusBlockerRefresh() {
         val intent = Intent(FocusModeBlocker.INTENT_ACTION_REFRESH_FOCUS_MODE)
-<<<<<<< HEAD:app/src/main/java/neth/iecal/curbox/ui/fragments/main/reducers/blockertools/autofocus/AutoFocusViewModel.kt
-        BridgeServiceManager.sendBridgedBroadcast(application, intent)
-=======
-        getApplication<Application>().sendBroadcast(intent)
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26:app/src/main/java/neth/iecal/curbox/ui/fragments/main/reducers/blockertools/autodnd/AutoDndViewModel.kt
+        BridgeServiceManager.sendBridgedBroadcast(getApplication(), intent)
     }
 }

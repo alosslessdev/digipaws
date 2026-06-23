@@ -230,7 +230,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-<<<<<<< HEAD
         <!-- Web Apps -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_web_apps"
@@ -296,7 +295,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-=======
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -306,7 +304,6 @@
             android:letterSpacing="0.1"
             android:layout_marginBottom="20dp"
             android:layout_marginTop="8dp"/>
->>>>>>> 62c92183a67cb54ed11a3304ad8bc7018c175f26
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_autodnd"
