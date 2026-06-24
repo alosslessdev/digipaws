@@ -6,11 +6,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import com.google.gson.Gson
@@ -21,6 +23,7 @@ import neth.iecal.curbox.databinding.FragmentCreateAppGroupBinding
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.AppUsageConfig
+import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
 import neth.iecal.curbox.utils.ViewUtils
 import java.util.UUID
 
@@ -36,6 +39,12 @@ class CreateAppGroupFragment : Fragment() {
     private var selectedApps: ArrayList<String> = arrayListOf()
     private var isPrefilled = false
     private val viewModel: AppBlockerSettingViewModel by activityViewModels()
+
+    private var initialGroupName: String = ""
+    private var initialSelectedApps: List<String> = emptyList()
+    private var initialBlockingType: AppBlockingType = AppBlockingType.Usage
+    private var initialSetting: String = ""
+    private var initialWarningConfig: String = ""
 
     private val selectAppsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -76,6 +85,13 @@ class CreateAppGroupFragment : Fragment() {
             binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
         }
 
+        if (groupId == null) {
+            viewModel.currentUsageConfig = AppUsageConfig()
+            viewModel.currentTimeConfig = AppTimeConfig()
+            viewModel.warningScrnConfig = AppBlockerWarningScreenConfig()
+            captureInitialState()
+        }
+
         if (groupId != null) {
             viewLifecycleOwner.lifecycleScope.launch {
                 viewModel.groups.collectLatest { groups ->
@@ -113,6 +129,8 @@ class CreateAppGroupFragment : Fragment() {
                             binding.btnConfigureSettings.visibility = View.GONE
                         }
                         viewModel.warningScrnConfig = group.warningScreenConfig
+                        
+                        captureInitialState()
                     }
                 }
             }
@@ -158,6 +176,77 @@ class CreateAppGroupFragment : Fragment() {
         binding.fabSaveGroup.setOnClickListener {
             saveGroup()
         }
+
+        setupBackPressHandling()
+    }
+
+    private fun setupBackPressHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasChanges()) {
+                    showUnsavedChangesDialog()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    private fun showUnsavedChangesDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.unsaved_changes_dialog_title)
+            .setMessage(R.string.unsaved_changes_dialog_message)
+            .setPositiveButton(R.string.save) { _, _ ->
+                saveGroup()
+            }
+            .setNegativeButton(R.string.btn_discard) { _, _ ->
+                requireActivity().finish()
+            }
+            .setNeutralButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun hasChanges(): Boolean {
+        val currentGroupName = binding.etGroupName.text.toString().trim()
+        val currentSelectedApps = selectedApps.toList()
+        val currentBlockingType = when {
+            binding.rbUsageBased.isChecked -> AppBlockingType.Usage
+            binding.rbOnOpen.isChecked -> AppBlockingType.OnOpen
+            else -> AppBlockingType.Timed
+        }
+        val currentSetting = if (binding.rbUsageBased.isChecked) {
+            Gson().toJson(viewModel.currentUsageConfig)
+        } else if (binding.rbOnOpen.isChecked) {
+            ""
+        } else {
+            Gson().toJson(viewModel.currentTimeConfig)
+        }
+        val currentWarningConfig = Gson().toJson(viewModel.warningScrnConfig)
+
+        return currentGroupName != initialGroupName ||
+                currentSelectedApps != initialSelectedApps ||
+                currentBlockingType != initialBlockingType ||
+                currentSetting != initialSetting ||
+                currentWarningConfig != initialWarningConfig
+    }
+
+    private fun captureInitialState() {
+        initialGroupName = binding.etGroupName.text.toString().trim()
+        initialSelectedApps = selectedApps.toList()
+        initialBlockingType = when {
+            binding.rbUsageBased.isChecked -> AppBlockingType.Usage
+            binding.rbOnOpen.isChecked -> AppBlockingType.OnOpen
+            else -> AppBlockingType.Timed
+        }
+        initialSetting = if (binding.rbUsageBased.isChecked) {
+            Gson().toJson(viewModel.currentUsageConfig)
+        } else if (binding.rbOnOpen.isChecked) {
+            ""
+        } else {
+            Gson().toJson(viewModel.currentTimeConfig)
+        }
+        initialWarningConfig = Gson().toJson(viewModel.warningScrnConfig)
     }
 
     private fun setupBlockingTypeSelection() {

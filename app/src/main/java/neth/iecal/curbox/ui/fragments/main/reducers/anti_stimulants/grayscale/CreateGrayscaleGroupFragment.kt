@@ -9,11 +9,14 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.data.models.AppTimeConfig
@@ -35,6 +38,10 @@ class CreateGrayscaleGroupFragment : Fragment() {
     private var selectedApps: ArrayList<String> = arrayListOf()
     private var isPrefilled = false
     private val viewModel: GrayscaleViewModel by activityViewModels()
+
+    private var initialGroupName: String = ""
+    private var initialSelectedApps: List<String> = emptyList()
+    private var initialTimeConfig: String = ""
 
     private val selectAppsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -77,6 +84,7 @@ class CreateGrayscaleGroupFragment : Fragment() {
                     TimeInterval(startHour = 0, endHour = 7)
                 )
             )
+            captureInitialState()
         }
 
         if (groupId != null) {
@@ -99,6 +107,8 @@ class CreateGrayscaleGroupFragment : Fragment() {
                         }
 
                         viewModel.currentTimeConfig = group.timeConfig.copy()
+                        
+                        captureInitialState()
                     }
                 }
             }
@@ -115,37 +125,86 @@ class CreateGrayscaleGroupFragment : Fragment() {
         }
 
         binding.fabSaveGroup.setOnClickListener {
-            val name = binding.etGroupName.text.toString().trim()
-            if (name.isEmpty()) {
-                binding.etGroupName.error = "Please enter a group name"
-                return@setOnClickListener
-            }
-            
-            if (selectedApps.isEmpty()) {
-                Toast.makeText(requireContext(), getString(R.string.please_select_at_least_one_app), Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            val savedGroupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
-            val isEditingRecord = savedGroupId != null
-            val targetExistingGroup = viewModel.groups.value.find { it.groupId == savedGroupId }
-
-            val newGroup = GrayscaleGroup(
-                groupId = if (isEditingRecord && targetExistingGroup != null) targetExistingGroup.groupId else UUID.randomUUID().toString(),
-                groupName = name,
-                packages = HashSet(selectedApps),
-                timeConfig = viewModel.currentTimeConfig
-            )
-
-            if (isEditingRecord && targetExistingGroup != null) {
-                viewModel.updateGroup(newGroup)
-            } else {
-                viewModel.addGroup(newGroup)
-            }
-
-            Toast.makeText(requireContext(), getString(R.string.group_saved_successfully), Toast.LENGTH_SHORT).show()
-            requireActivity().finish()
+            saveGroup()
         }
+
+        setupBackPressHandling()
+    }
+
+    private fun setupBackPressHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasChanges()) {
+                    showUnsavedChangesDialog()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    private fun showUnsavedChangesDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.unsaved_changes_dialog_title)
+            .setMessage(R.string.unsaved_changes_dialog_message)
+            .setPositiveButton(R.string.save) { _, _ ->
+                saveGroup()
+            }
+            .setNegativeButton(R.string.btn_discard) { _, _ ->
+                requireActivity().finish()
+            }
+            .setNeutralButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun hasChanges(): Boolean {
+        val currentGroupName = binding.etGroupName.text.toString().trim()
+        val currentSelectedApps = selectedApps.toList()
+        val currentTimeConfig = Gson().toJson(viewModel.currentTimeConfig)
+
+        return currentGroupName != initialGroupName ||
+                currentSelectedApps != initialSelectedApps ||
+                currentTimeConfig != initialTimeConfig
+    }
+
+    private fun captureInitialState() {
+        initialGroupName = binding.etGroupName.text.toString().trim()
+        initialSelectedApps = selectedApps.toList()
+        initialTimeConfig = Gson().toJson(viewModel.currentTimeConfig)
+    }
+
+    private fun saveGroup() {
+        val name = binding.etGroupName.text.toString().trim()
+        if (name.isEmpty()) {
+            binding.etGroupName.error = "Please enter a group name"
+            return
+        }
+        
+        if (selectedApps.isEmpty()) {
+            Toast.makeText(requireContext(), getString(R.string.please_select_at_least_one_app), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val savedGroupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
+        val isEditingRecord = savedGroupId != null
+        val targetExistingGroup = viewModel.groups.value.find { it.groupId == savedGroupId }
+
+        val newGroup = GrayscaleGroup(
+            groupId = if (isEditingRecord && targetExistingGroup != null) targetExistingGroup.groupId else UUID.randomUUID().toString(),
+            groupName = name,
+            packages = HashSet(selectedApps),
+            timeConfig = viewModel.currentTimeConfig
+        )
+
+        if (isEditingRecord && targetExistingGroup != null) {
+            viewModel.updateGroup(newGroup)
+        } else {
+            viewModel.addGroup(newGroup)
+        }
+
+        Toast.makeText(requireContext(), getString(R.string.group_saved_successfully), Toast.LENGTH_SHORT).show()
+        requireActivity().finish()
     }
     
     override fun onDestroyView() {
