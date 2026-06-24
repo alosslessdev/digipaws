@@ -136,7 +136,7 @@ class FocusModeBlocker : BaseBlocker() {
     fun doFocusModeCheck(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
         if (packageName == service.packageName) return
-        if (!service.isDelayOver(1000)) return
+        if (!service.isDelayOver(10000)) return
 
         if (focusModeData != null) {
             if (lastPackage != packageName) {

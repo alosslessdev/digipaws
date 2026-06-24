@@ -64,7 +64,14 @@ class AppBlocker() : BaseBlocker() {
 
         val packageName = event.packageName?.toString() ?: return
 
-        if (lastPackage == packageName || packageName == service.packageName || packageName == "com.android.systemui") return
+        if (packageName == service.packageName) {
+            if (!service.isDelayOver(10000)) {
+                showWarningScreen(packageName)
+            }
+            return
+        }
+
+        if (lastPackage == packageName || packageName == "com.android.systemui") return
 
         if (onOpenAppsList.containsKey(lastPackage) && lastPackage != packageName) {
             removeCooldownFrom(lastPackage)
@@ -357,13 +364,13 @@ class AppBlocker() : BaseBlocker() {
     }
 
     private fun showWarningScreen(packageName: String) {
-        if (service.isDelayOver(1000)) {
+        if (service.isDelayOver(10000)) {
             notificationManager.stopTimer()
             service.pressHome()
             lastPackage = ""
 
             try {
-                if (AppSuspendHelper.isShizukuAvailable()) {
+                if (AppSuspendHelper.isShizukuAvailable() && packageName != service.packageName) {
                     ShizukuRunner.executeCommand(
                         "am force-stop $packageName",
                         object : ShizukuRunner.CommandResultListener {})
@@ -375,11 +382,15 @@ class AppBlocker() : BaseBlocker() {
             if (appBlockerWarningScrnConfgs[packageName]?.isWarningDialogHidden == true) return
 
             handler.postDelayed({
+                val config = appBlockerWarningScrnConfgs[packageName] ?: AppBlockerWarningScreenConfig(
+                    message = "Wait a moment before opening Curbox right after a block.",
+                    proceedDelayInSecs = 5
+                )
                 val dialogIntent = Intent(service, WarningActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     putExtra("mode", Constants.WARNING_SCREEN_MODE_APP_BLOCKER)
                     putExtra("result_id", packageName)
-                    putExtra("warning_config", Gson().toJson(appBlockerWarningScrnConfgs[packageName]))
+                    putExtra("warning_config", Gson().toJson(config))
                 }
                 service.startActivity(dialogIntent)
             }, 100)

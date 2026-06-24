@@ -35,6 +35,7 @@ import neth.iecal.curbox.Constants
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.db.AppDatabase
 import neth.iecal.curbox.data.db.WebsiteStatsEntity
+import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
 import neth.iecal.curbox.data.models.AppBlockingType
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.AppUsageConfig
@@ -269,18 +270,49 @@ class KeywordBlocker : BaseBlocker() {
         }
     }
 
-    private fun pressHome(word: String) {
+    private fun pressHome(word: String, group: KeywordGroup? = null) {
         showMessage(word)
         service.pressHome()
+        if (group != null && service.isDelayOver(10000)) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                val intent = Intent(service, WarningActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                    putExtra("result_id", group.id)
+                    putExtra("warning_config", Gson().toJson(group.warningScreenConfig))
+                }
+                service.startActivity(intent)
+            }, 300)
+        }
     }
 
     fun checkIfUserGettingFreaky(event: AccessibilityEvent?) {
         if (!isTurnedOn) return
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) return
 
+        val packageName = event.packageName?.toString() ?: return
+
+        if (packageName == "neth.iecal.curbox") {
+            if (!service.isDelayOver(10000)) {
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val intent = Intent(service, WarningActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                        putExtra("result_id", "neth.iecal.curbox")
+                        putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                            message = "Wait a moment before opening Curbox right after a block.",
+                            proceedDelayInSecs = 5
+                        )))
+                    }
+                    service.startActivity(intent)
+                }, 100)
+            }
+            return
+        }
+
         if (!service.isDelayOver(lastEventTimeStamp, refreshCooldown) || 
-            event.packageName == "neth.iecal.curbox" || 
-            ignoredApps.contains(event.packageName.toString())) {
+            !service.isDelayOver(10000) ||
+            ignoredApps.contains(packageName)) {
             return
         }
 
@@ -311,7 +343,6 @@ class KeywordBlocker : BaseBlocker() {
             }
         }
 
-        val packageName = event.packageName.toString()
         val urlBarInfo = URL_BAR_ID_LIST[packageName]
         val idPrefixPart = "$packageName:id/"
         
@@ -348,7 +379,24 @@ class KeywordBlocker : BaseBlocker() {
             return
         }
 
-        if (!isKeywordEffectivelyBlocked(detectedKeyword, packageName)) {
+        val keyword = detectedKeyword!!
+
+        if (isTimeTrackingEnabled) {
+            handleKeywordDetected(keyword, packageName)
+        }
+
+        var matchedGroup = getBlockingGroupForKeyword(keyword, packageName)
+        val isBlockedByLimit = isTimeTrackingEnabled && isTimeLimitReached(keyword)
+
+        if (matchedGroup == null && isBlockedByLimit) {
+            // Find any group that contains this keyword to get a warning config if possible
+            matchedGroup = activeGroups.firstOrNull { group ->
+                val patterns = groupPatternMap[group.id] ?: return@firstOrNull false
+                matchesPatterns(patterns, keyword)
+            }
+        }
+
+        if (matchedGroup == null && !isBlockedByLimit) {
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
             return
@@ -358,7 +406,7 @@ class KeywordBlocker : BaseBlocker() {
         lastEventTimeStamp = SystemClock.uptimeMillis()
 
         if (urlBarInfo == null) {
-            pressHome(detectedKeyword)
+            pressHome(keyword, matchedGroup)
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
             return
@@ -375,7 +423,7 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         if (displayUrlTextNode == null) {
-            pressHome(detectedKeyword)
+            pressHome(keyword, matchedGroup)
             safeRecycle(recursionResultNodes)
             return
         }
@@ -402,7 +450,7 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         if (editUrlBar == null) {
-            pressHome(detectedKeyword)
+            pressHome(keyword, matchedGroup)
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
             return
@@ -443,7 +491,7 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         if (!redirectionSuccessful) {
-            pressHome(detectedKeyword)
+            pressHome(keyword, matchedGroup)
         }
         lastEventTimeStamp = SystemClock.uptimeMillis()
     }
@@ -586,6 +634,8 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun handleBlocking(group: KeywordGroup, word: String, packageName: String) {
+        if (!service.isDelayOver(10000)) return
+
         if (URL_BAR_ID_LIST.containsKey(packageName)) {
              // If it's a browser, redirection should be handled by UI thread.
              // We only proceed here if the UI thread lock has expired or wasn't set.
@@ -613,25 +663,16 @@ class KeywordBlocker : BaseBlocker() {
             AppBlockingType.OnOpen -> true
         }
 
-    private fun isKeywordEffectivelyBlocked(keyword: String, packageName: String): Boolean {
-        var blockedByGroup = false
+    private fun getBlockingGroupForKeyword(keyword: String, packageName: String): KeywordGroup? {
         for (group in activeGroups) {
             val patterns = groupPatternMap[group.id] ?: continue
             if (matchesPatterns(patterns, keyword)) {
                 if (isBlocked(group, packageName)) {
-                    blockedByGroup = true
-                    break
+                    return group
                 }
             }
         }
-
-        if (isTimeTrackingEnabled) {
-            handleKeywordDetected(keyword, packageName)
-            if (isTimeLimitReached(keyword)) return true
-            return blockedByGroup
-        }
-
-        return blockedByGroup
+        return null
     }
 
     private fun isTimedBlockActive(group: KeywordGroup): Boolean {
