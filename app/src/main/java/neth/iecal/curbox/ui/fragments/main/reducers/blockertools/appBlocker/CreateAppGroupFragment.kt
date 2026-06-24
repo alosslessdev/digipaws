@@ -112,7 +112,7 @@ class CreateAppGroupFragment : Fragment() {
                             binding.btnConfigureSettings.visibility = View.GONE
                         }
                         viewModel.warningScrnConfig = group.warningScreenConfig
-                        
+
                         binding.btnDeleteGroup.visibility = View.VISIBLE
                         binding.btnDeleteGroup.setOnClickListener {
                             MaterialAlertDialogBuilder(requireContext())
@@ -126,7 +126,7 @@ class CreateAppGroupFragment : Fragment() {
                                 .setNegativeButton(R.string.cancel, null)
                                 .show()
                         }
-                        
+
                         captureInitialState()
                     }
                 }

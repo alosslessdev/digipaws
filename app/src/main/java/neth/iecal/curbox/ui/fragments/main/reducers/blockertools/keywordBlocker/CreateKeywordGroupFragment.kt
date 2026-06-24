@@ -160,7 +160,7 @@ class CreateKeywordGroupFragment : Fragment() {
                             .setTitle(R.string.delete_group)
                             .setMessage("Are you sure you want to delete this group?")
                             .setPositiveButton(R.string.delete) { _, _ ->
-                                viewModel.deleteGroup(groupId)
+                                viewModel.deleteGroup(existingGroupId!!)
                                 Toast.makeText(requireContext(), R.string.group_deleted, Toast.LENGTH_SHORT).show()
                                 requireActivity().finish()
                             }
