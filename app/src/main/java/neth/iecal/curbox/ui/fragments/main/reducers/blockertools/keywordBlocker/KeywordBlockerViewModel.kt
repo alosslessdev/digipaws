@@ -3,42 +3,40 @@ package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.data.models.KeywordBlocker
 import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.KeywordUsageTracker
 import neth.iecal.curbox.data.models.AppUsageConfig
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
 
 class KeywordBlockerViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)
-    
-    private val _keywordBlockerConfig = MutableStateFlow(KeywordBlocker())
-    val keywordBlockerConfig: StateFlow<KeywordBlocker> = _keywordBlockerConfig
+    private val usageTracker = KeywordUsageTracker(application)
+
+    val keywordBlockerConfig: LiveData<KeywordBlocker> = dataStoreManager.settings
+        .map { it.keywordBlockerConfig }
+        .asLiveData()
 
     var currentUsageConfig = AppUsageConfig()
     var currentTimeConfig = AppTimeConfig()
     var warningScrnConfig = AppBlockerWarningScreenConfig()
 
-    init {
-        viewModelScope.launch {
-            dataStoreManager.settings.collectLatest { settings ->
-                _keywordBlockerConfig.value = settings.keywordBlockerConfig
-            }
-        }
-    }
-
-
     private fun requestKeywordBlockerRefresh() {
         val intent = Intent(neth.iecal.curbox.blockers.KeywordBlocker.INTENT_ACTION_REFRESH_CONFIG)
         getApplication<Application>().sendBroadcast(intent)
     }
-    private fun updateConfig(transform: (neth.iecal.curbox.data.models.KeywordBlocker) -> neth.iecal.curbox.data.models.KeywordBlocker) {
+
+    private fun updateConfig(transform: (KeywordBlocker) -> KeywordBlocker) {
         viewModelScope.launch {
             dataStoreManager.updateKeywordBlockerConfig(transform)
             requestKeywordBlockerRefresh()
@@ -47,10 +45,6 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     fun setIsActive(isActive: Boolean) {
         updateConfig { it.copy(isActive = isActive) }
-    }
-
-    fun setBlockAllExceptSupported(enabled: Boolean) {
-        updateConfig { it.copy(blockAllExceptSupported = enabled) }
     }
 
     fun addGroup(group: KeywordGroup) {
@@ -89,5 +83,71 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
             }
             config.copy(keywordGroups = groups)
         }
+    }
+
+    fun setIgnoredApps(list: List<String>) {
+        updateConfig { it.copy(ignoredApps = list) }
+    }
+
+    fun setRedirectUrl(url: String) {
+        updateConfig { it.copy(redirectUrl = url) }
+    }
+
+    fun setSearchRecursively(enabled: Boolean) {
+        updateConfig { it.copy(searchRecursively = enabled) }
+    }
+
+    fun setMatchSubstrings(enabled: Boolean) {
+        updateConfig { it.copy(matchSubstrings = enabled) }
+    }
+
+    fun setBlockAllExceptSupported(enabled: Boolean) {
+        updateConfig { it.copy(blockAllExceptSupported = enabled) }
+    }
+
+    fun setTimeTrackingEnabled(enabled: Boolean) {
+        updateConfig { it.copy(isTimeTrackingEnabled = enabled) }
+    }
+
+    fun setClusteringThreshold(minutes: Int) {
+        updateConfig { it.copy(clusteringThresholdMinutes = minutes) }
+    }
+
+    fun setKeywordTimeLimit(keyword: String, minutes: Int) {
+        updateConfig { config ->
+            val currentLimits = config.keywordTimeLimits.toMutableMap()
+            if (minutes > 0) {
+                currentLimits[keyword] = minutes
+            } else {
+                currentLimits.remove(keyword)
+            }
+            config.copy(keywordTimeLimits = currentLimits)
+        }
+    }
+
+    fun setKeywordReminderInterval(keyword: String, minutes: Int) {
+        updateConfig { config ->
+            val currentIntervals = config.keywordReminderIntervals.toMutableMap()
+            if (minutes > 0) {
+                currentIntervals[keyword] = minutes
+            } else {
+                currentIntervals.remove(keyword)
+            }
+            config.copy(keywordReminderIntervals = currentIntervals)
+        }
+    }
+
+    fun getKeywordUsageMinutes(keyword: String): Double {
+        val config = keywordBlockerConfig.value ?: return 0.0
+        val clusteringThresholdMs = config.clusteringThresholdMinutes * 60 * 1000L
+        return usageTracker.calculateTotalUsageMinutesForToday(keyword, clusteringThresholdMs)
+    }
+
+    fun clearKeywordUsage(keyword: String) {
+        usageTracker.clearDetectionsForKeyword(keyword)
+    }
+
+    fun clearAllUsage() {
+        usageTracker.clearAllDetections()
     }
 }
