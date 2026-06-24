@@ -19,10 +19,12 @@ import neth.iecal.curbox.blockers.KeywordBlocker
 import neth.iecal.curbox.blockers.ReelBlocker
 import neth.iecal.curbox.blockers.uihider.NodePicker
 import neth.iecal.curbox.blockers.uihider.UiHider
+import neth.iecal.curbox.utils.AppLogger
 
 @Suppress("DEPRECATION")
 class AppBlockerService : BaseBlockingService() {
 
+    private val TAG = "AppBlockerService"
     private val appBlocker: AppBlocker = AppBlocker()
     private val focusModeBlocker = FocusModeBlocker()
     private val autoDnd = AutoDnd()
@@ -66,7 +68,7 @@ class AppBlockerService : BaseBlockingService() {
             grayScaleFilter.doGrayscaleCheck(event)
             focusModeBlocker.doFocusModeCheck(event)
         } catch (t: Throwable) {
-            Log.e("error", t.message ?: "Unknown error")
+            AppLogger.functionError(TAG, "onAccessibilityEvent", t)
             crashLogger.logNonFatalError(Exception(t))
         }
 
