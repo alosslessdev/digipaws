@@ -87,7 +87,7 @@ class AppBlockerService : BaseBlockingService() {
             for (event in eventChannel) {
                 try {
                     reelBlocker.doViewBlockerCheck(event)
-                    keywordBlocker.checkIfUnsupportedBrowser(event)
+                    keywordBlocker.checkIfUserGettingFreaky(event)
                     uiHider.doUiHiderCheck(event)
                 } catch (t: Throwable) {
                     // Don't log normal coroutine cancellations as crashes

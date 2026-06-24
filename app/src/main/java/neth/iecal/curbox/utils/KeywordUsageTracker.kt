@@ -1,7 +1,6 @@
 package neth.iecal.curbox.utils
 
 import android.content.Context
-import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import neth.iecal.curbox.data.models.KeywordDetection
@@ -32,7 +31,7 @@ class KeywordUsageTracker(private val context: Context) {
                 mutableMapOf<String, MutableList<KeywordDetection>>()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading detections", e)
+            AppLogger.functionError(TAG, "loadDetections", e)
             mutableMapOf<String, MutableList<KeywordDetection>>()
         }.also { cachedDetections = it }
     }
@@ -42,7 +41,7 @@ class KeywordUsageTracker(private val context: Context) {
             detectionsFile.writeText(gson.toJson(detections))
             cachedDetections = detections
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving detections", e)
+            AppLogger.functionError(TAG, "saveDetections", e)
         }
     }
 
@@ -57,6 +56,7 @@ class KeywordUsageTracker(private val context: Context) {
             )
         )
         saveDetections(detections)
+        AppLogger.logDebug(TAG, "Recorded detection for keyword: $keyword")
     }
 
     fun getDetectionsForKeyword(keyword: String): List<KeywordDetection> {
@@ -143,6 +143,7 @@ class KeywordUsageTracker(private val context: Context) {
         if (toRemove.isNotEmpty()) {
             toRemove.forEach { detections.remove(it) }
             saveDetections(detections)
+            AppLogger.logDebug(TAG, "Cleared detections for past days")
         }
     }
 

@@ -43,6 +43,7 @@ import neth.iecal.curbox.data.models.FocusBlockMode
 import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.services.BaseBlockingService
 import neth.iecal.curbox.ui.activity.WarningActivity
+import neth.iecal.curbox.utils.AppLogger
 import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
 import neth.iecal.curbox.utils.KeywordUsageTracker
 import neth.iecal.curbox.utils.TimeTools
@@ -338,7 +339,7 @@ class KeywordBlocker : BaseBlocker() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "checkIfUserGettingFreaky - searchAllTextFields error", e)
+                AppLogger.functionError(TAG, "checkIfUserGettingFreaky - searchAllTextFields", e)
             }
         }
 
