@@ -16,10 +16,13 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.switchmaterial.SwitchMaterial
 import neth.iecal.curbox.Constants
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.AppBlockingType
 import neth.iecal.curbox.data.models.KeywordGroup
+import neth.iecal.curbox.databinding.DialogKeywordSettingsBinding
 import neth.iecal.curbox.databinding.FragmentKeywordBlockerBinding
 import neth.iecal.curbox.ui.activity.FragmentActivity
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
@@ -65,61 +68,6 @@ class KeywordBlockerFragment : Fragment() {
         binding.btnMenu.setOnClickListener { showPopupMenu(it) }
 
         observeViewModel()
-        setupListeners()
-    }
-
-    private fun setupListeners() {
-        binding.etRedirectUrl.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                if (!isUpdatingUi) {
-                    viewModel.setRedirectUrl(s.toString())
-                }
-            }
-        })
-
-        binding.cbSearchRecursively.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) {
-                viewModel.setSearchRecursively(isChecked)
-            }
-        }
-
-        binding.cbMatchSubstrings.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) {
-                viewModel.setMatchSubstrings(isChecked)
-            }
-        }
-
-        binding.cbBlockUnsupportedBrowsers.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) {
-                viewModel.setBlockAllExceptSupported(isChecked)
-            }
-        }
-
-        binding.btnSelectIgnoredApps.setOnClickListener {
-            val intent = Intent(requireContext(), SelectAppsActivity::class.java)
-            intent.putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(selectedApps))
-            selectAppsLauncher.launch(intent)
-        }
-
-        binding.switchTimeTracking.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) {
-                viewModel.setTimeTrackingEnabled(isChecked)
-                binding.layoutTimeTrackingSettings.visibility = if (isChecked) View.VISIBLE else View.GONE
-            }
-        }
-
-        binding.etClusteringThreshold.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                if (!isUpdatingUi) {
-                    val threshold = s.toString().toIntOrNull() ?: 5
-                    viewModel.setClusteringThreshold(threshold)
-                }
-            }
-        })
     }
 
     private fun showPopupMenu(view: View) {
@@ -128,6 +76,10 @@ class KeywordBlockerFragment : Fragment() {
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                R.id.menu_settings -> {
+                    showSettingsDialog()
+                    true
+                }
                 R.id.menu_help -> {
                     val url = "https://curbox.app/docs/reducers/keyword-blocker/"
                     try {
@@ -142,9 +94,74 @@ class KeywordBlockerFragment : Fragment() {
         popup.show()
     }
 
+    private fun showSettingsDialog() {
+        val dialogBinding = DialogKeywordSettingsBinding.inflate(layoutInflater)
+        val config = viewModel.keywordBlockerConfig.value ?: return
+        
+        isUpdatingUi = true
+        dialogBinding.etRedirectUrl.setText(config.redirectUrl)
+        dialogBinding.cbSearchRecursively.isChecked = config.searchRecursively
+        dialogBinding.cbMatchSubstrings.isChecked = config.matchSubstrings
+        dialogBinding.cbBlockUnsupportedBrowsers.isChecked = config.blockAllExceptSupported
+        selectedApps = config.ignoredApps
+        dialogBinding.switchTimeTracking.isChecked = config.isTimeTrackingEnabled
+        dialogBinding.layoutTimeTrackingSettings.visibility = if (config.isTimeTrackingEnabled) View.VISIBLE else View.GONE
+        dialogBinding.etClusteringThreshold.setText(config.clusteringThresholdMinutes.toString())
+        isUpdatingUi = false
+
+        dialogBinding.etRedirectUrl.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (!isUpdatingUi) viewModel.setRedirectUrl(s.toString())
+            }
+        })
+
+        dialogBinding.cbSearchRecursively.setOnCheckedChangeListener { _, isChecked ->
+            if (!isUpdatingUi) viewModel.setSearchRecursively(isChecked)
+        }
+
+        dialogBinding.cbMatchSubstrings.setOnCheckedChangeListener { _, isChecked ->
+            if (!isUpdatingUi) viewModel.setMatchSubstrings(isChecked)
+        }
+
+        dialogBinding.cbBlockUnsupportedBrowsers.setOnCheckedChangeListener { _, isChecked ->
+            if (!isUpdatingUi) viewModel.setBlockAllExceptSupported(isChecked)
+        }
+
+        dialogBinding.btnSelectIgnoredApps.setOnClickListener {
+            val intent = Intent(requireContext(), SelectAppsActivity::class.java)
+            intent.putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(selectedApps))
+            selectAppsLauncher.launch(intent)
+        }
+
+        dialogBinding.switchTimeTracking.setOnCheckedChangeListener { _, isChecked ->
+            if (!isUpdatingUi) {
+                viewModel.setTimeTrackingEnabled(isChecked)
+                dialogBinding.layoutTimeTrackingSettings.visibility = if (isChecked) View.VISIBLE else View.GONE
+            }
+        }
+
+        dialogBinding.etClusteringThreshold.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (!isUpdatingUi) {
+                    val threshold = s.toString().toIntOrNull() ?: 5
+                    viewModel.setClusteringThreshold(threshold)
+                }
+            }
+        })
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.advanced)
+            .setView(dialogBinding.root)
+            .setPositiveButton(R.string.done, null)
+            .show()
+    }
+
     private fun observeViewModel() {
         viewModel.keywordBlockerConfig.observe(viewLifecycleOwner) { config ->
-            isUpdatingUi = true
             if (config.keywordGroups.isEmpty()) {
                 binding.tvEmptyState.visibility = View.VISIBLE
                 binding.rvKeywordGroups.visibility = View.GONE
@@ -153,36 +170,7 @@ class KeywordBlockerFragment : Fragment() {
                 binding.rvKeywordGroups.visibility = View.VISIBLE
                 binding.rvKeywordGroups.adapter = KeywordGroupAdapter(config.keywordGroups)
             }
-
-            if (binding.etRedirectUrl.text.toString() != config.redirectUrl) {
-                binding.etRedirectUrl.setText(config.redirectUrl)
-            }
-
-            if (binding.cbSearchRecursively.isChecked != config.searchRecursively) {
-                binding.cbSearchRecursively.isChecked = config.searchRecursively
-            }
-
-            if (binding.cbMatchSubstrings.isChecked != config.matchSubstrings) {
-                binding.cbMatchSubstrings.isChecked = config.matchSubstrings
-            }
-
-            if (binding.cbBlockUnsupportedBrowsers.isChecked != config.blockAllExceptSupported) {
-                binding.cbBlockUnsupportedBrowsers.isChecked = config.blockAllExceptSupported
-            }
-            
             selectedApps = config.ignoredApps
-
-            if (binding.switchTimeTracking.isChecked != config.isTimeTrackingEnabled) {
-                binding.switchTimeTracking.isChecked = config.isTimeTrackingEnabled
-                binding.layoutTimeTrackingSettings.visibility = if (config.isTimeTrackingEnabled) View.VISIBLE else View.GONE
-            }
-
-            val currentThreshold = binding.etClusteringThreshold.text.toString().toIntOrNull() ?: 5
-            if (currentThreshold != config.clusteringThresholdMinutes) {
-                binding.etClusteringThreshold.setText(config.clusteringThresholdMinutes.toString())
-            }
-
-            isUpdatingUi = false
         }
     }
 
@@ -196,7 +184,8 @@ class KeywordBlockerFragment : Fragment() {
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val tvName: TextView = view.findViewById(R.id.tv_group_name)
-            val tvDesc: TextView = view.findViewById(R.id.tv_group_details)
+            val tvDetails: TextView = view.findViewById(R.id.tv_group_details)
+            val switchActive: SwitchMaterial = view.findViewById(R.id.switch_group_active)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -214,7 +203,13 @@ class KeywordBlockerFragment : Fragment() {
                 AppBlockingType.Timed -> getString(R.string.time_based)
                 AppBlockingType.OnOpen -> getString(R.string.label_on_each_open)
             }
-            holder.tvDesc.text = "${group.selectedKeywords.size} Keywords • $typeStr"
+            holder.tvDetails.text = "${group.selectedKeywords.size} Keywords • $typeStr"
+
+            holder.switchActive.setOnCheckedChangeListener(null)
+            holder.switchActive.isChecked = group.isActive
+            holder.switchActive.setOnCheckedChangeListener { _, isChecked ->
+                viewModel.updateGroupActiveState(group.id, isChecked)
+            }
 
             holder.itemView.setOnClickListener {
                 val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
