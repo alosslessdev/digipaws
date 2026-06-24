@@ -24,6 +24,10 @@ import java.util.UUID
 
 class CreateAutoDndGroupFragment : Fragment() {
 
+    companion object {
+        const val FRAGMENT_ID = "create_autodnd_group"
+    }
+
     private var _binding: FragmentCreateAutodndGroupBinding? = null
     private val binding get() = _binding!!
 

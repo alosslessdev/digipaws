@@ -26,6 +26,10 @@ import java.util.UUID
 
 class CreateGrayscaleGroupFragment : Fragment() {
 
+    companion object {
+        const val FRAGMENT_ID = "create_grayscale_group"
+    }
+
     private var _binding: FragmentCreateGrayscaleGroupBinding? = null
     private val binding get() = _binding!!
 
