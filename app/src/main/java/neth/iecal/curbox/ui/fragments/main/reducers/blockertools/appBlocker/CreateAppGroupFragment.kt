@@ -28,6 +28,10 @@ import java.util.UUID
 
 class CreateAppGroupFragment : Fragment() {
 
+    companion object {
+        const val FRAGMENT_ID = "create_app_group"
+    }
+
     private var _binding: FragmentCreateAppGroupBinding? = null
     private val binding get() = _binding!!
 

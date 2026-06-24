@@ -33,6 +33,10 @@ import java.util.UUID
 
 class CreateKeywordGroupFragment : Fragment() {
 
+    companion object {
+        const val FRAGMENT_ID = "create_keyword_group"
+    }
+
     private var _binding: FragmentCreateKeywordGroupBinding? = null
     private val binding get() = _binding!!
 
@@ -254,7 +258,7 @@ class CreateKeywordGroupFragment : Fragment() {
     private fun saveGroup() {
         val name = binding.etGroupName.text.toString().trim()
         if (name.isEmpty()) {
-            binding.etGroupName.error = getString(R.string.please_add_a_name)
+            binding.etGroupName.error = getString(R.string.enter_group_name)
             return
         }
         if (selectedKeywords.isEmpty()) {

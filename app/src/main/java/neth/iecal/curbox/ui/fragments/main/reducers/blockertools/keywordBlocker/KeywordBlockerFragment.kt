@@ -29,6 +29,10 @@ import neth.iecal.curbox.ui.activity.SelectAppsActivity
 
 class KeywordBlockerFragment : Fragment() {
 
+    companion object {
+        const val FRAGMENT_ID = "keyword_blocker"
+    }
+
     private var _binding: FragmentKeywordBlockerBinding? = null
     private val binding get() = _binding!!
 
