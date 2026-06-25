@@ -92,6 +92,9 @@ class KeywordBlocker : BaseBlocker() {
     private var activeGroups = listOf<KeywordGroup>()
     private var groupPatternMap = mutableMapOf<String, Pair<List<Regex>, List<String>>>()
 
+    private var lastBlockTimestampSeen = 0L
+    private var curboxBlockStartTime = 0L
+
     private val detectionCache = LruCache<String, String>(200)
     private var isTurnedOn = false
     private var isUnsupportedBrowserBlockingOn = false
@@ -272,7 +275,7 @@ class KeywordBlocker : BaseBlocker() {
     private fun pressHome(word: String, group: KeywordGroup? = null) {
         showMessage(word)
         service.pressHome()
-        if (group != null && service.isDelayOver(10000)) {
+        if (group != null && service.isDelayOver(15000)) {
             Handler(Looper.getMainLooper()).postDelayed({
                 val intent = Intent(service, WarningActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -292,26 +295,46 @@ class KeywordBlocker : BaseBlocker() {
         val packageName = event.packageName?.toString() ?: return
 
         if (packageName == "neth.iecal.curbox") {
-            if (!service.isDelayOver(10000)) {
-                Handler(Looper.getMainLooper()).postDelayed({
-                    val intent = Intent(service, WarningActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
-                        putExtra("result_id", "neth.iecal.curbox")
-                        putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
-                            message = "Wait a moment before opening Curbox right after a block.",
-                            proceedDelayInSecs = 5
-                        )))
-                    }
-                    service.startActivity(intent)
-                }, 100)
+            val currentBlockTimestamp = service.lastBackPressTimeStamp
+            val now = SystemClock.uptimeMillis()
+
+            if (currentBlockTimestamp != lastBlockTimestampSeen) {
+                if (now - currentBlockTimestamp < 15000) {
+                    curboxBlockStartTime = now
+                    lastBlockTimestampSeen = currentBlockTimestamp
+                } else {
+                    curboxBlockStartTime = 0L
+                    lastBlockTimestampSeen = currentBlockTimestamp
+                }
+            }
+
+            if (curboxBlockStartTime > 0L) {
+                val elapsed = now - curboxBlockStartTime
+                if (elapsed < 15000) {
+                    val remainingSeconds = ((15000 - elapsed) / 1000).toInt().coerceAtLeast(1)
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        val intent = Intent(service, WarningActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                            putExtra("result_id", "neth.iecal.curbox")
+                            putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                                message = "Wait a moment before opening Curbox right after a block.",
+                                proceedDelayInSecs = remainingSeconds
+                            )))
+                        }
+                        service.startActivity(intent)
+                    }, 100)
+                    return
+                } else {
+                    curboxBlockStartTime = 0L
+                }
             }
             return
         }
 
         val currentTime = SystemClock.uptimeMillis()
         if (currentTime - lastEventTimeStamp < refreshCooldown || 
-            !service.isDelayOver(10000) ||
+            !service.isDelayOver(15000) ||
             ignoredApps.contains(packageName)) {
             return
         }
@@ -634,7 +657,7 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun handleBlocking(group: KeywordGroup, word: String, packageName: String) {
-        if (!service.isDelayOver(10000)) return
+        if (!service.isDelayOver(15000)) return
 
         if (URL_BAR_ID_LIST.containsKey(packageName)) {
              // If it's a browser, redirection should be handled by UI thread.
