@@ -8,9 +8,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CompoundButton
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import neth.iecal.curbox.R
@@ -38,6 +40,8 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
 
     private val dayItems = mutableListOf<DayItem>()
     private lateinit var daysAdapter: DayAdapter
+
+    private var initialConfig: AppTimeConfig? = null
 
     protected abstract fun inflateView(inflater: LayoutInflater, container: ViewGroup?): View
     protected abstract fun getTimeConfig(): AppTimeConfig
@@ -67,11 +71,68 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
             everydayAdapter.notifyItemInserted(everydayIntervals.size - 1)
         }
 
+        view.findViewById<View>(R.id.fab_done)?.setOnClickListener {
+            persistSettings()
+            requireActivity().finish()
+        }
+
         loadExistingSettings()
+        captureInitialState()
+        setupBackPressHandling()
+    }
+
+    private fun captureInitialState() {
+        initialConfig = getCurrentConfigState()
+    }
+
+    private fun getCurrentConfigState(): AppTimeConfig {
+        val dailyIntervals = dayItems
+            .filter { it.isActive }
+            .associateTo(mutableMapOf()) { it.dayIndex to it.intervals.map { i -> i.copy() }.toMutableList() }
+        return AppTimeConfig(
+            isEveryday = switchEveryDay.isChecked,
+            everydayIntervals = everydayIntervals.map { it.copy() }.toMutableList(),
+            dailyIntervals = dailyIntervals
+        )
+    }
+
+    private fun hasChanges(): Boolean {
+        return getCurrentConfigState() != initialConfig
+    }
+
+    private fun setupBackPressHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasChanges()) {
+                    showUnsavedChangesDialog()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    private fun showUnsavedChangesDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.unsaved_changes_dialog_title)
+            .setMessage(R.string.unsaved_changes_dialog_message)
+            .setPositiveButton(R.string.save) { _, _ ->
+                persistSettings()
+                requireActivity().finish()
+            }
+            .setNegativeButton(R.string.btn_discard) { _, _ ->
+                requireActivity().finish()
+            }
+            .setNeutralButton(R.string.cancel, null)
+            .show()
     }
 
     override fun onDismiss(dialog: DialogInterface) {
-        persistSettings()
+        // Only auto-persist if there were changes and we didn't explicitly finish
+        if (hasChanges()) {
+            persistSettings()
+        }
         super.onDismiss(dialog)
     }
 

@@ -8,9 +8,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.AppUsageConfig
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.UsageDayItem
@@ -26,6 +28,8 @@ abstract class BaseUsageSettingsFragment : BottomSheetDialogFragment() {
     private lateinit var adapter: UsageSettingsAdapter
     private lateinit var daysListContainer: RecyclerView
 
+    private var initialConfig: AppUsageConfig? = null
+
     protected abstract fun inflateView(inflater: LayoutInflater, container: ViewGroup?): View
     protected abstract fun loadUsageConfig(): AppUsageConfig
     protected abstract fun saveUsageConfig(config: AppUsageConfig)
@@ -40,10 +44,56 @@ abstract class BaseUsageSettingsFragment : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         populateFromConfig()
+        captureInitialState()
+
+        view.findViewById<View>(R.id.fab_done)?.setOnClickListener {
+            persistConfig()
+            requireActivity().finish()
+        }
+
+        setupBackPressHandling()
+    }
+
+    private fun captureInitialState() {
+        initialConfig = getCurrentConfigFromUi()
+    }
+
+    private fun hasChanges(): Boolean {
+        return getCurrentConfigFromUi() != initialConfig
+    }
+
+    private fun setupBackPressHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasChanges()) {
+                    showUnsavedChangesDialog()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    private fun showUnsavedChangesDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.unsaved_changes_dialog_title)
+            .setMessage(R.string.unsaved_changes_dialog_message)
+            .setPositiveButton(R.string.save) { _, _ ->
+                persistConfig()
+                requireActivity().finish()
+            }
+            .setNegativeButton(R.string.btn_discard) { _, _ ->
+                requireActivity().finish()
+            }
+            .setNeutralButton(R.string.cancel, null)
+            .show()
     }
 
     override fun onDismiss(dialog: DialogInterface) {
-        persistConfig()
+        if (hasChanges()) {
+            persistConfig()
+        }
         super.onDismiss(dialog)
     }
 
@@ -96,7 +146,7 @@ abstract class BaseUsageSettingsFragment : BottomSheetDialogFragment() {
         adapter.notifyItemRangeChanged(1, dayItems.size - 1)
     }
 
-    private fun persistConfig() {
+    private fun getCurrentConfigFromUi(): AppUsageConfig {
         val isDailyUniform = dayItems[0].isEnabled
         val config = AppUsageConfig(
             isDailyUniform = isDailyUniform,
@@ -107,7 +157,10 @@ abstract class BaseUsageSettingsFragment : BottomSheetDialogFragment() {
             for (i in 1..6) config.dailyLimits[i] = (dayItems[i].hours * 60 + dayItems[i].minutes).toLong()
             config.dailyLimits[0] = (dayItems[7].hours * 60 + dayItems[7].minutes).toLong()
         }
+        return config
+    }
 
-        saveUsageConfig(config)
+    private fun persistConfig() {
+        saveUsageConfig(getCurrentConfigFromUi())
     }
 }
