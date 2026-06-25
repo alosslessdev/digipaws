@@ -57,6 +57,22 @@ class CreateAppGroupFragment : Fragment() {
         }
     }
 
+    private val configureSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val json = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_JSON)
+            val type = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_TYPE)
+            if (json != null) {
+                if (type == "time") {
+                    viewModel.currentTimeConfig = Gson().fromJson(json, AppTimeConfig::class.java)
+                } else if (type == "usage") {
+                    viewModel.currentUsageConfig = Gson().fromJson(json, AppUsageConfig::class.java)
+                }
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -146,10 +162,13 @@ class CreateAppGroupFragment : Fragment() {
                 else -> AppBlockingType.Timed
             }
             val intent = Intent(requireContext(), neth.iecal.curbox.ui.activity.FragmentActivity::class.java).apply {
-                putExtra("fragment", if (type == AppBlockingType.Usage) UsageBasedSettingsFragment.FRAGMENT_ID else TimeBasedSettingsFragment.FRAGMENT_ID)
+                val isUsage = type == AppBlockingType.Usage
+                putExtra("fragment_type", if (isUsage) "app_usage_config" else "app_time_config")
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.ARG_INITIAL_CONFIG, 
+                    if (isUsage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig))
                 putExtra("mode", "APP_BLOCKER")
             }
-            startActivity(intent)
+            configureSettingsLauncher.launch(intent)
         }
 
         binding.configureWarningScreen.setOnClickListener {

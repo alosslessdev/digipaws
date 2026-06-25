@@ -145,10 +145,10 @@ class FragmentActivity : AppCompatActivity() {
                     AutoDndTimeSettingsFragment.FRAGMENT_ID -> AutoDndTimeSettingsFragment()
                     GrayscaleTimeSettingsFragment.FRAGMENT_ID -> GrayscaleTimeSettingsFragment()
                     WarningConfigFragment.FRAGMENT_ID -> {
-                        val configJson = intent.getStringExtra(WarningConfigFragment.ARG_CONFIG)
-                        val requestKey = intent.getStringExtra(WarningConfigFragment.ARG_REQUEST_KEY) ?: WarningConfigFragment.RESULT_KEY
-                        val isNew = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_NEW, false)
-                        val isOnOpen = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_ON_OPEN, false)
+                        val configJson = intent.getStringExtra(WarningConfigFragment.ARG_CONFIG) ?: intent.getStringExtra("arg_config")
+                        val requestKey = intent.getStringExtra(WarningConfigFragment.ARG_REQUEST_KEY) ?: intent.getStringExtra("arg_request_key") ?: WarningConfigFragment.RESULT_KEY
+                        val isNew = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_NEW, intent.getBooleanExtra("arg_is_new", false))
+                        val isOnOpen = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_ON_OPEN, intent.getBooleanExtra("arg_is_on_open", false))
                         
                         if (configJson != null) {
                             val config = com.google.gson.Gson().fromJson(configJson, neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig::class.java)

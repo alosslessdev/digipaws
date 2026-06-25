@@ -53,6 +53,17 @@ class CreateGrayscaleGroupFragment : Fragment() {
         }
     }
 
+    private val configureSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val json = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_JSON)
+            if (json != null) {
+                viewModel.currentTimeConfig = Gson().fromJson(json, AppTimeConfig::class.java)
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -116,10 +127,11 @@ class CreateGrayscaleGroupFragment : Fragment() {
 
         binding.btnConfigureSchedule.setOnClickListener {
             val intent = Intent(requireContext(), neth.iecal.curbox.ui.activity.FragmentActivity::class.java).apply {
-                putExtra("fragment", GrayscaleTimeSettingsFragment.FRAGMENT_ID)
+                putExtra("fragment_type", "app_time_config")
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.ARG_INITIAL_CONFIG, Gson().toJson(viewModel.currentTimeConfig))
                 putExtra("mode", "GRAYSCALE")
             }
-            startActivity(intent)
+            configureSettingsLauncher.launch(intent)
         }
 
         binding.btnDeleteGroup.visibility = if (groupId != null) View.VISIBLE else View.GONE
