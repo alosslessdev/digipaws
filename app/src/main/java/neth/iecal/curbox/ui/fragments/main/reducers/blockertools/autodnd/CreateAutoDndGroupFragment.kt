@@ -73,7 +73,7 @@ class CreateAutoDndGroupFragment : Fragment() {
 
         binding.btnConfigureSchedule.setOnClickListener {
             val intent = Intent(requireContext(), neth.iecal.curbox.ui.activity.FragmentActivity::class.java).apply {
-                putExtra("fragment_type", "app_time_config")
+                putExtra("fragment", AutoDndTimeSettingsFragment.FRAGMENT_ID)
                 putExtra("mode", "AUTODND")
             }
             startActivity(intent)

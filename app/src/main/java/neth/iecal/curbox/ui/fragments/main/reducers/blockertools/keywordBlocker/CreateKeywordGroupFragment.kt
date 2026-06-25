@@ -179,7 +179,7 @@ class CreateKeywordGroupFragment : Fragment() {
         binding.btnConfigureBlocking.setOnClickListener {
             val type = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment_type", if (type == AppBlockingType.Usage) "app_usage_config" else "app_time_config")
+                putExtra("fragment", if (type == AppBlockingType.Usage) KeywordUsageBasedSettingsFragment.FRAGMENT_ID else KeywordTimeBasedSettingsFragment.FRAGMENT_ID)
                 putExtra("mode", "KEYWORD_BLOCKER")
             }
             startActivity(intent)
@@ -187,7 +187,8 @@ class CreateKeywordGroupFragment : Fragment() {
 
         binding.btnConfigureWarning.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment_type", "warning_screen_config")
+                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.FRAGMENT_ID)
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.ARG_CONFIG, Gson().toJson(viewModel.warningScrnConfig))
                 putExtra("mode", "KEYWORD_BLOCKER")
             }
             startActivity(intent)

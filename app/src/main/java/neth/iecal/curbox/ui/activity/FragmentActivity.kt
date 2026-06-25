@@ -21,6 +21,13 @@ import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.CreateA
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.reelBlocker.ReelBlockerFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordBlockerFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.CreateKeywordGroupFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.TimeBasedSettingsFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.UsageBasedSettingsFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordTimeBasedSettingsFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordUsageBasedSettingsFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.AutoDndTimeSettingsFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.GrayscaleTimeSettingsFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderEditorFragment
 import androidx.core.view.isVisible
@@ -40,7 +47,23 @@ class FragmentActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val sharedPreferences = getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
         val isFirstLaunchComplete = sharedPreferences.getBoolean("isFirstLaunchComplete", false)
-        val selectedFragment = intent.getStringExtra("fragment") ?: if (!isFirstLaunchComplete) OnboardingFragment.FRAGMENT_ID else AllAppsUsageFragment.FRAGMENT_ID
+        val selectedFragmentStr = intent.getStringExtra("fragment") ?: intent.getStringExtra("fragment_type") ?: if (!isFirstLaunchComplete) OnboardingFragment.FRAGMENT_ID else AllAppsUsageFragment.FRAGMENT_ID
+        val mode = intent.getStringExtra("mode")
+        
+        val selectedFragment = when (selectedFragmentStr) {
+            "app_time_config" -> when (mode) {
+                "GRAYSCALE" -> GrayscaleTimeSettingsFragment.FRAGMENT_ID
+                "AUTODND" -> AutoDndTimeSettingsFragment.FRAGMENT_ID
+                "KEYWORD_BLOCKER" -> KeywordTimeBasedSettingsFragment.FRAGMENT_ID
+                else -> TimeBasedSettingsFragment.FRAGMENT_ID
+            }
+            "app_usage_config" -> when (mode) {
+                "KEYWORD_BLOCKER" -> KeywordUsageBasedSettingsFragment.FRAGMENT_ID
+                else -> UsageBasedSettingsFragment.FRAGMENT_ID
+            }
+            "warning_screen_config" -> WarningConfigFragment.FRAGMENT_ID
+            else -> selectedFragmentStr
+        }
 
         if (selectedFragment == OnboardingFragment.FRAGMENT_ID) {
             setTheme(R.style.Theme_Curbox_Onboarding)
@@ -87,7 +110,14 @@ class FragmentActivity : AppCompatActivity() {
             neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID,
             KeywordBlockerFragment.FRAGMENT_ID,
             neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID,
-            CreateKeywordGroupFragment.FRAGMENT_ID -> {
+            CreateKeywordGroupFragment.FRAGMENT_ID,
+            TimeBasedSettingsFragment.FRAGMENT_ID,
+            UsageBasedSettingsFragment.FRAGMENT_ID,
+            KeywordTimeBasedSettingsFragment.FRAGMENT_ID,
+            KeywordUsageBasedSettingsFragment.FRAGMENT_ID,
+            AutoDndTimeSettingsFragment.FRAGMENT_ID,
+            GrayscaleTimeSettingsFragment.FRAGMENT_ID,
+            WarningConfigFragment.FRAGMENT_ID -> {
                 // Hide bottom nav for these standalone fragments
                 bottomNav.visibility = android.view.View.GONE
                 
@@ -108,6 +138,25 @@ class FragmentActivity : AppCompatActivity() {
                     neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment()
                     IntentsLogFragment.FRAGMENT_ID -> IntentsLogFragment()
                     neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment()
+                    TimeBasedSettingsFragment.FRAGMENT_ID -> TimeBasedSettingsFragment()
+                    UsageBasedSettingsFragment.FRAGMENT_ID -> UsageBasedSettingsFragment()
+                    KeywordTimeBasedSettingsFragment.FRAGMENT_ID -> KeywordTimeBasedSettingsFragment()
+                    KeywordUsageBasedSettingsFragment.FRAGMENT_ID -> KeywordUsageBasedSettingsFragment()
+                    AutoDndTimeSettingsFragment.FRAGMENT_ID -> AutoDndTimeSettingsFragment()
+                    GrayscaleTimeSettingsFragment.FRAGMENT_ID -> GrayscaleTimeSettingsFragment()
+                    WarningConfigFragment.FRAGMENT_ID -> {
+                        val configJson = intent.getStringExtra(WarningConfigFragment.ARG_CONFIG)
+                        val requestKey = intent.getStringExtra(WarningConfigFragment.ARG_REQUEST_KEY) ?: WarningConfigFragment.RESULT_KEY
+                        val isNew = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_NEW, false)
+                        val isOnOpen = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_ON_OPEN, false)
+                        
+                        if (configJson != null) {
+                            val config = com.google.gson.Gson().fromJson(configJson, neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig::class.java)
+                            WarningConfigFragment.newInstance(config, requestKey, isNew, isOnOpen)
+                        } else {
+                            WarningConfigFragment()
+                        }
+                    }
                     else -> AccessibilityGuide()
                 }
                 fragment.arguments = intent.extras

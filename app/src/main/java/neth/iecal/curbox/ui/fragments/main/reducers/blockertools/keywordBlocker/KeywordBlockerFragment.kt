@@ -64,7 +64,7 @@ class KeywordBlockerFragment : Fragment() {
         binding.rvKeywordGroups.layoutManager = LinearLayoutManager(requireContext())
         binding.fabAddGroup.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment_type", "create_keyword_group")
+                putExtra("fragment", CreateKeywordGroupFragment.FRAGMENT_ID)
             }
             startActivity(intent)
         }
@@ -217,7 +217,7 @@ class KeywordBlockerFragment : Fragment() {
 
             holder.itemView.setOnClickListener {
                 val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                    putExtra("fragment_type", "create_keyword_group")
+                    putExtra("fragment", CreateKeywordGroupFragment.FRAGMENT_ID)
                     putExtra("result_id", group.id)
                 }
                 startActivity(intent)
