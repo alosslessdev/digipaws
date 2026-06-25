@@ -116,7 +116,7 @@ class CreateGrayscaleGroupFragment : Fragment() {
 
         binding.btnConfigureSchedule.setOnClickListener {
             val intent = Intent(requireContext(), neth.iecal.curbox.ui.activity.FragmentActivity::class.java).apply {
-                putExtra("fragment_type", "app_time_config")
+                putExtra("fragment", GrayscaleTimeSettingsFragment.FRAGMENT_ID)
                 putExtra("mode", "GRAYSCALE")
             }
             startActivity(intent)
