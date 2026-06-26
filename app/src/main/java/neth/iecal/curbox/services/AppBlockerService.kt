@@ -17,7 +17,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.Constants
 import neth.iecal.curbox.CrashLogger
-import neth.iecal.curbox.R
 import neth.iecal.curbox.anti_stimulants.AutoDnd
 import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
 import neth.iecal.curbox.blockers.AppBlocker
