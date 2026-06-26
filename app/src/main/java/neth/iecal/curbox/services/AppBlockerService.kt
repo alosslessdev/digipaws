@@ -48,11 +48,11 @@ class AppBlockerService : BaseBlockingService() {
 
     private var lastBlockTimestampSeen: Long
         get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("lastBlockTimestampSeen", 0L)
-        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit { putLong("lastBlockTimestampSeen", value) }
+        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit(commit = true) { putLong("lastBlockTimestampSeen", value) }
 
-    private var curboxBlockStartTime: Long
-        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("curboxBlockStartTime", 0L)
-        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit { putLong("curboxBlockStartTime", value) }
+    private var curboxProtectionDeadline: Long
+        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("curboxProtectionDeadline", 0L)
+        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit(commit = true) { putLong("curboxProtectionDeadline", value) }
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -116,33 +116,29 @@ class AppBlockerService : BaseBlockingService() {
 
         if (currentBlockTimestamp != lastBlockTimestampSeen) {
             if (now - currentBlockTimestamp < 15000) {
-                curboxBlockStartTime = now
+                curboxProtectionDeadline = now + 15000
                 lastBlockTimestampSeen = currentBlockTimestamp
             } else {
-                curboxBlockStartTime = 0L
+                curboxProtectionDeadline = 0L
                 lastBlockTimestampSeen = currentBlockTimestamp
             }
         }
 
-        if (curboxBlockStartTime > 0L) {
-            val elapsed = now - curboxBlockStartTime
-            if (elapsed < 15000) {
-                val remainingSeconds = ((15000 - elapsed) / 1000).toInt().coerceAtLeast(1)
-                Handler(Looper.getMainLooper()).postDelayed({
-                    val intent = Intent(this, WarningActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
-                        putExtra("result_id", "neth.iecal.curbox")
-                        putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
-                            message = "Wait a moment before opening Curbox right after a block.",
-                            proceedDelayInSecs = remainingSeconds
-                        )))
-                    }
-                    startActivity(intent)
-                }, 10)
-            } else {
-                curboxBlockStartTime = 0L
-            }
+        val deadline = curboxProtectionDeadline
+        if (deadline > now) {
+            val remainingSeconds = ((deadline - now) / 1000).toInt().coerceAtLeast(1)
+            Handler(Looper.getMainLooper()).postDelayed({
+                val intent = Intent(this, WarningActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                    putExtra("result_id", "neth.iecal.curbox")
+                    putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                        message = "Wait a moment before opening Curbox right after a block.",
+                        proceedDelayInSecs = remainingSeconds
+                    )))
+                }
+                startActivity(intent)
+            }, 10)
         }
     }
 
@@ -150,7 +146,7 @@ class AppBlockerService : BaseBlockingService() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN) {
                 if (intent.getStringExtra("result_id") == "neth.iecal.curbox") {
-                    curboxBlockStartTime = 0L
+                    curboxProtectionDeadline = 0L
                 }
             }
         }
