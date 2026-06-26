@@ -22,7 +22,7 @@ open class BaseBlockingService : AccessibilityService() {
 
 
     var lastBackPressTimeStamp: Long
-        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("lastBackPressTimeStamp", System.currentTimeMillis())
+        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("lastBackPressTimeStamp", 0L)
         set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit().putLong("lastBackPressTimeStamp", value).apply()
 
     override fun onServiceConnected() {
