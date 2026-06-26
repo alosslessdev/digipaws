@@ -21,8 +21,9 @@ open class BaseBlockingService : AccessibilityService() {
     }
 
 
-    var lastBackPressTimeStamp: Long =
-        SystemClock.uptimeMillis() // prevents repetitive global actions
+    var lastBackPressTimeStamp: Long
+        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("lastBackPressTimeStamp", System.currentTimeMillis())
+        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit().putLong("lastBackPressTimeStamp", value).apply()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -74,18 +75,18 @@ open class BaseBlockingService : AccessibilityService() {
 
 
     fun isDelayOver( delay: Int): Boolean {
-        val currentTime = SystemClock.uptimeMillis().toFloat()
+        val currentTime = System.currentTimeMillis()
         return currentTime - lastBackPressTimeStamp > delay
     }
 
     fun pressHome() {
         performGlobalAction(GLOBAL_ACTION_HOME)
-        lastBackPressTimeStamp = SystemClock.uptimeMillis()
+        lastBackPressTimeStamp = System.currentTimeMillis()
     }
 
     fun pressBack() {
             performGlobalAction(GLOBAL_ACTION_BACK)
-            lastBackPressTimeStamp = SystemClock.uptimeMillis()
+            lastBackPressTimeStamp = System.currentTimeMillis()
 
     }
 }

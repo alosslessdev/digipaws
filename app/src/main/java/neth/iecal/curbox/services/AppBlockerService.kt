@@ -1,12 +1,15 @@
 package neth.iecal.curbox.services
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import androidx.core.content.edit
 import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -43,8 +46,13 @@ class AppBlockerService : BaseBlockingService() {
 
     private var grayScaleFilter = GrayScaleFilter()
 
-    private var lastBlockTimestampSeen = 0L
-    private var curboxBlockStartTime = 0L
+    private var lastBlockTimestampSeen: Long
+        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("lastBlockTimestampSeen", 0L)
+        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit { putLong("lastBlockTimestampSeen", value) }
+
+    private var curboxBlockStartTime: Long
+        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("curboxBlockStartTime", 0L)
+        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit { putLong("curboxBlockStartTime", value) }
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -76,7 +84,12 @@ class AppBlockerService : BaseBlockingService() {
 
         val packageName = event.packageName?.toString()
         if (packageName == "neth.iecal.curbox") {
-            handleCurboxProtection()
+            val className = event.className?.toString()
+            if (className != "neth.iecal.curbox.ui.activity.WarningActivity" && 
+                className != "androidx.appcompat.app.AlertDialog" &&
+                event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                handleCurboxProtection()
+            }
         }
 
         try {
@@ -99,7 +112,7 @@ class AppBlockerService : BaseBlockingService() {
 
     private fun handleCurboxProtection() {
         val currentBlockTimestamp = lastBackPressTimeStamp
-        val now = SystemClock.uptimeMillis()
+        val now = System.currentTimeMillis()
 
         if (currentBlockTimestamp != lastBlockTimestampSeen) {
             if (now - currentBlockTimestamp < 15000) {
@@ -126,9 +139,19 @@ class AppBlockerService : BaseBlockingService() {
                         )))
                     }
                     startActivity(intent)
-                }, 100)
+                }, 10)
             } else {
                 curboxBlockStartTime = 0L
+            }
+        }
+    }
+
+    private val curboxProtectionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN) {
+                if (intent.getStringExtra("result_id") == "neth.iecal.curbox") {
+                    curboxBlockStartTime = 0L
+                }
             }
         }
     }
@@ -176,13 +199,20 @@ class AppBlockerService : BaseBlockingService() {
         uiHider.setupReceivers()
         nodePicker.setupReceivers()
 
+        val filter = IntentFilter(KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(curboxProtectionReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(curboxProtectionReceiver, filter)
+        }
+
         startBackgroundWorker()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         try {
-
+            unregisterReceiver(curboxProtectionReceiver)
             focusModeBlocker.removeReceivers()
             autoDnd.stop()
             reelBlocker.removeReceivers()
