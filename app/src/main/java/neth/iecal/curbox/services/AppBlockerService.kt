@@ -84,7 +84,7 @@ class AppBlockerService : BaseBlockingService() {
 
         val packageName = event.packageName?.toString()
         if (packageName == "neth.iecal.curbox") {
-            handleCurboxProtection(event.className?.toString())
+            handleCurboxProtection(event.className?.toString(), event.eventType)
         }
 
         try {
@@ -107,7 +107,7 @@ class AppBlockerService : BaseBlockingService() {
 
     private var lastWarningShowTime = 0L
 
-    private fun handleCurboxProtection(className: String?) {
+    private fun handleCurboxProtection(className: String?, eventType: Int) {
         if (className == "neth.iecal.curbox.ui.activity.WarningActivity" || 
             className == "neth.iecal.curbox.ui.activity.PortraitCaptureActivity") {
             return
@@ -117,6 +117,7 @@ class AppBlockerService : BaseBlockingService() {
         val now = System.currentTimeMillis()
 
         // 1. Detect new blocks and initialize deadline if needed
+        // If a block happened within the last 15 seconds
         if (now - lastBlockTime < 15000) {
             if (lastBlockTime != lastBlockTimestampSeen) {
                 // First time we encounter this block, set the deadline based on block time
@@ -124,7 +125,7 @@ class AppBlockerService : BaseBlockingService() {
                 lastBlockTimestampSeen = lastBlockTime
             }
         } else {
-            // No recent block or deadline expired
+            // No recent block - clear any stale deadline
             if (curboxProtectionDeadline != 0L) {
                 curboxProtectionDeadline = 0L
             }
@@ -133,7 +134,11 @@ class AppBlockerService : BaseBlockingService() {
         // 2. Show warning if deadline is active and we are in Curbox
         val deadline = curboxProtectionDeadline
         if (deadline > now) {
-            if (now - lastWarningShowTime > 2000) {
+            // Trigger immediately on app open/window change, or throttle for content changes
+            val isUrgentTrigger = eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            val throttleMs = if (isUrgentTrigger) 0L else 1000L
+
+            if (now - lastWarningShowTime > throttleMs) {
                 lastWarningShowTime = now
                 val remainingSeconds = ((deadline - now) / 1000).toInt().coerceAtLeast(1)
                 

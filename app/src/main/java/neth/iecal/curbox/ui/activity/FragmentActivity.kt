@@ -46,6 +46,13 @@ class FragmentActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val sharedPreferences = getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
+
+        val deadline = sharedPreferences.getLong("curboxProtectionDeadline", 0L)
+        if (deadline > System.currentTimeMillis()) {
+            finish()
+            return
+        }
+
         val isFirstLaunchComplete = sharedPreferences.getBoolean("isFirstLaunchComplete", false)
         val selectedFragmentStr = intent.getStringExtra("fragment") ?: intent.getStringExtra("fragment_type") ?: if (!isFirstLaunchComplete) OnboardingFragment.FRAGMENT_ID else AllAppsUsageFragment.FRAGMENT_ID
         val mode = intent.getStringExtra("mode")
