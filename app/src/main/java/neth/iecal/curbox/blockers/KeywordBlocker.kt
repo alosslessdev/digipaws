@@ -16,11 +16,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.util.LruCache
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
-import androidx.core.content.edit
 import androidx.room.InvalidationTracker
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
@@ -82,6 +82,7 @@ class KeywordBlocker : BaseBlocker() {
         )
 
         private const val SAFE_STRING_TOKEN = "||SAFE||"
+        private const val TAG = "KeywordBlocker"
     }
 
     private lateinit var service: BaseBlockingService
@@ -94,7 +95,6 @@ class KeywordBlocker : BaseBlocker() {
     private val detectionCache = LruCache<String, String>(200)
     private var isTurnedOn = false
     private var isUnsupportedBrowserBlockingOn = false
-    private var lastpkg = ""
     private var cooldownGroupsList = HashMap<String, Long>()
     private var observationJob: Job? = null
 
@@ -104,7 +104,7 @@ class KeywordBlocker : BaseBlocker() {
     private var isSubstringMatchEnabled = false
     var recursionResultNodes: MutableList<AccessibilityNodeInfo> = mutableListOf()
     private var ignoredApps: HashSet<String> = hashSetOf()
-    private var settingsJob: Job? = null
+    private var configJob: Job? = null
 
     @Volatile
     private var lastEventTimeStamp = 0L
@@ -310,14 +310,15 @@ class KeywordBlocker : BaseBlocker() {
             return
         }
 
-        if (!service.isDelayOver(lastEventTimeStamp, refreshCooldown) || 
+        val currentTime = SystemClock.uptimeMillis()
+        if (currentTime - lastEventTimeStamp < refreshCooldown || 
             !service.isDelayOver(10000) ||
             ignoredApps.contains(packageName)) {
             return
         }
 
         if (isUnsupportedBrowserBlockingOn && browserBlocker.isAppBrowser(event)) {
-            lastEventTimeStamp = SystemClock.uptimeMillis()
+            lastEventTimeStamp = currentTime
             return pressHome("/ unsupported browser")
         }
 
@@ -339,7 +340,7 @@ class KeywordBlocker : BaseBlocker() {
                     }
                 }
             } catch (e: Exception) {
-                AppLogger.functionError("KeywordBlocker", "checkIfUserGettingFreaky - searchAllTextFields", e)
+                AppLogger.functionError(TAG, "checkIfUserGettingFreaky - searchAllTextFields", e)
             }
         }
 
@@ -402,7 +403,7 @@ class KeywordBlocker : BaseBlocker() {
             return
         }
 
-        // Lock other blocking mechanisms (like DB observer) immediately
+        // Lock other blocking mechanisms immediately
         lastEventTimeStamp = SystemClock.uptimeMillis()
 
         if (urlBarInfo == null) {
@@ -501,7 +502,7 @@ class KeywordBlocker : BaseBlocker() {
         try {
             findNodesByClassName(rootNode, "android.webkit.WebView")
         } catch (e: Exception) {
-            AppLogger.functionError("KeywordBlocker", "searchKeywordsInWebViewTitle", e)
+            Log.e(TAG, "searchKeywordsInWebViewTitle error", e)
             return null
         }
 
@@ -764,7 +765,6 @@ class KeywordBlocker : BaseBlocker() {
                             (1440 - currentMinutes) + start
                         }
                     } else {
-                        // Overnight interval
                         if (currentMinutes >= start || currentMinutes < end) {
                             if (currentMinutes >= start) (1440 - currentMinutes) + end
                             else end - currentMinutes
@@ -789,8 +789,6 @@ class KeywordBlocker : BaseBlocker() {
             }
         }
     }
-
-    private var configJob: Job? = null
 
     fun setupBlocker(service: BaseBlockingService, watchSettings: Boolean = true) {
         this.service = service
@@ -847,18 +845,18 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun persistCooldownData() {
-        prefs.edit {
+        prefs.edit().apply {
             putStringSet("cooldown_keys", cooldownGroupsList.keys)
             cooldownGroupsList.forEach { (id, end) -> putLong("cooldown_$id", end) }
-        }
+        }.apply()
     }
 
     private fun removeCooldownFrom(id: String) {
         cooldownGroupsList.remove(id)
-        prefs.edit {
+        prefs.edit().apply {
             remove("cooldown_$id")
             putStringSet("cooldown_keys", cooldownGroupsList.keys)
-        }
+        }.apply()
     }
 
     private fun handleCooldownIntent(intent: Intent) {
@@ -891,7 +889,9 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     fun removeReceivers() {
-        service.unregisterReceiver(refreshReceiver)
+        try {
+            service.unregisterReceiver(refreshReceiver)
+        } catch (_: Exception) {}
         observationJob?.cancel()
     }
 

@@ -174,4 +174,10 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
 
         picker.show(childFragmentManager, "time_picker")
     }
+
+    companion object {
+        const val EXTRA_CONFIG_JSON = "extra_config_json"
+        const val EXTRA_CONFIG_TYPE = "extra_config_type"
+        const val ARG_INITIAL_CONFIG = "arg_initial_config"
+    }
 }

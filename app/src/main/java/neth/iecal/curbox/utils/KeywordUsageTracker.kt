@@ -12,6 +12,7 @@ class KeywordUsageTracker(private val context: Context) {
     companion object {
         private const val DETECTIONS_FILE = "keyword_detections.json"
         private const val DEFAULT_CLUSTERING_THRESHOLD_MS = 5 * 60 * 1000L
+        private const val TAG = "KeywordUsageTracker"
     }
 
     private val gson = Gson()
@@ -30,7 +31,7 @@ class KeywordUsageTracker(private val context: Context) {
                 mutableMapOf<String, MutableList<KeywordDetection>>()
             }
         } catch (e: Exception) {
-            AppLogger.functionError("KeywordUsageTracker", "loadDetections", e)
+            AppLogger.functionError(TAG, "loadDetections", e)
             mutableMapOf<String, MutableList<KeywordDetection>>()
         }.also { cachedDetections = it }
     }
@@ -40,7 +41,7 @@ class KeywordUsageTracker(private val context: Context) {
             detectionsFile.writeText(gson.toJson(detections))
             cachedDetections = detections
         } catch (e: Exception) {
-            AppLogger.functionError("KeywordUsageTracker", "saveDetections", e)
+            AppLogger.functionError(TAG, "saveDetections", e)
         }
     }
 
@@ -55,7 +56,7 @@ class KeywordUsageTracker(private val context: Context) {
             )
         )
         saveDetections(detections)
-        AppLogger.logDebug("KeywordUsageTracker", "Recorded detection for keyword: $keyword")
+        AppLogger.logDebug(TAG, "Recorded detection for keyword: $keyword")
     }
 
     fun getDetectionsForKeyword(keyword: String): List<KeywordDetection> {
@@ -142,7 +143,7 @@ class KeywordUsageTracker(private val context: Context) {
         if (toRemove.isNotEmpty()) {
             toRemove.forEach { detections.remove(it) }
             saveDetections(detections)
-            AppLogger.logDebug("KeywordUsageTracker", "Cleared detections for past days")
+            AppLogger.logDebug(TAG, "Cleared detections for past days")
         }
     }
 

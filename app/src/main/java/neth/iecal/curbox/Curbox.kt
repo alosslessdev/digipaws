@@ -7,8 +7,8 @@ import neth.iecal.curbox.utils.BridgeServiceManager
 
 class Curbox: Application() {
   override fun onCreate() {
-    DynamicColors.applyToActivitiesIfAvailable(this)
     AppLogger.init(this)
+    DynamicColors.applyToActivitiesIfAvailable(this)
 
     // Start the communication bridge service
     BridgeServiceManager.ensureBridgeRunning(this)

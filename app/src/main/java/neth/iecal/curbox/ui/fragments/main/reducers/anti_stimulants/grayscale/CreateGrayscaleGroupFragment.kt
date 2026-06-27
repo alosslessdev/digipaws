@@ -1,17 +1,13 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale
 
-import neth.iecal.curbox.R
-
-import android.content.Intent
+import android.app.Activity
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -19,11 +15,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.GrayscaleGroup
 import neth.iecal.curbox.data.models.TimeInterval
 import neth.iecal.curbox.databinding.FragmentCreateGrayscaleGroupBinding
 import neth.iecal.curbox.ui.activity.SelectAppsActivity
+import android.content.Intent
 import java.util.UUID
 
 class CreateGrayscaleGroupFragment : Fragment() {
@@ -35,7 +33,7 @@ class CreateGrayscaleGroupFragment : Fragment() {
     private var _binding: FragmentCreateGrayscaleGroupBinding? = null
     private val binding get() = _binding!!
 
-    private var selectedApps: ArrayList<String> = arrayListOf()
+    private var selectedApps: List<String> = emptyList()
     private var isPrefilled = false
     private val viewModel: GrayscaleViewModel by activityViewModels()
 
@@ -46,11 +44,22 @@ class CreateGrayscaleGroupFragment : Fragment() {
     private val selectAppsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == AppCompatActivity.RESULT_OK) {
+        if (result.resultCode == Activity.RESULT_OK) {
             val apps = result.data?.getStringArrayListExtra("SELECTED_APPS")
             if (apps != null) {
                 selectedApps = apps
                 binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
+            }
+        }
+    }
+
+    private val configureSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val json = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_JSON)
+            if (json != null) {
+                viewModel.currentTimeConfig = Gson().fromJson(json, AppTimeConfig::class.java)
             }
         }
     }
@@ -66,21 +75,11 @@ class CreateGrayscaleGroupFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        var isEditing = false
-        var existingGroup: GrayscaleGroup? = null
         val groupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
-        val prefillPackage = requireActivity().intent.getStringExtra("prefill_package")
-
-        if (groupId == null && !isPrefilled && prefillPackage != null) {
-            isPrefilled = true
-            selectedApps = arrayListOf(prefillPackage)
-            binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
-        }
 
         if (groupId == null) {
             viewModel.currentTimeConfig = AppTimeConfig(
                 everydayIntervals = mutableListOf(
-                    TimeInterval(startHour = 20, endHour = 24),
                     TimeInterval(startHour = 0, endHour = 7)
                 )
             )
@@ -91,23 +90,29 @@ class CreateGrayscaleGroupFragment : Fragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 viewModel.groups.collectLatest { groups ->
                     val group = groups.find { it.groupId == groupId }
-                    if (group != null && !isEditing) {
-                        isEditing = true
-                        existingGroup = group
+                    if (group != null && !isPrefilled) {
+                        isPrefilled = true
                         binding.textView.text = "Edit Grayscale Group"
                         binding.etGroupName.setText(group.groupName)
-                        selectedApps = ArrayList(group.packages.toList())
+                        selectedApps = group.packages.toList()
                         binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
-
-                        binding.btnDeleteGroup.visibility = View.VISIBLE
-                        binding.btnDeleteGroup.setOnClickListener {
-                            viewModel.removeGroup(group)
-                            Toast.makeText(requireContext(), "Group deleted", Toast.LENGTH_SHORT).show()
-                            requireActivity().finish()
-                        }
 
                         viewModel.currentTimeConfig = group.timeConfig.copy()
                         
+                        binding.btnDeleteGroup.visibility = View.VISIBLE
+                        binding.btnDeleteGroup.setOnClickListener {
+                            MaterialAlertDialogBuilder(requireContext())
+                                .setTitle(R.string.delete_group)
+                                .setMessage("Are you sure you want to delete this group?")
+                                .setPositiveButton(R.string.delete) { _, _ ->
+                                    viewModel.deleteGroup(groupId)
+                                    Toast.makeText(requireContext(), R.string.group_deleted, Toast.LENGTH_SHORT).show()
+                                    requireActivity().finish()
+                                }
+                                .setNegativeButton(R.string.cancel, null)
+                                .show()
+                        }
+
                         captureInitialState()
                     }
                 }
@@ -116,12 +121,17 @@ class CreateGrayscaleGroupFragment : Fragment() {
 
         binding.btnSelectApps.setOnClickListener {
             val intent = Intent(requireContext(), SelectAppsActivity::class.java)
-            intent.putStringArrayListExtra("PRE_SELECTED_APPS", selectedApps)
+            intent.putStringArrayListExtra("PRE_SELECTED_APPS", ArrayList(selectedApps))
             selectAppsLauncher.launch(intent)
         }
 
         binding.btnConfigureSchedule.setOnClickListener {
-            GrayscaleTimeSettingsFragment().show(parentFragmentManager, GrayscaleTimeSettingsFragment.FRAGMENT_ID)
+            val intent = Intent(requireContext(), neth.iecal.curbox.ui.activity.FragmentActivity::class.java).apply {
+                putExtra("fragment_type", "app_time_config")
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.ARG_INITIAL_CONFIG, Gson().toJson(viewModel.currentTimeConfig))
+                putExtra("mode", "GRAYSCALE")
+            }
+            configureSettingsLauncher.launch(intent)
         }
 
         binding.fabSaveGroup.setOnClickListener {

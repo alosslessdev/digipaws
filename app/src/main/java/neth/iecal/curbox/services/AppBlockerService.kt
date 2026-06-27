@@ -1,7 +1,6 @@
 package neth.iecal.curbox.services
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -75,6 +74,15 @@ class AppBlockerService : BaseBlockingService() {
         event ?: return
         super.onAccessibilityEvent(event)
 
+        try {
+            appBlocker.doAppBlockerCheck(event)
+            grayScaleFilter.doGrayscaleCheck(event)
+            focusModeBlocker.doFocusModeCheck(event)
+        } catch (t: Throwable) {
+            AppLogger.functionError(TAG, "onAccessibilityEvent", t)
+            crashLogger.logNonFatalError(Exception(t))
+        }
+
         val eventCopy = AccessibilityEvent.obtain(event)
         val result = eventChannel.trySend(eventCopy)
 
@@ -100,24 +108,6 @@ class AppBlockerService : BaseBlockingService() {
             try {
                 for (event in eventChannel) {
                     try {
-                        try {
-                            appBlocker.doAppBlockerCheck(event)
-                        } catch (t: Throwable) {
-                            Log.e(TAG, "Error in appBlocker.doAppBlockerCheck", t)
-                        }
-
-                        try {
-                            grayScaleFilter.doGrayscaleCheck(event)
-                        } catch (t: Throwable) {
-                            Log.e(TAG, "Error in grayScaleFilter.doGrayscaleCheck", t)
-                        }
-
-                        try {
-                            focusModeBlocker.doFocusModeCheck(event)
-                        } catch (t: Throwable) {
-                            Log.e(TAG, "Error in focusModeBlocker.doFocusModeCheck", t)
-                        }
-                        
                         reelBlocker.doViewBlockerCheck(event)
                         keywordBlocker.checkIfUserGettingFreaky(event)
                         uiHider.doUiHiderCheck(event)

@@ -49,6 +49,15 @@ class AutoDndViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun deleteGroup(groupId: String) {
+        viewModelScope.launch {
+            val currentSettings = dataStoreManager.settings.first()
+            val currentGroups = currentSettings.autoDndGroups.toMutableList()
+            currentGroups.removeIf { it.groupId == groupId }
+            updateGroups(currentGroups)
+        }
+    }
+
     fun updateGroup(group: AutoDndGroup) {
         viewModelScope.launch {
             val currentSettings = dataStoreManager.settings.first()

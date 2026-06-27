@@ -3,16 +3,18 @@ package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.data.models.KeywordBlocker
 import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.utils.DataStoreManager
 import neth.iecal.curbox.utils.BridgeServiceManager
-import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
 import neth.iecal.curbox.utils.KeywordUsageTracker
 import neth.iecal.curbox.data.models.AppUsageConfig
 import neth.iecal.curbox.data.models.AppTimeConfig
@@ -22,20 +24,13 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
     private val dataStoreManager = DataStoreManager(application)
     private val usageTracker = KeywordUsageTracker(application)
 
-    private val _keywordBlockerConfig = MutableStateFlow(KeywordBlocker())
-    val keywordBlockerConfig: StateFlow<KeywordBlocker> = _keywordBlockerConfig
+    val keywordBlockerConfig: LiveData<KeywordBlocker> = dataStoreManager.settings
+        .map { it.keywordBlockerConfig }
+        .asLiveData()
 
     var currentUsageConfig = AppUsageConfig()
     var currentTimeConfig = AppTimeConfig()
     var warningScrnConfig = AppBlockerWarningScreenConfig()
-
-    init {
-        viewModelScope.launch {
-            dataStoreManager.settings.collectLatest { settings ->
-                _keywordBlockerConfig.value = settings.keywordBlockerConfig
-            }
-        }
-    }
 
     private fun requestKeywordBlockerRefresh() {
         val intent = Intent(neth.iecal.curbox.blockers.KeywordBlocker.INTENT_ACTION_REFRESH_CONFIG)
@@ -144,7 +139,8 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
     }
 
     fun getKeywordUsageMinutes(keyword: String): Double {
-        val clusteringThresholdMs = _keywordBlockerConfig.value.clusteringThresholdMinutes * 60 * 1000L
+        val config = keywordBlockerConfig.value ?: return 0.0
+        val clusteringThresholdMs = config.clusteringThresholdMinutes * 60 * 1000L
         return usageTracker.calculateTotalUsageMinutesForToday(keyword, clusteringThresholdMs)
     }
 

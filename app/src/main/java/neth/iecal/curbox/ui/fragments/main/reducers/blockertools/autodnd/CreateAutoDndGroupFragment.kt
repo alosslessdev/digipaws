@@ -2,6 +2,7 @@ package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd
 
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -30,10 +31,22 @@ class CreateAutoDndGroupFragment : Fragment() {
     private var _binding: FragmentCreateAutodndGroupBinding? = null
     private val binding get() = _binding!!
 
+    private var isPrefilled = false
     private val viewModel: AutoDndViewModel by activityViewModels()
 
     private var initialGroupName: String = ""
     private var initialTimeConfig: String = ""
+
+    private val configureSettingsLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val json = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_JSON)
+            if (json != null) {
+                viewModel.currentTimeConfig = Gson().fromJson(json, AppTimeConfig::class.java)
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -46,7 +59,6 @@ class CreateAutoDndGroupFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        var isEditing = false
         val groupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
 
         if (groupId == null) {
@@ -58,20 +70,27 @@ class CreateAutoDndGroupFragment : Fragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 viewModel.groups.collectLatest { groups ->
                     val group = groups.find { it.groupId == groupId }
-                    if (group != null && !isEditing) {
-                        isEditing = true
+                    if (group != null && !isPrefilled) {
+                        isPrefilled = true
                         binding.textView.text = "Edit Auto DND Group"
                         binding.etGroupName.setText(group.groupName)
 
-                        binding.btnDeleteGroup.visibility = View.VISIBLE
-                        binding.btnDeleteGroup.setOnClickListener {
-                            viewModel.removeGroup(group)
-                            Toast.makeText(requireContext(), "Group deleted", Toast.LENGTH_SHORT).show()
-                            requireActivity().finish()
-                        }
-
                         viewModel.currentTimeConfig = group.timeConfig.copy()
                         
+                        binding.btnDeleteGroup.visibility = View.VISIBLE
+                        binding.btnDeleteGroup.setOnClickListener {
+                            MaterialAlertDialogBuilder(requireContext())
+                                .setTitle(R.string.delete_group)
+                                .setMessage("Are you sure you want to delete this group?")
+                                .setPositiveButton(R.string.delete) { _, _ ->
+                                    viewModel.deleteGroup(groupId)
+                                    Toast.makeText(requireContext(), R.string.group_deleted, Toast.LENGTH_SHORT).show()
+                                    requireActivity().finish()
+                                }
+                                .setNegativeButton(R.string.cancel, null)
+                                .show()
+                        }
+
                         captureInitialState()
                     }
                 }
@@ -79,7 +98,12 @@ class CreateAutoDndGroupFragment : Fragment() {
         }
 
         binding.btnConfigureSchedule.setOnClickListener {
-            AutoDndTimeSettingsFragment().show(parentFragmentManager, AutoDndTimeSettingsFragment.FRAGMENT_ID)
+            val intent = Intent(requireContext(), neth.iecal.curbox.ui.activity.FragmentActivity::class.java).apply {
+                putExtra("fragment_type", "app_time_config")
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.ARG_INITIAL_CONFIG, Gson().toJson(viewModel.currentTimeConfig))
+                putExtra("mode", "AUTODND")
+            }
+            configureSettingsLauncher.launch(intent)
         }
 
         binding.fabSaveGroup.setOnClickListener {
@@ -136,13 +160,10 @@ class CreateAutoDndGroupFragment : Fragment() {
             return
         }
         
-        // Auto DND always turns on DND
-        val autoTurnOnDnd = true
-
         // Check for DND access before saving
         val nm = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (!nm.isNotificationPolicyAccessGranted) {
-            val intent = android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+            val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
             startActivity(intent)
             Toast.makeText(requireContext(), "Please grant Do Not Disturb access to use this feature", Toast.LENGTH_LONG).show()
             return
@@ -155,7 +176,7 @@ class CreateAutoDndGroupFragment : Fragment() {
         val newGroup = AutoDndGroup(
             groupId = if (isEditingRecord && targetExistingGroup != null) targetExistingGroup.groupId else UUID.randomUUID().toString(),
             groupName = name,
-            autoTurnOnDnd = autoTurnOnDnd,
+            autoTurnOnDnd = true,
             timeConfig = viewModel.currentTimeConfig
         )
 
