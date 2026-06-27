@@ -9,7 +9,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import androidx.core.content.edit
 import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +30,7 @@ import neth.iecal.curbox.blockers.uihider.UiHider
 import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
 import neth.iecal.curbox.ui.activity.WarningActivity
 import neth.iecal.curbox.utils.AppLogger
+import neth.iecal.curbox.utils.CurboxProtectionStore
 
 @Suppress("DEPRECATION")
 class AppBlockerService : BaseBlockingService() {
@@ -47,12 +47,12 @@ class AppBlockerService : BaseBlockingService() {
     private var grayScaleFilter = GrayScaleFilter()
 
     private var lastBlockTimestampSeen: Long
-        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("lastBlockTimestampSeen", 0L)
-        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit(commit = true) { putLong("lastBlockTimestampSeen", value) }
+        get() = CurboxProtectionStore.getLastBlockTimestampSeen(this)
+        set(value) = CurboxProtectionStore.setLastBlockTimestampSeen(this, value)
 
     private var curboxProtectionDeadline: Long
-        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("curboxProtectionDeadline", 0L)
-        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit(commit = true) { putLong("curboxProtectionDeadline", value) }
+        get() = CurboxProtectionStore.getDeadline(this)
+        set(value) = CurboxProtectionStore.setDeadline(this, value)
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -114,14 +114,17 @@ class AppBlockerService : BaseBlockingService() {
         val currentBlockTimestamp = lastBackPressTimeStamp
         val now = System.currentTimeMillis()
 
+        // Set the 15s window exactly once, at the first Curbox open after a fresh block.
+        // The deadline is an absolute wall-clock instant, so cancel+reopen re-shows the
+        // remaining countdown instead of resetting it.
         if (currentBlockTimestamp != lastBlockTimestampSeen) {
-            if (now - currentBlockTimestamp < 15000) {
+            val sinceBlock = now - currentBlockTimestamp
+            if (currentBlockTimestamp > 0 && sinceBlock in 0..<15000) {
                 curboxProtectionDeadline = now + 15000
-                lastBlockTimestampSeen = currentBlockTimestamp
             } else {
                 curboxProtectionDeadline = 0L
-                lastBlockTimestampSeen = currentBlockTimestamp
             }
+            lastBlockTimestampSeen = currentBlockTimestamp
         }
 
         val deadline = curboxProtectionDeadline
