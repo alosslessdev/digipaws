@@ -46,8 +46,11 @@ import neth.iecal.curbox.utils.CurboxProtectionStore
 class FragmentActivity : AppCompatActivity() {
 
     private fun checkProtection(): Boolean {
+        val now = System.currentTimeMillis()
         val deadline = CurboxProtectionStore.getDeadline(this)
-        if (deadline > System.currentTimeMillis()) {
+        val lastBlock = CurboxProtectionStore.getLastBackPressTimeStamp(this)
+
+        if (deadline > now || (lastBlock > 0 && (now - lastBlock) < 15000)) {
             finishAffinity()
             return true
         }

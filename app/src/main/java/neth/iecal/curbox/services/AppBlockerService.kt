@@ -84,12 +84,7 @@ class AppBlockerService : BaseBlockingService() {
 
         val packageName = event.packageName?.toString()
         if (packageName == "neth.iecal.curbox") {
-            val className = event.className?.toString()
-            if (className != "neth.iecal.curbox.ui.activity.WarningActivity" && 
-                className != "androidx.appcompat.app.AlertDialog" &&
-                event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                handleCurboxProtection()
-            }
+            handleCurboxProtection(event.className?.toString())
         }
 
         try {
@@ -110,38 +105,48 @@ class AppBlockerService : BaseBlockingService() {
         }
     }
 
-    private fun handleCurboxProtection() {
-        val currentBlockTimestamp = lastBackPressTimeStamp
-        val now = System.currentTimeMillis()
+    private var lastWarningShowTime = 0L
 
-        // Set the 15s window exactly once, at the first Curbox open after a fresh block.
-        // The deadline is an absolute wall-clock instant, so cancel+reopen re-shows the
-        // remaining countdown instead of resetting it.
+    private fun handleCurboxProtection(className: String?) {
+        if (className == "neth.iecal.curbox.ui.activity.WarningActivity" || 
+            className == "neth.iecal.curbox.ui.activity.PortraitCaptureActivity") {
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val currentBlockTimestamp = lastBackPressTimeStamp
+
+        // 1. New Block Detection
         if (currentBlockTimestamp != lastBlockTimestampSeen) {
             val sinceBlock = now - currentBlockTimestamp
             if (currentBlockTimestamp > 0 && sinceBlock in 0..<15000) {
-                curboxProtectionDeadline = now + 15000
+                curboxProtectionDeadline = currentBlockTimestamp + 15000
             } else {
                 curboxProtectionDeadline = 0L
             }
             lastBlockTimestampSeen = currentBlockTimestamp
         }
 
+        // 2. Deadline Enforcement
         val deadline = curboxProtectionDeadline
         if (deadline > now) {
-            val remainingSeconds = ((deadline - now) / 1000).toInt().coerceAtLeast(1)
-            Handler(Looper.getMainLooper()).postDelayed({
-                val intent = Intent(this, WarningActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
-                    putExtra("result_id", "neth.iecal.curbox")
-                    putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
-                        message = "Wait a moment before opening Curbox right after a block.",
-                        proceedDelayInSecs = remainingSeconds
-                    )))
-                }
-                startActivity(intent)
-            }, 10)
+            if (now - lastWarningShowTime > 1500) {
+                lastWarningShowTime = now
+                val remainingSeconds = ((deadline - now) / 1000).toInt().coerceAtLeast(1)
+                
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val intent = Intent(this, WarningActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                        putExtra("result_id", "neth.iecal.curbox")
+                        putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                            message = "Wait a moment before opening Curbox right after a block.",
+                            proceedDelayInSecs = remainingSeconds
+                        )))
+                    }
+                    startActivity(intent)
+                }, 10)
+            }
         }
     }
 
