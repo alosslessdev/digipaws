@@ -84,12 +84,7 @@ class AppBlockerService : BaseBlockingService() {
 
         val packageName = event.packageName?.toString()
         if (packageName == "neth.iecal.curbox") {
-            val className = event.className?.toString()
-            // Always check for protection if we are in Curbox, but avoid looping on WarningActivity
-            if (className != "neth.iecal.curbox.ui.activity.WarningActivity" && 
-                className != "neth.iecal.curbox.ui.activity.PortraitCaptureActivity") {
-                handleCurboxProtection()
-            }
+            handleCurboxProtection(event.className?.toString())
         }
 
         try {
@@ -112,36 +107,49 @@ class AppBlockerService : BaseBlockingService() {
 
     private var lastWarningShowTime = 0L
 
-    private fun handleCurboxProtection() {
-        val currentBlockTimestamp = lastBackPressTimeStamp
+    private fun handleCurboxProtection(className: String?) {
+        if (className == "neth.iecal.curbox.ui.activity.WarningActivity" || 
+            className == "neth.iecal.curbox.ui.activity.PortraitCaptureActivity") {
+            return
+        }
+
+        val lastBlockTime = lastBackPressTimeStamp
         val now = System.currentTimeMillis()
 
-        if (currentBlockTimestamp != lastBlockTimestampSeen) {
-            if (now - currentBlockTimestamp < 15000) {
-                curboxProtectionDeadline = now + 15000
-                lastBlockTimestampSeen = currentBlockTimestamp
-            } else {
+        // 1. Detect new blocks and initialize deadline if needed
+        if (now - lastBlockTime < 15000) {
+            if (lastBlockTime != lastBlockTimestampSeen) {
+                // First time we encounter this block, set the deadline based on block time
+                curboxProtectionDeadline = lastBlockTime + 15000
+                lastBlockTimestampSeen = lastBlockTime
+            }
+        } else {
+            // No recent block or deadline expired
+            if (curboxProtectionDeadline != 0L) {
                 curboxProtectionDeadline = 0L
-                lastBlockTimestampSeen = currentBlockTimestamp
             }
         }
 
+        // 2. Show warning if deadline is active and we are in Curbox
         val deadline = curboxProtectionDeadline
-        if (deadline > now && now - lastWarningShowTime > 1000) {
-            lastWarningShowTime = now
-            val remainingSeconds = ((deadline - now) / 1000).toInt().coerceAtLeast(1)
-            Handler(Looper.getMainLooper()).postDelayed({
-                val intent = Intent(this, WarningActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
-                    putExtra("result_id", "neth.iecal.curbox")
-                    putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
-                        message = "Wait a moment before opening Curbox right after a block.",
-                        proceedDelayInSecs = remainingSeconds
-                    )))
-                }
-                startActivity(intent)
-            }, 10)
+        if (deadline > now) {
+            if (now - lastWarningShowTime > 2000) {
+                lastWarningShowTime = now
+                val remainingSeconds = ((deadline - now) / 1000).toInt().coerceAtLeast(1)
+                
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val intent = Intent(this, WarningActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                        putExtra("result_id", "neth.iecal.curbox")
+                        putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                            message = "Wait a moment before opening Curbox right after a block.",
+                            proceedDelayInSecs = remainingSeconds
+                        )))
+                    }
+                    startActivity(intent)
+                }, 10)
+            }
         }
     }
 
