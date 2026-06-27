@@ -42,6 +42,9 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import neth.iecal.curbox.utils.CurboxProtectionStore
+import neth.iecal.curbox.Constants
+import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
+import com.google.gson.Gson
 
 class FragmentActivity : AppCompatActivity() {
 
@@ -51,7 +54,24 @@ class FragmentActivity : AppCompatActivity() {
         val lastBlock = CurboxProtectionStore.getLastBackPressTimeStamp(this)
 
         if (deadline > now || (lastBlock > 0 && (now - lastBlock) < 15000)) {
-            finishAffinity()
+            val remainingSeconds = if (deadline > now) {
+                ((deadline - now) / 1000).toInt().coerceAtLeast(1)
+            } else {
+                ((15000 - (now - lastBlock)) / 1000).toInt().coerceAtLeast(1)
+            }
+
+            val intent = Intent(this, WarningActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                putExtra("result_id", "neth.iecal.curbox")
+                putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                    message = "Wait a moment before opening Curbox right after a block.",
+                    proceedDelayInSecs = remainingSeconds,
+                    isDynamicIntervalSettingAllowed = true
+                )))
+            }
+            startActivity(intent)
+            finish()
             return true
         }
         return false
@@ -63,7 +83,6 @@ class FragmentActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (checkProtection()) return
         val sharedPreferences = getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
         val isFirstLaunchComplete = sharedPreferences.getBoolean("isFirstLaunchComplete", false)
         val selectedFragmentStr = intent.getStringExtra("fragment") ?: intent.getStringExtra("fragment_type") ?: if (!isFirstLaunchComplete) OnboardingFragment.FRAGMENT_ID else AllAppsUsageFragment.FRAGMENT_ID
@@ -89,6 +108,8 @@ class FragmentActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
+        if (checkProtection()) return
+
         enableEdgeToEdge()
         setContentView(R.layout.activity_fragment)
 
