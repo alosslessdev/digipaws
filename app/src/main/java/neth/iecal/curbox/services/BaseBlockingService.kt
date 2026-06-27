@@ -6,14 +6,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import neth.iecal.curbox.R
+import neth.iecal.curbox.utils.CurboxProtectionStore
 import neth.iecal.curbox.utils.DataStoreManager
 import kotlin.lazy
 
@@ -25,18 +21,13 @@ open class BaseBlockingService : AccessibilityService() {
     }
 
 
-    var lastBackPressTimeStamp: Long = 0L
+    var lastBackPressTimeStamp: Long
+        get() = CurboxProtectionStore.getLastBackPressTimeStamp(this)
+        set(value) = CurboxProtectionStore.setLastBackPressTimeStamp(this, value)
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         startForegroundService()
-        
-        // Keep in-memory timestamp synced with MultiProcess DataStore
-        CoroutineScope(Dispatchers.IO).launch {
-            dataStoreManager.settings.collectLatest { settings ->
-                lastBackPressTimeStamp = settings.lastBackPressTimeStamp
-            }
-        }
     }
 
     private fun startForegroundService() {
@@ -90,19 +81,12 @@ open class BaseBlockingService : AccessibilityService() {
 
     fun pressHome() {
         performGlobalAction(GLOBAL_ACTION_HOME)
-        val now = System.currentTimeMillis()
-        lastBackPressTimeStamp = now
-        CoroutineScope(Dispatchers.IO).launch {
-            dataStoreManager.updateLastBlockTimestamp(now)
-        }
+        lastBackPressTimeStamp = System.currentTimeMillis()
     }
 
     fun pressBack() {
-        performGlobalAction(GLOBAL_ACTION_BACK)
-        val now = System.currentTimeMillis()
-        lastBackPressTimeStamp = now
-        CoroutineScope(Dispatchers.IO).launch {
-            dataStoreManager.updateLastBlockTimestamp(now)
-        }
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            lastBackPressTimeStamp = System.currentTimeMillis()
+
     }
 }

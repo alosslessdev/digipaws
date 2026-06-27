@@ -41,16 +41,12 @@ import android.os.Build
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import neth.iecal.curbox.utils.DataStoreManager
+import neth.iecal.curbox.utils.CurboxProtectionStore
 
 class FragmentActivity : AppCompatActivity() {
 
     private fun checkProtection(): Boolean {
-        val dataStoreManager = DataStoreManager(this)
-        val settings = runBlocking { dataStoreManager.settings.first() }
-        val deadline = settings.curboxProtectionDeadline
+        val deadline = CurboxProtectionStore.getDeadline(this)
         if (deadline > System.currentTimeMillis()) {
             finishAffinity()
             return true
@@ -65,9 +61,7 @@ class FragmentActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (checkProtection()) return
-        
         val sharedPreferences = getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
-
         val isFirstLaunchComplete = sharedPreferences.getBoolean("isFirstLaunchComplete", false)
         val selectedFragmentStr = intent.getStringExtra("fragment") ?: intent.getStringExtra("fragment_type") ?: if (!isFirstLaunchComplete) OnboardingFragment.FRAGMENT_ID else AllAppsUsageFragment.FRAGMENT_ID
         val mode = intent.getStringExtra("mode")

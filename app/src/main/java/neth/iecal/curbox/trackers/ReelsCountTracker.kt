@@ -7,7 +7,6 @@ import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
 import android.graphics.Rect
@@ -229,7 +228,7 @@ class ReelsCountTracker {
             } catch (_: Exception) { }
         }
 
-        service.lastBackPressTimeStamp = SystemClock.uptimeMillis()
+        service.lastBackPressTimeStamp = System.currentTimeMillis()
     }
 
     private val refreshReceiver = object : BroadcastReceiver() {
