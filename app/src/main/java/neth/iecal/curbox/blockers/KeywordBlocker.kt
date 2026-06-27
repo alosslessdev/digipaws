@@ -272,7 +272,7 @@ class KeywordBlocker : BaseBlocker() {
     private fun pressHome(word: String, group: KeywordGroup? = null) {
         showMessage(word)
         service.pressHome()
-        if (group != null && service.isDelayOver(15000)) {
+        if (group != null && service.isDelayOver(10000)) {
             Handler(Looper.getMainLooper()).postDelayed({
                 val intent = Intent(service, WarningActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -291,9 +291,27 @@ class KeywordBlocker : BaseBlocker() {
 
         val packageName = event.packageName?.toString() ?: return
 
+        if (packageName == "neth.iecal.curbox") {
+            if (!service.isDelayOver(10000)) {
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val intent = Intent(service, WarningActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                        putExtra("result_id", "neth.iecal.curbox")
+                        putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                            message = "Wait a moment before opening Curbox right after a block.",
+                            proceedDelayInSecs = 5
+                        )))
+                    }
+                    service.startActivity(intent)
+                }, 100)
+            }
+            return
+        }
+
         val currentTime = SystemClock.uptimeMillis()
         if (currentTime - lastEventTimeStamp < refreshCooldown || 
-            !service.isDelayOver(15000) ||
+            !service.isDelayOver(10000) ||
             ignoredApps.contains(packageName)) {
             return
         }
@@ -616,7 +634,7 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun handleBlocking(group: KeywordGroup, word: String, packageName: String) {
-        if (!service.isDelayOver(15000)) return
+        if (!service.isDelayOver(10000)) return
 
         if (URL_BAR_ID_LIST.containsKey(packageName)) {
              // If it's a browser, redirection should be handled by UI thread.
