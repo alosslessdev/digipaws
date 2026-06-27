@@ -85,9 +85,9 @@ class AppBlockerService : BaseBlockingService() {
         val packageName = event.packageName?.toString()
         if (packageName == "neth.iecal.curbox") {
             val className = event.className?.toString()
+            // Always check for protection if we are in Curbox, but avoid looping on WarningActivity
             if (className != "neth.iecal.curbox.ui.activity.WarningActivity" && 
-                className != "androidx.appcompat.app.AlertDialog" &&
-                event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                className != "neth.iecal.curbox.ui.activity.PortraitCaptureActivity") {
                 handleCurboxProtection()
             }
         }
@@ -110,6 +110,8 @@ class AppBlockerService : BaseBlockingService() {
         }
     }
 
+    private var lastWarningShowTime = 0L
+
     private fun handleCurboxProtection() {
         val currentBlockTimestamp = lastBackPressTimeStamp
         val now = System.currentTimeMillis()
@@ -125,7 +127,8 @@ class AppBlockerService : BaseBlockingService() {
         }
 
         val deadline = curboxProtectionDeadline
-        if (deadline > now) {
+        if (deadline > now && now - lastWarningShowTime > 1000) {
+            lastWarningShowTime = now
             val remainingSeconds = ((deadline - now) / 1000).toInt().coerceAtLeast(1)
             Handler(Looper.getMainLooper()).postDelayed({
                 val intent = Intent(this, WarningActivity::class.java).apply {
