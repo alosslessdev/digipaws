@@ -9,6 +9,10 @@ import android.os.Build
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import neth.iecal.curbox.R
 import neth.iecal.curbox.utils.DataStoreManager
 import kotlin.lazy
@@ -21,13 +25,18 @@ open class BaseBlockingService : AccessibilityService() {
     }
 
 
-    var lastBackPressTimeStamp: Long
-        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("lastBackPressTimeStamp", 0L)
-        set(value) { getSharedPreferences("AppPreferences", MODE_PRIVATE).edit().putLong("lastBackPressTimeStamp", value).commit() }
+    var lastBackPressTimeStamp: Long = 0L
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         startForegroundService()
+        
+        // Keep in-memory timestamp synced with MultiProcess DataStore
+        CoroutineScope(Dispatchers.IO).launch {
+            dataStoreManager.settings.collectLatest { settings ->
+                lastBackPressTimeStamp = settings.lastBackPressTimeStamp
+            }
+        }
     }
 
     private fun startForegroundService() {
@@ -81,12 +90,19 @@ open class BaseBlockingService : AccessibilityService() {
 
     fun pressHome() {
         performGlobalAction(GLOBAL_ACTION_HOME)
-        lastBackPressTimeStamp = System.currentTimeMillis()
+        val now = System.currentTimeMillis()
+        lastBackPressTimeStamp = now
+        CoroutineScope(Dispatchers.IO).launch {
+            dataStoreManager.updateLastBlockTimestamp(now)
+        }
     }
 
     fun pressBack() {
-            performGlobalAction(GLOBAL_ACTION_BACK)
-            lastBackPressTimeStamp = System.currentTimeMillis()
-
+        performGlobalAction(GLOBAL_ACTION_BACK)
+        val now = System.currentTimeMillis()
+        lastBackPressTimeStamp = now
+        CoroutineScope(Dispatchers.IO).launch {
+            dataStoreManager.updateLastBlockTimestamp(now)
+        }
     }
 }

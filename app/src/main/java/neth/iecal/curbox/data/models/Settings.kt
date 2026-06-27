@@ -21,5 +21,6 @@ data class Settings(
     val reelCounterOverlayConfig: ReelCounterOverlayConfig = ReelCounterOverlayConfig(),
     val nextWebsiteRecheckTime: Long = 0L,
     val curboxProtectionDeadline: Long = 0L,
-    val lastBlockTimestampSeen: Long = 0L
+    val lastBlockTimestampSeen: Long = 0L,
+    val lastBackPressTimeStamp: Long = 0L
 )

@@ -122,4 +122,8 @@ class DataStoreManager(private val context: Context) {
     suspend fun clearCurboxProtectionDeadline() {
         settingsDataStore.updateData { it.copy(curboxProtectionDeadline = 0L) }
     }
+
+    suspend fun updateLastBlockTimestamp(timestamp: Long) {
+        settingsDataStore.updateData { it.copy(lastBackPressTimeStamp = timestamp) }
+    }
 }
