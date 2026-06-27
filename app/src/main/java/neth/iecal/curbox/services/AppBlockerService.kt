@@ -46,13 +46,8 @@ class AppBlockerService : BaseBlockingService() {
 
     private var grayScaleFilter = GrayScaleFilter()
 
-    private var lastBlockTimestampSeen: Long
-        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("lastBlockTimestampSeen", 0L)
-        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit(commit = true) { putLong("lastBlockTimestampSeen", value) }
-
-    private var curboxProtectionDeadline: Long
-        get() = getSharedPreferences("AppPreferences", MODE_PRIVATE).getLong("curboxProtectionDeadline", 0L)
-        set(value) = getSharedPreferences("AppPreferences", MODE_PRIVATE).edit(commit = true) { putLong("curboxProtectionDeadline", value) }
+    private var lastBlockTimestampSeen: Long = 0L
+    private var curboxProtectionDeadline: Long = 0L
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -121,13 +116,20 @@ class AppBlockerService : BaseBlockingService() {
         if (now - lastBlockTime < 15000) {
             if (lastBlockTime != lastBlockTimestampSeen) {
                 // First time we encounter this block, set the deadline based on block time
-                curboxProtectionDeadline = lastBlockTime + 15000
+                val newDeadline = lastBlockTime + 15000
                 lastBlockTimestampSeen = lastBlockTime
+                curboxProtectionDeadline = newDeadline
+                serviceScope.launch {
+                    dataStoreManager.updateCurboxProtection(newDeadline, lastBlockTime)
+                }
             }
         } else {
             // No recent block - clear any stale deadline
             if (curboxProtectionDeadline != 0L) {
                 curboxProtectionDeadline = 0L
+                serviceScope.launch {
+                    dataStoreManager.clearCurboxProtectionDeadline()
+                }
             }
         }
 
@@ -163,6 +165,9 @@ class AppBlockerService : BaseBlockingService() {
             if (intent?.action == KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN) {
                 if (intent.getStringExtra("result_id") == "neth.iecal.curbox") {
                     curboxProtectionDeadline = 0L
+                    serviceScope.launch {
+                        dataStoreManager.clearCurboxProtectionDeadline()
+                    }
                 }
             }
         }
@@ -210,6 +215,13 @@ class AppBlockerService : BaseBlockingService() {
         grayScaleFilter.setupReceivers()
         uiHider.setupReceivers()
         nodePicker.setupReceivers()
+
+        serviceScope.launch {
+            dataStoreManager.settings.collect {
+                curboxProtectionDeadline = it.curboxProtectionDeadline
+                lastBlockTimestampSeen = it.lastBlockTimestampSeen
+            }
+        }
 
         val filter = IntentFilter(KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {

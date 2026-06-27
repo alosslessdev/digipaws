@@ -114,4 +114,12 @@ class DataStoreManager(private val context: Context) {
     suspend fun updateNextWebsiteRecheckTime(time: Long) {
         settingsDataStore.updateData { it.copy(nextWebsiteRecheckTime = time) }
     }
+
+    suspend fun updateCurboxProtection(deadline: Long, lastSeen: Long) {
+        settingsDataStore.updateData { it.copy(curboxProtectionDeadline = deadline, lastBlockTimestampSeen = lastSeen) }
+    }
+
+    suspend fun clearCurboxProtectionDeadline() {
+        settingsDataStore.updateData { it.copy(curboxProtectionDeadline = 0L) }
+    }
 }
