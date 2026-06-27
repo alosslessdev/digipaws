@@ -67,7 +67,8 @@ class FragmentActivity : AppCompatActivity() {
                 putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
                     message = "Wait a moment before opening Curbox right after a block.",
                     proceedDelayInSecs = remainingSeconds,
-                    isIntentRequirementEnabled = true
+                    isTypingRequirementEnabled = true,
+                    typingSentence = "I am in control"
                 )))
             }
             startActivity(intent)
