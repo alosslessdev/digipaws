@@ -186,6 +186,11 @@ class AppBlockerService : BaseBlockingService() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onServiceConnected() {
         super.onServiceConnected()
+        
+        serviceInfo = serviceInfo.apply {
+            flags = flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        }
+
         appBlocker.setupAppBlocker(this)
         focusModeBlocker.setupFocusMode(this)
         autoDnd.setup(this)

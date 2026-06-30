@@ -55,25 +55,25 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-
-            // required because of hardcoded f-droid values
-            applicationVariants.all {
-                val variant = this
-                if (variant.flavorName == "fdroid") {
-                    variant.outputs
-                        .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-                        .forEach { output ->
-                            val outputFileName = "app-fdroid-universal-release-unsigned.apk"
-                            println("OutputFileName: $outputFileName")
-                            output.outputFileName = outputFileName
-                        }
-                }
-            }
         }
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             resValue("string", "app_name", "Debug Curbox")
+        }
+    }
+
+    // required because of hardcoded f-droid values
+    applicationVariants.all {
+        val variant = this
+        if (variant.flavorName == "fdroid") {
+            variant.outputs
+                .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+                .forEach { output ->
+                    val outputFileName = "app-fdroid-universal-release-unsigned.apk"
+                    println("OutputFileName: $outputFileName")
+                    output.outputFileName = outputFileName
+                }
         }
     }
     compileOptions {
@@ -128,16 +128,39 @@ dependencies {
 androidComponents {
     onVariants { variant ->
         val variantName = variant.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+        // This hooks into the standard "Run" action in Android Studio
+        tasks.matching { it.name == "install$variantName" }.configureEach {
+            doLast {
+                val adbPath = sdkComponents.adb.get().asFile.absolutePath
+                val appId = variant.applicationId.get()
+                println(">>> Automatically wiping data for $appId")
+                exec {
+                    commandLine(adbPath, "shell", "pm", "clear", "--user", "0", appId)
+                    isIgnoreExitValue = true
+                }
+            }
+        }
+
         tasks.register("installAndGrantAccessibility$variantName") {
             group = "install"
-            description = "Installs the app, grants Accessibility permission, and launches it"
+            description = "Installs, wipes, grants permissions, and launches the app"
             dependsOn("install$variantName")
             
             doLast {
                 val adbPath = sdkComponents.adb.get().asFile.absolutePath
                 val appId = variant.applicationId.get()
+                
+                println(">>> Target Package: $appId")
                 Thread.sleep(2000)
+
+                // Wipe app data
+                println(">>> Wiping data...")
+                exec {
+                    commandLine(adbPath, "shell", "pm", "clear", "--user", "0", appId)
+                }
+
                 // Grant Accessibility Permission
+                println(">>> Granting permissions...")
                 exec {
                     val baseId = "neth.iecal.curbox"
                     val combinedServices = "$appId/$baseId.services.AppBlockerService:$appId/$baseId.services.UsageTrackingService"
@@ -146,6 +169,7 @@ androidComponents {
                 }
 
                 // Launch MainActivity
+                println(">>> Launching app...")
                 exec {
                     val baseId = "neth.iecal.curbox"
                     commandLine(adbPath, "shell", "am", "start", "-n", "$appId/$baseId.ui.activity.FragmentActivity")

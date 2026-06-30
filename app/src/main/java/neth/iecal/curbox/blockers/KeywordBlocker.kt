@@ -301,7 +301,18 @@ class KeywordBlocker : BaseBlocker() {
         
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) return
 
-        val packageName = event.packageName?.toString() ?: return
+        var packageName = event.packageName?.toString() ?: return
+        val rootNode = service.rootInActiveWindow
+
+        // If event is from system UI, it might be a status bar update while browser is open.
+        // Try to get the package from the active window root if it's not Curbox.
+        if (packageName == "com.android.systemui" || packageName == "android") {
+            val rootPkg = rootNode?.packageName?.toString()
+            if (rootPkg != null && rootPkg != "neth.iecal.curbox" && rootPkg != "com.android.systemui") {
+                packageName = rootPkg
+                Log.d(TAG, "Using package from root node: $packageName")
+            }
+        }
         
         // Log all events from supported browsers to see what's happening
         if (URL_BAR_ID_LIST.containsKey(packageName) || packageName == "neth.iecal.curbox") {
@@ -338,7 +349,6 @@ class KeywordBlocker : BaseBlocker() {
             return pressHome("/ unsupported browser")
         }
 
-        val rootNode = service.rootInActiveWindow
         val urlBarInfo = URL_BAR_ID_LIST[packageName]
         val idPrefixPart = "$packageName:id/"
         
@@ -552,10 +562,22 @@ class KeywordBlocker : BaseBlocker() {
             }
         }
 
-        val currentRootNode = service.rootInActiveWindow ?: rootNode
-        val goBtnNode =
-            ReelBlocker.findElementById(currentRootNode, idPrefixPart + urlBarInfo.browserSugggestionBoxId)
-                ?: return false
+        val goBtnNodeId = idPrefixPart + urlBarInfo.browserSugggestionBoxId
+        var goBtnNode: AccessibilityNodeInfo? = null
+        var lastUsedRootNode: AccessibilityNodeInfo = rootNode
+        
+        for (i in 1..5) {
+            val currentRootNode = service.rootInActiveWindow ?: rootNode
+            goBtnNode = ReelBlocker.findElementById(currentRootNode, goBtnNodeId)
+            if (goBtnNode != null) {
+                lastUsedRootNode = currentRootNode
+                break
+            }
+            if (currentRootNode != rootNode) safeRecycle(currentRootNode)
+            Thread.sleep(200)
+        }
+
+        if (goBtnNode == null) return false
 
         val didClickGo = if (urlBarInfo.isSuggestionEqualToGo) {
             goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
@@ -567,7 +589,7 @@ class KeywordBlocker : BaseBlocker() {
         }
         
         safeRecycle(goBtnNode)
-        if (currentRootNode != rootNode) safeRecycle(currentRootNode)
+        if (lastUsedRootNode != rootNode) safeRecycle(lastUsedRootNode)
         return didClickGo
     }
 
@@ -671,7 +693,7 @@ class KeywordBlocker : BaseBlocker() {
         if (URL_BAR_ID_LIST.containsKey(packageName)) {
              // If it's a browser, redirection should be handled by UI thread.
              // We only proceed here if the UI thread lock has expired or wasn't set.
-             if (SystemClock.uptimeMillis() - lastEventTimeStamp < 5000) return
+             if (SystemClock.uptimeMillis() - lastEventTimeStamp < 2000) return
         }
 
         service.pressBack()
