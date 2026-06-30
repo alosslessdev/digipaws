@@ -132,7 +132,6 @@ class AppBlockerService : BaseBlockingService() {
         if (deadline > now) {
             if (now - lastWarningShowTime > 1500) {
                 lastWarningShowTime = now
-                val remainingSeconds = ((deadline - now) / 1000).toInt().coerceAtLeast(1)
                 
                 Handler(Looper.getMainLooper()).postDelayed({
                     val intent = Intent(this, WarningActivity::class.java).apply {
@@ -141,7 +140,7 @@ class AppBlockerService : BaseBlockingService() {
                         putExtra("result_id", "neth.iecal.curbox")
                         putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
                             message = "Wait a moment before opening Curbox right after a block.",
-                            proceedDelayInSecs = remainingSeconds
+                            proceedDelayInSecs = 5
                         )))
                     }
                     startActivity(intent)
@@ -205,7 +204,7 @@ class AppBlockerService : BaseBlockingService() {
 
         val filter = IntentFilter(KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(curboxProtectionReceiver, filter, Context.RECEIVER_EXPORTED)
+            registerReceiver(curboxProtectionReceiver, filter, RECEIVER_EXPORTED)
         } else {
             registerReceiver(curboxProtectionReceiver, filter)
         }

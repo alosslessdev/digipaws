@@ -66,9 +66,7 @@ class FragmentActivity : AppCompatActivity() {
                 putExtra("result_id", "neth.iecal.curbox")
                 putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
                     message = "Wait a moment before opening Curbox right after a block.",
-                    proceedDelayInSecs = remainingSeconds,
-                    isTypingRequirementEnabled = true,
-                    typingSentence = "I am in control"
+                    proceedDelayInSecs = 5
                 )))
             }
             startActivity(intent)
