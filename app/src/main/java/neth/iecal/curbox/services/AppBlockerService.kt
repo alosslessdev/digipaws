@@ -1,8 +1,15 @@
 package neth.iecal.curbox.services
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import com.google.gson.Gson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.Constants
 import neth.iecal.curbox.CrashLogger
 import neth.iecal.curbox.anti_stimulants.AutoDnd
 import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
@@ -19,7 +27,10 @@ import neth.iecal.curbox.blockers.KeywordBlocker
 import neth.iecal.curbox.blockers.ReelBlocker
 import neth.iecal.curbox.blockers.uihider.NodePicker
 import neth.iecal.curbox.blockers.uihider.UiHider
+import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
+import neth.iecal.curbox.ui.activity.WarningActivity
 import neth.iecal.curbox.utils.AppLogger
+import neth.iecal.curbox.utils.CurboxProtectionStore
 
 @Suppress("DEPRECATION")
 class AppBlockerService : BaseBlockingService() {
@@ -34,6 +45,14 @@ class AppBlockerService : BaseBlockingService() {
     private val nodePicker = NodePicker()
 
     private var grayScaleFilter = GrayScaleFilter()
+
+    private var lastBlockTimestampSeen: Long
+        get() = CurboxProtectionStore.getLastBlockTimestampSeen(this)
+        set(value) = CurboxProtectionStore.setLastBlockTimestampSeen(this, value)
+
+    private var curboxProtectionDeadline: Long
+        get() = CurboxProtectionStore.getDeadline(this)
+        set(value) = CurboxProtectionStore.setDeadline(this, value)
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -63,6 +82,11 @@ class AppBlockerService : BaseBlockingService() {
         event ?: return
         super.onAccessibilityEvent(event)
 
+        val packageName = event.packageName?.toString()
+        if (packageName == "neth.iecal.curbox") {
+            handleCurboxProtection(event.className?.toString())
+        }
+
         try {
             appBlocker.doAppBlockerCheck(event)
             grayScaleFilter.doGrayscaleCheck(event)
@@ -78,6 +102,60 @@ class AppBlockerService : BaseBlockingService() {
         // If the channel is closed or rejected it, recycle immediately
         if (result.isFailure) {
             eventCopy.recycle()
+        }
+    }
+
+    private var lastWarningShowTime = 0L
+
+    private fun handleCurboxProtection(className: String?) {
+        if (className == "neth.iecal.curbox.ui.activity.WarningActivity" || 
+            className == "neth.iecal.curbox.ui.activity.PortraitCaptureActivity") {
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val currentBlockTimestamp = lastBackPressTimeStamp
+
+        // 1. New Block Detection
+        if (currentBlockTimestamp != lastBlockTimestampSeen) {
+            val sinceBlock = now - currentBlockTimestamp
+            if (currentBlockTimestamp > 0 && sinceBlock in 0..<15000) {
+                curboxProtectionDeadline = currentBlockTimestamp + 15000
+            } else {
+                curboxProtectionDeadline = 0L
+            }
+            lastBlockTimestampSeen = currentBlockTimestamp
+        }
+
+        // 2. Deadline Enforcement
+        val deadline = curboxProtectionDeadline
+        if (deadline > now) {
+            if (now - lastWarningShowTime > 1500) {
+                lastWarningShowTime = now
+                
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val intent = Intent(this, WarningActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                        putExtra("result_id", "neth.iecal.curbox")
+                        putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                            message = "Wait a moment before opening Curbox right after a block.",
+                            proceedDelayInSecs = 5
+                        )))
+                    }
+                    startActivity(intent)
+                }, 10)
+            }
+        }
+    }
+
+    private val curboxProtectionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN) {
+                if (intent.getStringExtra("result_id") == "neth.iecal.curbox") {
+                    curboxProtectionDeadline = 0L
+                }
+            }
         }
     }
 
@@ -124,13 +202,20 @@ class AppBlockerService : BaseBlockingService() {
         uiHider.setupReceivers()
         nodePicker.setupReceivers()
 
+        val filter = IntentFilter(KeywordBlocker.INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(curboxProtectionReceiver, filter, RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(curboxProtectionReceiver, filter)
+        }
+
         startBackgroundWorker()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         try {
-
+            unregisterReceiver(curboxProtectionReceiver)
             focusModeBlocker.removeReceivers()
             autoDnd.stop()
             reelBlocker.removeReceivers()

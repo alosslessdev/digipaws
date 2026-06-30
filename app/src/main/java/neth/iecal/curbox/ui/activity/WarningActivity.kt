@@ -31,6 +31,8 @@ import android.widget.Toast
 import androidx.core.content.edit
 import androidx.core.widget.doAfterTextChanged
 import neth.iecal.curbox.anti_stimulants.MindfulMessage
+import neth.iecal.curbox.utils.DataStoreManager
+import kotlinx.coroutines.runBlocking
 
 class WarningActivity : AppCompatActivity() {
 
@@ -286,6 +288,9 @@ class WarningActivity : AppCompatActivity() {
             if (mode == Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER) {
                 intent.getStringExtra("result_id")
                     ?.let { it1 ->
+                        if (it1 == "neth.iecal.curbox") {
+                            runBlocking { DataStoreManager(this@WarningActivity).clearCurboxProtectionDeadline() }
+                        }
                         val finalTime = if (warningScreenConfig.isQrUnlockRequirementEnabled && scannedValidDuration != -1L) {
                             (scannedValidDuration / 60000).toInt()
                         } else {
