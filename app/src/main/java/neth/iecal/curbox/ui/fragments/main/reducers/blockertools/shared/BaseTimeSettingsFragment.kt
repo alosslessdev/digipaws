@@ -1,6 +1,7 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared
 
 import android.content.DialogInterface
+import android.content.Intent
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.LayoutInflater
@@ -15,6 +16,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import com.google.gson.Gson
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.TimeInterval
@@ -24,6 +26,12 @@ import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.DayItem
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.TimeIntervalAdapter
 
 abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
+
+    companion object {
+        const val ARG_INITIAL_CONFIG = "arg_initial_config"
+        const val EXTRA_CONFIG_JSON = "config_json"
+        const val EXTRA_CONFIG_TYPE = "config_type"
+    }
 
     protected open val daysOfWeek = listOf(
         "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
@@ -71,9 +79,15 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
             everydayAdapter.notifyItemInserted(everydayIntervals.size - 1)
         }
 
+        arguments?.getString(ARG_INITIAL_CONFIG)?.let { json ->
+            try {
+                val config = Gson().fromJson(json, AppTimeConfig::class.java)
+                saveTimeConfig(config)
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+
         view.findViewById<View>(R.id.fab_done)?.setOnClickListener {
-            persistSettings()
-            requireActivity().finish()
+            confirmAndFinish()
         }
 
         loadExistingSettings()
@@ -118,20 +132,44 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
             .setTitle(R.string.unsaved_changes_dialog_title)
             .setMessage(R.string.unsaved_changes_dialog_message)
             .setPositiveButton(R.string.save) { _, _ ->
+<<<<<<< HEAD
                 persistSettings()
                 requireActivity().finish()
+=======
+                confirmAndFinish()
+>>>>>>> feature/keyword-blocker-ui
             }
             .setNegativeButton(R.string.btn_discard) { _, _ ->
                 requireActivity().finish()
             }
             .setNeutralButton(R.string.cancel, null)
             .show()
+<<<<<<< HEAD
     }
 
     override fun onDismiss(dialog: DialogInterface) {
         // Only auto-persist if there were changes and we didn't explicitly finish
         if (hasChanges()) {
             persistSettings()
+=======
+    }
+
+    private fun confirmAndFinish() {
+        val config = getCurrentConfigState()
+        saveTimeConfig(config)
+        val resultIntent = Intent().apply {
+            putExtra(EXTRA_CONFIG_JSON, Gson().toJson(config))
+            putExtra(EXTRA_CONFIG_TYPE, "time")
+        }
+        requireActivity().setResult(android.app.Activity.RESULT_OK, resultIntent)
+        requireActivity().finish()
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        if (hasChanges()) {
+            val config = getCurrentConfigState()
+            saveTimeConfig(config)
+>>>>>>> feature/keyword-blocker-ui
         }
         super.onDismiss(dialog)
     }
@@ -195,16 +233,8 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
     }
 
     private fun persistSettings() {
-        val dailyIntervals = dayItems
-            .filter { it.isActive }
-            .associateTo(mutableMapOf()) { it.dayIndex to it.intervals.map { i -> i.copy() }.toMutableList() }
-        saveTimeConfig(
-            AppTimeConfig(
-                isEveryday = switchEveryDay.isChecked,
-                everydayIntervals = everydayIntervals.map { it.copy() }.toMutableList(),
-                dailyIntervals = dailyIntervals
-            )
-        )
+        val config = getCurrentConfigState()
+        saveTimeConfig(config)
     }
 
     private fun showTimePicker(interval: TimeInterval, isStart: Boolean, list: MutableList<TimeInterval>, onComplete: () -> Unit) {

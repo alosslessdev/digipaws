@@ -37,6 +37,17 @@ class CreateAutoDndGroupFragment : Fragment() {
     private var initialGroupName: String = ""
     private var initialTimeConfig: String = ""
 
+    private val configureSettingsLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val json = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_JSON)
+            if (json != null) {
+                viewModel.currentTimeConfig = Gson().fromJson(json, AppTimeConfig::class.java)
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -89,9 +100,10 @@ class CreateAutoDndGroupFragment : Fragment() {
         binding.btnConfigureSchedule.setOnClickListener {
             val intent = Intent(requireContext(), neth.iecal.curbox.ui.activity.FragmentActivity::class.java).apply {
                 putExtra("fragment", AutoDndTimeSettingsFragment.FRAGMENT_ID)
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.ARG_INITIAL_CONFIG, Gson().toJson(viewModel.currentTimeConfig))
                 putExtra("mode", "AUTODND")
             }
-            startActivity(intent)
+            configureSettingsLauncher.launch(intent)
         }
 
         binding.btnDeleteGroup.visibility = if (groupId != null) View.VISIBLE else View.GONE
