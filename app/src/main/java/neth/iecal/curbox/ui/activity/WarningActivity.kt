@@ -289,7 +289,7 @@ class WarningActivity : AppCompatActivity() {
                 intent.getStringExtra("result_id")
                     ?.let { it1 ->
                         if (it1 == "neth.iecal.curbox") {
-                            runBlocking { DataStoreManager(this@WarningActivity).clearCurboxProtectionDeadline() }
+                            neth.iecal.curbox.utils.CurboxProtectionStore.clearDeadline(this@WarningActivity)
                         }
                         val finalTime = if (warningScreenConfig.isQrUnlockRequirementEnabled && scannedValidDuration != -1L) {
                             (scannedValidDuration / 60000).toInt()
