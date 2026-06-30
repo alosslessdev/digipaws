@@ -98,6 +98,21 @@ class CreateGrayscaleGroupFragment : Fragment() {
                         binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
 
                         viewModel.currentTimeConfig = group.timeConfig.copy()
+                        
+                        binding.btnDeleteGroup.visibility = View.VISIBLE
+                        binding.btnDeleteGroup.setOnClickListener {
+                            MaterialAlertDialogBuilder(requireContext())
+                                .setTitle(R.string.delete_group)
+                                .setMessage("Are you sure you want to delete this group?")
+                                .setPositiveButton(R.string.delete) { _, _ ->
+                                    viewModel.deleteGroup(groupId)
+                                    Toast.makeText(requireContext(), R.string.group_deleted, Toast.LENGTH_SHORT).show()
+                                    requireActivity().finish()
+                                }
+                                .setNegativeButton(R.string.cancel, null)
+                                .show()
+                        }
+
                         captureInitialState()
                     }
                 }
@@ -117,6 +132,22 @@ class CreateGrayscaleGroupFragment : Fragment() {
                 putExtra("mode", "GRAYSCALE")
             }
             configureSettingsLauncher.launch(intent)
+        }
+
+        binding.btnDeleteGroup.visibility = if (groupId != null) View.VISIBLE else View.GONE
+        binding.btnDeleteGroup.setOnClickListener {
+            if (groupId != null) {
+                MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.delete_group)
+                    .setMessage("Are you sure you want to delete this group?")
+                    .setPositiveButton(R.string.delete) { _, _ ->
+                        viewModel.deleteGroup(groupId)
+                        Toast.makeText(requireContext(), R.string.group_deleted, Toast.LENGTH_SHORT).show()
+                        requireActivity().finish()
+                    }
+                    .setNegativeButton(R.string.cancel, null)
+                    .show()
+            }
         }
 
         binding.fabSaveGroup.setOnClickListener {
