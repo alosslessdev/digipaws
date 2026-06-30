@@ -297,15 +297,16 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     fun checkIfUserGettingFreaky(event: AccessibilityEvent?) {
-        if (!isTurnedOn) {
-            // Log once in a while or just return
-            return
-        }
+        if (!isTurnedOn) return
+        
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) return
 
         val packageName = event.packageName?.toString() ?: return
         
-        Log.d(TAG, "checkIfUserGettingFreaky: event from $packageName, type: ${AccessibilityEvent.eventTypeToString(event.eventType)}")
+        // Log all events from supported browsers to see what's happening
+        if (URL_BAR_ID_LIST.containsKey(packageName) || packageName == "neth.iecal.curbox") {
+            Log.d(TAG, "checkIfUserGettingFreaky: event from $packageName, type: ${AccessibilityEvent.eventTypeToString(event.eventType)}")
+        }
 
         if (packageName == "neth.iecal.curbox") {
             if (!service.isDelayOver(1000)) {
@@ -337,14 +338,21 @@ class KeywordBlocker : BaseBlocker() {
             return pressHome("/ unsupported browser")
         }
 
-        val rootNode = service.rootInActiveWindow ?: return
+        val rootNode = service.rootInActiveWindow
+        val urlBarInfo = URL_BAR_ID_LIST[packageName]
+        val idPrefixPart = "$packageName:id/"
+        
         var detectedKeyword: String? = null
+        var displayUrlTextNode: AccessibilityNodeInfo? = null
 
-        if (isSearchAllTextFields) {
-            recursionResultNodes.clear()
-            findNodesByClassName(rootNode, "android.widget.TextView", false)
+        if (rootNode != null) {
+            displayUrlTextNode = if (urlBarInfo != null)
+                ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
+            else null
 
-            try {
+            if (isSearchAllTextFields) {
+                recursionResultNodes.clear()
+                findNodesByClassName(rootNode, "android.widget.TextView", false)
                 for (node in recursionResultNodes) {
                     val nodeText = node.text?.toString() ?: ""
                     if (nodeText.isEmpty()) continue
@@ -354,47 +362,35 @@ class KeywordBlocker : BaseBlocker() {
                         break
                     }
                 }
-            } catch (e: Exception) {
-                AppLogger.functionError(TAG, "checkIfUserGettingFreaky - searchAllTextFields", e)
+            }
+            
+            if (detectedKeyword == null && urlBarInfo != null) {
+                val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
+                val displayText = displayUrlTextNode?.text?.toString() ?: ""
+                Log.d(TAG, "Checking browser URL bar (root). Text: '$displayText'")
+                detectedKeyword = webViewKeyword ?: (if (displayText.isNotEmpty()) containsBlockedKeyword(displayText) else null)
             }
         }
 
-        val urlBarInfo = URL_BAR_ID_LIST[packageName]
-        val idPrefixPart = "$packageName:id/"
-        
-        var displayUrlTextNode: AccessibilityNodeInfo? = if (urlBarInfo != null)
-            ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
-        else null
-
-        // Bypass if we are already at the redirect URL
-        if (displayUrlTextNode != null) {
-            val displayText = displayUrlTextNode.text?.toString() ?: ""
-            if (displayText.isNotEmpty()) {
-                val normalizedCurrent = KeywordBlockerMatchUtils.normalizeBlockedEntry(displayText)
-                val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
-                if (normalizedCurrent == normalizedRedirect || normalizedCurrent.startsWith("$normalizedRedirect/")) {
-                    safeRecycle(displayUrlTextNode)
-                    safeRecycle(recursionResultNodes)
-                    return
+        // If root search failed, try the event source directly, especially for text changes
+        if (detectedKeyword == null) {
+            val source = event.source
+            if (source != null) {
+                val sourceText = source.text?.toString() ?: ""
+                if (sourceText.isNotEmpty()) {
+                    detectedKeyword = containsBlockedKeyword(sourceText)
+                    if (detectedKeyword != null) {
+                        Log.d(TAG, "Detected keyword in event source: $detectedKeyword")
+                    }
                 }
+                source.recycle()
             }
-        }
-
-        if (detectedKeyword == null && urlBarInfo != null) {
-            val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
-            val displayText = displayUrlTextNode?.text?.toString() ?: ""
-
-            Log.d(TAG, "Checking browser URL bar. Text: '$displayText'")
-
-            detectedKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
-                containsBlockedKeyword(displayText)
-            else null)
         }
 
         if (detectedKeyword == null) {
-            Log.d(TAG, "No blocked keyword detected in $packageName")
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
+            if (rootNode != null) safeRecycle(rootNode)
             return
         }
 
@@ -445,6 +441,7 @@ class KeywordBlocker : BaseBlocker() {
         if (displayUrlTextNode == null) {
             pressHome(keyword, matchedGroup)
             safeRecycle(recursionResultNodes)
+            if (rootNode != null) safeRecycle(rootNode)
             return
         }
 
@@ -473,6 +470,7 @@ class KeywordBlocker : BaseBlocker() {
             pressHome(keyword, matchedGroup)
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
+            if (rootNode != null) safeRecycle(rootNode)
             return
         }
 
@@ -492,6 +490,7 @@ class KeywordBlocker : BaseBlocker() {
         safeRecycle(editUrlBar)
         safeRecycle(displayUrlTextNode)
         safeRecycle(recursionResultNodes)
+        if (rootNode != null) safeRecycle(rootNode)
 
         // Verify redirection
         var redirectionSuccessful = false
@@ -837,6 +836,7 @@ class KeywordBlocker : BaseBlocker() {
             service.dataStoreManager.settings.collectLatest { settings ->
                 val config = settings.keywordBlockerConfig
                 isTurnedOn = config.isActive
+                Log.d(TAG, "KeywordBlocker settings updated. isActive: $isTurnedOn")
                 isUnsupportedBrowserBlockingOn = config.blockAllExceptSupported
                 browserBlocker.isTurnedOn = isTurnedOn
 

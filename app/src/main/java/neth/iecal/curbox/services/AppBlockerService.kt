@@ -56,7 +56,7 @@ class AppBlockerService : BaseBlockingService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    private val eventChannel = Channel<AccessibilityEvent>(Channel.CONFLATED) { droppedEvent ->
+    private val eventChannel = Channel<AccessibilityEvent>(100) { droppedEvent ->
         droppedEvent.recycle()
     }
 
