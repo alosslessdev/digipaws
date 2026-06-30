@@ -30,6 +30,8 @@ import neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.Gr
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderEditorFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.advanced.AntiUninstallFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.advanced.ServiceProtectionFragment
 import androidx.core.view.isVisible
 import android.animation.ValueAnimator
 import android.content.Context

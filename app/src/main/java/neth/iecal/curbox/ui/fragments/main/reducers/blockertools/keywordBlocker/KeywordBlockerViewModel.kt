@@ -6,11 +6,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import neth.iecal.curbox.data.db.AppDatabase
 import neth.iecal.curbox.data.models.KeywordBlocker
 import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.utils.DataStoreManager
@@ -18,6 +22,7 @@ import neth.iecal.curbox.utils.KeywordUsageTracker
 import neth.iecal.curbox.data.models.AppUsageConfig
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
+import java.util.Calendar
 
 class KeywordBlockerViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStoreManager = DataStoreManager(application)

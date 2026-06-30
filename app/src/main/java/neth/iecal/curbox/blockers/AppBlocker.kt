@@ -61,11 +61,32 @@ class AppBlocker() : BaseBlocker() {
     private var cooldownAppsList = ConcurrentHashMap<String, Long>()
 
     /**
-     * Stores general simple general list of block apps with their configs
+     * Holds a usage limited app's config along with every package in its group.
+     * Usage is compared against the combined total of all packages in [groupPackages].
+     * Each entry carries its own group's warning screen so the right screen shows when it triggers.
      */
-    val blockedAppsList = ConcurrentHashMap<String, AppUsageConfig>()
-    val timeBlockedAppsList = ConcurrentHashMap<String, AppTimeConfig>()
-    private val onOpenAppsList = ConcurrentHashMap<String, Boolean>()
+    data class UsageBlockEntry(
+        val config: AppUsageConfig,
+        val groupPackages: List<String>,
+        val warningConfig: AppBlockerWarningScreenConfig
+    )
+
+    /**
+     * Holds a timed app's config along with its own group's warning screen.
+     */
+    data class TimeBlockEntry(
+        val config: AppTimeConfig,
+        val warningConfig: AppBlockerWarningScreenConfig
+    )
+
+    /**
+     * Stores block apps with their configs. A package may belong to multiple groups, so each map
+     * holds a list of entries. The app is blocked if any of its groups demands a block.
+     */
+    val blockedAppsList = ConcurrentHashMap<String, MutableList<UsageBlockEntry>>()
+    val timeBlockedAppsList = ConcurrentHashMap<String, MutableList<TimeBlockEntry>>()
+    private val onOpenAppsList = ConcurrentHashMap<String, AppBlockerWarningScreenConfig>()
+    // Holds the warning config last SHOWN per package, used for the cooldown intent's default duration
     private val appBlockerWarningScrnConfgs = ConcurrentHashMap<String, AppBlockerWarningScreenConfig>()
 
     private lateinit var usageStats : UsageStatsHelper
@@ -113,14 +134,12 @@ class AppBlocker() : BaseBlocker() {
         }
 
         if (onOpenAppsList.containsKey(packageName)) {
-            Log.d("AppBlocker", "Blocking $packageName (OnOpen)")
             notificationManager.stopTimer()
-            showWarningScreen(packageName)
+            showWarningScreen(packageName, warningConfig)
             return
         }
 
         if (timeBlockedAppsList.containsKey(packageName)) {
-            Log.d("AppBlocker", "App $packageName found in Timed list")
             val endAllowedRealTime = getEndTimeInRealTimeMillis(packageName)
             if (endAllowedRealTime == null) {
                 Log.d("AppBlocker", "Blocking $packageName (Timed - out of schedule)")
@@ -137,20 +156,16 @@ class AppBlocker() : BaseBlocker() {
         }
 
         if (blockedAppsList.containsKey(packageName)) {
-            Log.d("AppBlocker", "App $packageName found in Usage list")
             val config = blockedAppsList[packageName]!!
             val currentUsage = runBlocking { usageStats.getForegroundStatsByRelativeDay(0) }
                 .firstOrNull { it.packageName == packageName }?.totalTime ?: 0L
             val usageLimitMillis = getUsageLimitForToday(config) * 60_000L
             val remainingUsage = usageLimitMillis - currentUsage
             
-            Log.d("AppBlocker", "App $packageName usage: $currentUsage / $usageLimitMillis")
 
             if (remainingUsage <= 0) {
-                Log.d("AppBlocker", "Blocking $packageName (Usage limit reached)")
                 notificationManager.stopTimer()
                 showWarningScreen(packageName)
-                return
             } else {
                 notificationManager.startTimer(
                     totalMillis = remainingUsage,
@@ -158,7 +173,6 @@ class AppBlocker() : BaseBlocker() {
                     title = service.getString(R.string.notification_title_remaining_usage)
                 )
                 setUpForcedRefreshChecker(packageName, System.currentTimeMillis() + remainingUsage)
-                lastPackage = packageName
                 return
             }
         }
@@ -200,10 +214,9 @@ class AppBlocker() : BaseBlocker() {
             service.dataStoreManager.settings.collectLatest { settings ->
                 Log.d("AppBlocker", "Settings updated, groups count: ${settings.blockedAppGroups.size}")
 
-                val newBlockedAppsList = ConcurrentHashMap<String, AppUsageConfig>()
-                val newTimeBlockedAppsList = ConcurrentHashMap<String, AppTimeConfig>()
-                val newOnOpenAppsList = ConcurrentHashMap<String, Boolean>()
-                val newWarningConfigs = ConcurrentHashMap<String, AppBlockerWarningScreenConfig>()
+                val newBlockedAppsList = ConcurrentHashMap<String, MutableList<UsageBlockEntry>>()
+                val newTimeBlockedAppsList = ConcurrentHashMap<String, MutableList<TimeBlockEntry>>()
+                val newOnOpenAppsList = ConcurrentHashMap<String, AppBlockerWarningScreenConfig>()
 
                 settings.blockedAppGroups.forEach { group ->
                     if (!group.isActive) {
@@ -215,40 +228,26 @@ class AppBlocker() : BaseBlocker() {
                         Log.d("AppBlocker", "Processing group: ${group.name}, Type: ${group.blockingType}, Packages: ${group.selectedPackages.size}")
                         when (group.blockingType) {
                             AppBlockingType.Usage -> {
-                                val config = if (group.setting.isNotEmpty()) {
-                                    Gson().fromJson(group.setting, AppUsageConfig::class.java)
-                                } else {
-                                    AppUsageConfig()
-                                }
+                                val config = Gson().fromJson(group.setting, AppUsageConfig::class.java)
                                 group.selectedPackages.forEach {
                                     val pkg = it.trim()
-                                    if (pkg.isNotEmpty()) {
-                                        newBlockedAppsList[pkg] = config
-                                        newWarningConfigs[pkg] = group.warningScreenConfig
-                                    }
+                                    newBlockedAppsList[pkg] = config
+                                    newWarningConfigs[pkg] = group.warningScreenConfig
                                 }
                             }
                             AppBlockingType.Timed -> {
-                                val config = if (group.setting.isNotEmpty()) {
-                                    Gson().fromJson(group.setting, AppTimeConfig::class.java)
-                                } else {
-                                    AppTimeConfig()
-                                }
+                                val config = Gson().fromJson(group.setting, AppTimeConfig::class.java)
                                 group.selectedPackages.forEach {
                                     val pkg = it.trim()
-                                    if (pkg.isNotEmpty()) {
-                                        newTimeBlockedAppsList[pkg] = config
-                                        newWarningConfigs[pkg] = group.warningScreenConfig
-                                    }
+                                    newTimeBlockedAppsList[pkg] = config
+                                    newWarningConfigs[pkg] = group.warningScreenConfig
                                 }
                             }
                             AppBlockingType.OnOpen -> {
                                 group.selectedPackages.forEach {
                                     val pkg = it.trim()
-                                    if (pkg.isNotEmpty()) {
-                                        newOnOpenAppsList[pkg] = true
-                                        newWarningConfigs[pkg] = group.warningScreenConfig
-                                    }
+                                    newOnOpenAppsList[pkg] = true
+                                    newWarningConfigs[pkg] = group.warningScreenConfig
                                 }
                             }
                         }
@@ -266,9 +265,6 @@ class AppBlocker() : BaseBlocker() {
 
                 onOpenAppsList.clear()
                 onOpenAppsList.putAll(newOnOpenAppsList)
-
-                appBlockerWarningScrnConfgs.clear()
-                appBlockerWarningScrnConfgs.putAll(newWarningConfigs)
 
                 Log.d("AppBlocker", "Maps updated. OnOpen: ${onOpenAppsList.keys().toList()}")
                 Log.d("AppBlocker", "Timed apps in map: ${timeBlockedAppsList.keys().toList()}")
@@ -354,8 +350,7 @@ class AppBlocker() : BaseBlocker() {
         }
     }
 
-    private fun getEndTimeInRealTimeMillis(packageName: String): Long? {
-        val config = timeBlockedAppsList[packageName] ?: return null
+    private fun getEndTimeInRealTimeMillis(config: AppTimeConfig): Long? {
         val calendar = Calendar.getInstance()
         val currentMinutes = TimeTools.convertToMinutesFromMidnight(
             calendar.get(Calendar.HOUR_OF_DAY),
@@ -401,7 +396,10 @@ class AppBlocker() : BaseBlocker() {
             try {
                 if (service.rootInActiveWindow?.packageName == coolPackage) {
                     removeCooldownFrom(coolPackage)
-                    showWarningScreen(coolPackage)
+                    showWarningScreen(
+                        coolPackage,
+                        appBlockerWarningScrnConfgs[coolPackage] ?: AppBlockerWarningScreenConfig()
+                    )
                     lastPackage = ""
                 }
             } catch (e: Exception) {
@@ -418,13 +416,9 @@ class AppBlocker() : BaseBlocker() {
     }
 
     private fun showWarningScreen(packageName: String) {
-        val now = System.currentTimeMillis()
-        val delayOver = service.isDelayOver(500)
-        Log.d("AppBlocker", "showWarningScreen for $packageName. DelayOver: $delayOver (Last: ${service.lastBackPressTimeStamp}, Now: $now)")
-        
-        if (delayOver) {
-            lastPackage = ""
-            Log.d("AppBlocker", "Executing home press for $packageName")
+        if (service.isDelayOver(1000)) {
+
+            Log.d("AppBlocker", "Showing warning screen for $packageName")
             notificationManager.stopTimer()
             service.pressHome()
 
@@ -438,7 +432,7 @@ class AppBlocker() : BaseBlocker() {
                 Log.e("AppBlocker", "Shizuku force-stop failed", e)
             }
 
-            if (appBlockerWarningScrnConfgs[packageName]?.isWarningDialogHidden == true) return
+            if (warningConfig.isWarningDialogHidden) return
 
             handler.postDelayed({
                 val dialogIntent = Intent(service, WarningActivity::class.java).apply {
@@ -447,7 +441,7 @@ class AppBlocker() : BaseBlocker() {
                     putExtra("result_id", packageName)
                     putExtra(
                         "warning_config",
-                        Gson().toJson(appBlockerWarningScrnConfgs[packageName])
+                        Gson().toJson(warningConfig)
                     )
                 }
                 service.startActivity(dialogIntent)

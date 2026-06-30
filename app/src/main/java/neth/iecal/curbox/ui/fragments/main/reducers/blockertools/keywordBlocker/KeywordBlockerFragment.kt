@@ -15,6 +15,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
@@ -197,6 +198,7 @@ class KeywordBlockerFragment : Fragment() {
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val tvName: TextView = view.findViewById(R.id.tv_group_name)
             val tvDetails: TextView = view.findViewById(R.id.tv_group_details)
+            val tvRemaining: TextView = view.findViewById(R.id.tv_group_remaining)
             val switchActive: SwitchMaterial = view.findViewById(R.id.switch_group_active)
         }
 

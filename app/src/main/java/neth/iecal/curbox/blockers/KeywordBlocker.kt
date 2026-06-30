@@ -798,7 +798,7 @@ class KeywordBlocker : BaseBlocker() {
         return true
     }
 
-    private fun isUsageLimitExceeded(group: KeywordGroup, packageName: String): Boolean {
+    private fun isUsageLimitExceeded(group: KeywordGroup): Boolean {
         val config = Gson().fromJson(group.setting, AppUsageConfig::class.java) ?: return false
         val limit = (if (config.isDailyUniform) config.uniformLimit else {
             config.dailyLimits[Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1]
@@ -806,17 +806,24 @@ class KeywordBlocker : BaseBlocker() {
 
         if (limit <= 0) return true
 
+        return groupUsage(group) >= limit
+    }
+
+    // Combined usage of every keyword in the group across all browsers, so the
+    // limit applies to the group as a whole rather than each browser separately.
+    private fun groupUsage(group: KeywordGroup): Long {
         val date = TimeTools.getCurrentDate()
-        val totalUsage = runBlocking(Dispatchers.IO) {
+        return runBlocking(Dispatchers.IO) {
             AppDatabase.getInstance(service).websiteStatsDao()
-                .getStatsForPackage(date, packageName)
+                .getStatsForDate(date)
                 .filter { matchesGroup(group, it.urlIdentifier) }
                 .sumOf { it.totalTime }
         }
-        return totalUsage >= limit
     }
 
-    private fun calculateAndSetNextRecheck(group: KeywordGroup, packageName: String) {
+    // Returns when this group should next be re-checked (0 if no re-check is needed). The caller is
+    // responsible for persisting the soonest value across all matched groups.
+    private fun computeNextRecheck(group: KeywordGroup): Long {
         val now = System.currentTimeMillis()
         var nextRecheck = 0L
 
@@ -827,14 +834,7 @@ class KeywordBlocker : BaseBlocker() {
                     config.dailyLimits[Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1]
                 }) * 60_000L
                 if (limit > 0) {
-                    val date = TimeTools.getCurrentDate()
-                    val totalUsage = runBlocking(Dispatchers.IO) {
-                        AppDatabase.getInstance(service).websiteStatsDao()
-                            .getStatsForPackage(date, packageName)
-                            .filter { matchesGroup(group, it.urlIdentifier) }
-                            .sumOf { it.totalTime }
-                    }
-                    val remaining = limit - totalUsage
+                    val remaining = limit - groupUsage(group)
                     if (remaining > 0) nextRecheck = now + remaining + 1000
                 }
             }

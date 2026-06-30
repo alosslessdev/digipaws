@@ -21,6 +21,7 @@ import neth.iecal.curbox.Constants
 import neth.iecal.curbox.CrashLogger
 import neth.iecal.curbox.anti_stimulants.AutoDnd
 import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
+import neth.iecal.curbox.blockers.AntiUninstallBlocker
 import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.blockers.FocusModeBlocker
 import neth.iecal.curbox.blockers.KeywordBlocker
@@ -43,6 +44,7 @@ class AppBlockerService : BaseBlockingService() {
     private var keywordBlocker = KeywordBlocker()
     private val uiHider = UiHider()
     private val nodePicker = NodePicker()
+    private val antiUninstallBlocker = AntiUninstallBlocker()
 
     private var grayScaleFilter = GrayScaleFilter()
 
@@ -89,6 +91,7 @@ class AppBlockerService : BaseBlockingService() {
         }
 
         try {
+            antiUninstallBlocker.doAntiUninstallCheck(event)
             appBlocker.doAppBlockerCheck(event)
             grayScaleFilter.doGrayscaleCheck(event)
             focusModeBlocker.doFocusModeCheck(event)
@@ -199,6 +202,7 @@ class AppBlockerService : BaseBlockingService() {
         uiHider.setupBlocker(this)
         nodePicker.setupBlocker(this)
         grayScaleFilter.setup(this)
+        antiUninstallBlocker.setupBlocker(this)
 
         focusModeBlocker.setupReceivers()
         appBlocker.setupReceivers()
@@ -230,6 +234,7 @@ class AppBlockerService : BaseBlockingService() {
             grayScaleFilter.unregisterReceivers()
             uiHider.removeReceivers()
             nodePicker.removeReceivers()
+            antiUninstallBlocker.onDestroy()
 
             eventChannel.close()
             serviceScope.cancel()
