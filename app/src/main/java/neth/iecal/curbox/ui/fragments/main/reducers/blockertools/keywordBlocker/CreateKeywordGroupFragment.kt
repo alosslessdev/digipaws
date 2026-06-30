@@ -57,6 +57,22 @@ class CreateKeywordGroupFragment : Fragment() {
         uri?.let { importKeywordsFromFile(it) }
     }
 
+    private val configureSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val json = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_JSON)
+            val type = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_TYPE)
+            if (json != null) {
+                if (type == "time") {
+                    viewModel.currentTimeConfig = Gson().fromJson(json, AppTimeConfig::class.java)
+                } else if (type == "usage") {
+                    viewModel.currentUsageConfig = Gson().fromJson(json, AppUsageConfig::class.java)
+                }
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -179,10 +195,13 @@ class CreateKeywordGroupFragment : Fragment() {
         binding.btnConfigureBlocking.setOnClickListener {
             val type = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment", if (type == AppBlockingType.Usage) KeywordUsageBasedSettingsFragment.FRAGMENT_ID else KeywordTimeBasedSettingsFragment.FRAGMENT_ID)
+                val isUsage = type == AppBlockingType.Usage
+                putExtra("fragment_type", if (isUsage) "app_usage_config" else "app_time_config")
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.ARG_INITIAL_CONFIG, 
+                    if (isUsage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig))
                 putExtra("mode", "KEYWORD_BLOCKER")
             }
-            startActivity(intent)
+            configureSettingsLauncher.launch(intent)
         }
 
         binding.btnConfigureWarning.setOnClickListener {
