@@ -41,8 +41,39 @@ import android.os.Build
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import neth.iecal.curbox.utils.CurboxProtectionStore
+import neth.iecal.curbox.Constants
+import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
+import com.google.gson.Gson
 
 class FragmentActivity : AppCompatActivity() {
+
+    private fun checkProtection(): Boolean {
+        val now = System.currentTimeMillis()
+        val deadline = CurboxProtectionStore.getDeadline(this)
+        val lastBlock = CurboxProtectionStore.getLastBackPressTimeStamp(this)
+
+        if (deadline > now || (lastBlock > 0 && (now - lastBlock) < 15000)) {
+            val intent = Intent(this, WarningActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                putExtra("result_id", "neth.iecal.curbox")
+                putExtra("warning_config", Gson().toJson(AppBlockerWarningScreenConfig(
+                    message = "Wait a moment before opening Curbox right after a block.",
+                    proceedDelayInSecs = 5
+                )))
+            }
+            startActivity(intent)
+            finish()
+            return true
+        }
+        return false
+    }
+
+    override fun onStart() {
+        super.onStart()
+        checkProtection()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val sharedPreferences = getSharedPreferences("AppPreferences", android.content.Context.MODE_PRIVATE)
@@ -70,6 +101,8 @@ class FragmentActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
+        if (checkProtection()) return
+
         enableEdgeToEdge()
         setContentView(R.layout.activity_fragment)
 
@@ -145,10 +178,10 @@ class FragmentActivity : AppCompatActivity() {
                     AutoDndTimeSettingsFragment.FRAGMENT_ID -> AutoDndTimeSettingsFragment()
                     GrayscaleTimeSettingsFragment.FRAGMENT_ID -> GrayscaleTimeSettingsFragment()
                     WarningConfigFragment.FRAGMENT_ID -> {
-                        val configJson = intent.getStringExtra(WarningConfigFragment.ARG_CONFIG)
-                        val requestKey = intent.getStringExtra(WarningConfigFragment.ARG_REQUEST_KEY) ?: WarningConfigFragment.RESULT_KEY
-                        val isNew = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_NEW, false)
-                        val isOnOpen = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_ON_OPEN, false)
+                        val configJson = intent.getStringExtra(WarningConfigFragment.ARG_CONFIG) ?: intent.getStringExtra("arg_config")
+                        val requestKey = intent.getStringExtra(WarningConfigFragment.ARG_REQUEST_KEY) ?: intent.getStringExtra("arg_request_key") ?: WarningConfigFragment.RESULT_KEY
+                        val isNew = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_NEW, intent.getBooleanExtra("arg_is_new", false))
+                        val isOnOpen = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_ON_OPEN, intent.getBooleanExtra("arg_is_on_open", false))
                         
                         if (configJson != null) {
                             val config = com.google.gson.Gson().fromJson(configJson, neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig::class.java)
