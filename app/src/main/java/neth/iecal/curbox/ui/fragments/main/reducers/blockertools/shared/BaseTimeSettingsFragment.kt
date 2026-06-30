@@ -132,26 +132,13 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
             .setTitle(R.string.unsaved_changes_dialog_title)
             .setMessage(R.string.unsaved_changes_dialog_message)
             .setPositiveButton(R.string.save) { _, _ ->
-<<<<<<< HEAD
-                persistSettings()
-                requireActivity().finish()
-=======
                 confirmAndFinish()
->>>>>>> feature/keyword-blocker-ui
             }
             .setNegativeButton(R.string.btn_discard) { _, _ ->
                 requireActivity().finish()
             }
             .setNeutralButton(R.string.cancel, null)
             .show()
-<<<<<<< HEAD
-    }
-
-    override fun onDismiss(dialog: DialogInterface) {
-        // Only auto-persist if there were changes and we didn't explicitly finish
-        if (hasChanges()) {
-            persistSettings()
-=======
     }
 
     private fun confirmAndFinish() {
@@ -169,7 +156,6 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
         if (hasChanges()) {
             val config = getCurrentConfigState()
             saveTimeConfig(config)
->>>>>>> feature/keyword-blocker-ui
         }
         super.onDismiss(dialog)
     }
