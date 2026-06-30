@@ -230,9 +230,6 @@ class KeywordBlocker : BaseBlocker() {
         val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
         if (normalizedInput == normalizedRedirect || normalizedInput.startsWith("$normalizedRedirect/")) return null
 
-        val parsedInput = KeywordBlockerMatchUtils.parseInputForMatching(url)
-        Log.d(TAG, "Checking match for '$normalizedInput'. Candidates: ${parsedInput.exactCandidates}")
-
         val cacheKey = buildString {
             append(if (isSubstringMatchEnabled) "1|" else "0|")
             append(normalizedInput)
@@ -296,24 +293,61 @@ class KeywordBlocker : BaseBlocker() {
         }
     }
 
+    private fun findUrlBarNode(packageName: String, info: BrowserUrlBarInfo): AccessibilityNodeInfo? {
+        val id = "$packageName:id/${info.displayUrlBarId}"
+        
+        // 1. Try rootInActiveWindow
+        val root = service.rootInActiveWindow
+        if (root != null) {
+            val node = ReelBlocker.findElementById(root, id)
+            if (node != null) {
+                if (node.packageName != packageName) {
+                    safeRecycle(node)
+                } else {
+                    safeRecycle(root)
+                    return node
+                }
+            }
+            safeRecycle(root)
+        }
+        
+        // 2. Try all windows
+        for (window in service.windows) {
+            val windowRoot = window.root
+            if (windowRoot != null) {
+                val node = ReelBlocker.findElementById(windowRoot, id)
+                if (node != null) {
+                    if (node.packageName != packageName) {
+                        safeRecycle(node)
+                    } else {
+                        safeRecycle(windowRoot)
+                        return node
+                    }
+                }
+                safeRecycle(windowRoot)
+            }
+        }
+        
+        return null
+    }
+
     fun checkIfUserGettingFreaky(event: AccessibilityEvent?) {
+        var packageName = event?.packageName?.toString() ?: return
+        
+        // Use a more robust way to get the active package if systemui/android is reporting
+        if (packageName == "com.android.systemui" || packageName == "android") {
+            val root = service.rootInActiveWindow
+            val rootPkg = root?.packageName?.toString()
+            if (rootPkg != null && rootPkg != "neth.iecal.curbox" && rootPkg != "com.android.systemui" && rootPkg != "android") {
+                packageName = rootPkg
+            }
+            safeRecycle(root)
+        }
+
         if (!isTurnedOn) return
         
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) return
 
-        var packageName = event.packageName?.toString() ?: return
-        val rootNode = service.rootInActiveWindow
-
-        // If event is from system UI, it might be a status bar update while browser is open.
-        // Try to get the package from the active window root if it's not Curbox.
-        if (packageName == "com.android.systemui" || packageName == "android") {
-            val rootPkg = rootNode?.packageName?.toString()
-            if (rootPkg != null && rootPkg != "neth.iecal.curbox" && rootPkg != "com.android.systemui") {
-                packageName = rootPkg
-                Log.d(TAG, "Using package from root node: $packageName")
-            }
-        }
-        
         // Log all events from supported browsers to see what's happening
         if (URL_BAR_ID_LIST.containsKey(packageName) || packageName == "neth.iecal.curbox") {
             Log.d(TAG, "checkIfUserGettingFreaky: event from $packageName, type: ${AccessibilityEvent.eventTypeToString(event.eventType)}")
@@ -355,12 +389,23 @@ class KeywordBlocker : BaseBlocker() {
         var detectedKeyword: String? = null
         var displayUrlTextNode: AccessibilityNodeInfo? = null
 
-        if (rootNode != null) {
-            displayUrlTextNode = if (urlBarInfo != null)
-                ReelBlocker.findElementById(rootNode, idPrefixPart + urlBarInfo.displayUrlBarId)
-            else null
+        // 1. Try to find URL bar in the active window or all windows
+        if (urlBarInfo != null) {
+            displayUrlTextNode = findUrlBarNode(packageName, urlBarInfo)
+            
+            val displayText = displayUrlTextNode?.text?.toString() ?: ""
+            if (displayText.isNotEmpty()) {
+                detectedKeyword = containsBlockedKeyword(displayText)
+                if (detectedKeyword != null) {
+                    Log.d(TAG, "Detected keyword in URL bar: $detectedKeyword ('$displayText')")
+                }
+            }
+        }
 
-            if (isSearchAllTextFields) {
+        // 2. If not found, try recursive search if enabled
+        if (detectedKeyword == null && isSearchAllTextFields) {
+            val rootNode = service.rootInActiveWindow
+            if (rootNode != null) {
                 recursionResultNodes.clear()
                 findNodesByClassName(rootNode, "android.widget.TextView", false)
                 for (node in recursionResultNodes) {
@@ -369,20 +414,27 @@ class KeywordBlocker : BaseBlocker() {
                     val word = containsBlockedKeyword(nodeText)
                     if (word != null) {
                         detectedKeyword = word
+                        Log.d(TAG, "Detected keyword via recursive search: $detectedKeyword")
                         break
                     }
                 }
+                safeRecycle(rootNode)
             }
-            
-            if (detectedKeyword == null && urlBarInfo != null) {
-                val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
-                val displayText = displayUrlTextNode?.text?.toString() ?: ""
-                Log.d(TAG, "Checking browser URL bar (root). Text: '$displayText'")
-                detectedKeyword = webViewKeyword ?: (if (displayText.isNotEmpty()) containsBlockedKeyword(displayText) else null)
+        }
+        
+        // 3. Try WebView title if still not found
+        if (detectedKeyword == null && urlBarInfo != null) {
+            val rootNode = service.rootInActiveWindow
+            if (rootNode != null) {
+                detectedKeyword = searchKeywordsInWebViewTitle(rootNode)
+                if (detectedKeyword != null) {
+                    Log.d(TAG, "Detected keyword in WebView title: $detectedKeyword")
+                }
+                safeRecycle(rootNode)
             }
         }
 
-        // If root search failed, try the event source directly, especially for text changes
+        // 4. Try the event source directly as a last resort
         if (detectedKeyword == null) {
             val source = event.source
             if (source != null) {
@@ -400,7 +452,6 @@ class KeywordBlocker : BaseBlocker() {
         if (detectedKeyword == null) {
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
-            if (rootNode != null) safeRecycle(rootNode)
             return
         }
 
@@ -438,20 +489,14 @@ class KeywordBlocker : BaseBlocker() {
             return
         }
 
-        // If it's a supported browser but we didn't find the URL bar, try one more time
+        // If it's a supported browser but we didn't find the URL bar yet, try one more time
         if (displayUrlTextNode == null) {
-            Thread.sleep(100)
-            val freshRoot = service.rootInActiveWindow
-            if (freshRoot != null) {
-                displayUrlTextNode = ReelBlocker.findElementById(freshRoot, idPrefixPart + urlBarInfo.displayUrlBarId)
-                if (freshRoot != rootNode) safeRecycle(freshRoot)
-            }
+            displayUrlTextNode = findUrlBarNode(packageName, urlBarInfo)
         }
 
         if (displayUrlTextNode == null) {
             pressHome(keyword, matchedGroup)
             safeRecycle(recursionResultNodes)
-            if (rootNode != null) safeRecycle(rootNode)
             return
         }
 
@@ -469,7 +514,7 @@ class KeywordBlocker : BaseBlocker() {
             if (freshRoot != null) {
                 editUrlBar = ReelBlocker.findElementById(freshRoot, idPrefixPart + editUrlBarId)
                 if (editUrlBar != null) {
-                    if (freshRoot != rootNode) safeRecycle(freshRoot)
+                    safeRecycle(freshRoot)
                     break
                 }
                 safeRecycle(freshRoot)
@@ -480,7 +525,6 @@ class KeywordBlocker : BaseBlocker() {
             pressHome(keyword, matchedGroup)
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
-            if (rootNode != null) safeRecycle(rootNode)
             return
         }
 
@@ -491,7 +535,7 @@ class KeywordBlocker : BaseBlocker() {
         
         Thread.sleep(100)
         submitEditedUrlBar(
-            rootNode = service.rootInActiveWindow ?: rootNode,
+            rootNode = service.rootInActiveWindow ?: editUrlBar,
             editUrlBar = editUrlBar,
             idPrefixPart = idPrefixPart,
             urlBarInfo = urlBarInfo
@@ -500,7 +544,6 @@ class KeywordBlocker : BaseBlocker() {
         safeRecycle(editUrlBar)
         safeRecycle(displayUrlTextNode)
         safeRecycle(recursionResultNodes)
-        if (rootNode != null) safeRecycle(rootNode)
 
         // Verify redirection
         var redirectionSuccessful = false
@@ -564,16 +607,18 @@ class KeywordBlocker : BaseBlocker() {
 
         val goBtnNodeId = idPrefixPart + urlBarInfo.browserSugggestionBoxId
         var goBtnNode: AccessibilityNodeInfo? = null
-        var lastUsedRootNode: AccessibilityNodeInfo = rootNode
+        var lastUsedRootNode: AccessibilityNodeInfo? = null
         
         for (i in 1..5) {
-            val currentRootNode = service.rootInActiveWindow ?: rootNode
-            goBtnNode = ReelBlocker.findElementById(currentRootNode, goBtnNodeId)
-            if (goBtnNode != null) {
-                lastUsedRootNode = currentRootNode
-                break
+            val currentRootNode = service.rootInActiveWindow
+            if (currentRootNode != null) {
+                goBtnNode = ReelBlocker.findElementById(currentRootNode, goBtnNodeId)
+                if (goBtnNode != null) {
+                    lastUsedRootNode = currentRootNode
+                    break
+                }
+                safeRecycle(currentRootNode)
             }
-            if (currentRootNode != rootNode) safeRecycle(currentRootNode)
             Thread.sleep(200)
         }
 
@@ -589,7 +634,7 @@ class KeywordBlocker : BaseBlocker() {
         }
         
         safeRecycle(goBtnNode)
-        if (lastUsedRootNode != rootNode) safeRecycle(lastUsedRootNode)
+        safeRecycle(lastUsedRootNode)
         return didClickGo
     }
 
@@ -607,7 +652,9 @@ class KeywordBlocker : BaseBlocker() {
         if (returnOnFirstResult && recursionResultNodes.isNotEmpty()) return
 
         for (i in 0 until node.childCount) {
-            findNodesByClassName(node.getChild(i), targetClassName, returnOnFirstResult)
+            val child = node.getChild(i)
+            findNodesByClassName(child, targetClassName, returnOnFirstResult)
+            safeRecycle(child)
             if (returnOnFirstResult && recursionResultNodes.isNotEmpty()) return
         }
     }
