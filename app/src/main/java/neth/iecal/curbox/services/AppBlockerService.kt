@@ -80,6 +80,7 @@ class AppBlockerService : BaseBlockingService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
+        Log.d(TAG, "onAccessibilityEvent: ${event.packageName} ${AccessibilityEvent.eventTypeToString(event.eventType)}")
         super.onAccessibilityEvent(event)
 
         val packageName = event.packageName?.toString()

@@ -55,7 +55,11 @@ class KeywordBlocker : BaseBlocker() {
         const val INTENT_ACTION_REFRESH_CONFIG = "neth.iecal.curbox.refresh.keywordblocker.config"
         const val INTENT_ACTION_REFRESH_KEYWORD_BLOCKER_COOLDOWN = "neth.iecal.curbox.refresh.keywordblocker.cooldown"
         private const val TARGET_EVENTS_MASK =
-            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or 
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED or
+            AccessibilityEvent.TYPE_VIEW_CLICKED or
+            AccessibilityEvent.TYPE_VIEW_FOCUSED
 
         val URL_BAR_ID_LIST = mapOf(
             "com.android.chrome" to BrowserUrlBarInfo(
@@ -226,6 +230,9 @@ class KeywordBlocker : BaseBlocker() {
         val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
         if (normalizedInput == normalizedRedirect || normalizedInput.startsWith("$normalizedRedirect/")) return null
 
+        val parsedInput = KeywordBlockerMatchUtils.parseInputForMatching(url)
+        Log.d(TAG, "Checking match for '$normalizedInput'. Candidates: ${parsedInput.exactCandidates}")
+
         val cacheKey = buildString {
             append(if (isSubstringMatchEnabled) "1|" else "0|")
             append(normalizedInput)
@@ -270,9 +277,13 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun pressHome(word: String, group: KeywordGroup? = null) {
+        val delayOver = service.isDelayOver(1000)
+        Log.d(TAG, "pressHome for $word. delayOver: $delayOver")
+        
         showMessage(word)
         service.pressHome()
-        if (group != null && service.isDelayOver(10000)) {
+        
+        if (group != null && delayOver) {
             Handler(Looper.getMainLooper()).postDelayed({
                 val intent = Intent(service, WarningActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -286,13 +297,18 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     fun checkIfUserGettingFreaky(event: AccessibilityEvent?) {
-        if (!isTurnedOn) return
+        if (!isTurnedOn) {
+            // Log once in a while or just return
+            return
+        }
         if (event == null || (event.eventType and TARGET_EVENTS_MASK) == 0) return
 
         val packageName = event.packageName?.toString() ?: return
+        
+        Log.d(TAG, "checkIfUserGettingFreaky: event from $packageName, type: ${AccessibilityEvent.eventTypeToString(event.eventType)}")
 
         if (packageName == "neth.iecal.curbox") {
-            if (!service.isDelayOver(10000)) {
+            if (!service.isDelayOver(1000)) {
                 Handler(Looper.getMainLooper()).postDelayed({
                     val intent = Intent(service, WarningActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -311,7 +327,7 @@ class KeywordBlocker : BaseBlocker() {
 
         val currentTime = SystemClock.uptimeMillis()
         if (currentTime - lastEventTimeStamp < refreshCooldown || 
-            !service.isDelayOver(10000) ||
+            !service.isDelayOver(1000) ||
             ignoredApps.contains(packageName)) {
             return
         }
@@ -368,17 +384,21 @@ class KeywordBlocker : BaseBlocker() {
             val webViewKeyword = searchKeywordsInWebViewTitle(rootNode)
             val displayText = displayUrlTextNode?.text?.toString() ?: ""
 
+            Log.d(TAG, "Checking browser URL bar. Text: '$displayText'")
+
             detectedKeyword = webViewKeyword ?: (if (displayText.isNotEmpty())
                 containsBlockedKeyword(displayText)
             else null)
         }
 
         if (detectedKeyword == null) {
+            Log.d(TAG, "No blocked keyword detected in $packageName")
             safeRecycle(displayUrlTextNode)
             safeRecycle(recursionResultNodes)
             return
         }
 
+        Log.d(TAG, "DETECTED BLOCKED KEYWORD: $detectedKeyword")
         val keyword = detectedKeyword!!
 
         if (isTimeTrackingEnabled) {
@@ -647,7 +667,7 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun handleBlocking(group: KeywordGroup, word: String, packageName: String) {
-        if (!service.isDelayOver(10000)) return
+        if (!service.isDelayOver(1000)) return
 
         if (URL_BAR_ID_LIST.containsKey(packageName)) {
              // If it's a browser, redirection should be handled by UI thread.
@@ -828,10 +848,15 @@ class KeywordBlocker : BaseBlocker() {
                     group.id to compileKeywords(group.selectedKeywords)
                 }.toMutableMap()
 
-                blockedKeywords = activeGroups.flatMap { it.selectedKeywords }
-                    .map(KeywordBlockerMatchUtils::normalizeBlockedEntry)
-                    .filter { it.isNotBlank() }
-                    .distinct()
+                blockedKeywords = activeGroups.flatMap { group ->
+                    group.selectedKeywords.flatMap { kw ->
+                        val normalized = KeywordBlockerMatchUtils.normalizeBlockedEntry(kw)
+                        val domain = if ("." in normalized) normalized.substringBefore(".") else ""
+                        if (domain.length > 3) listOf(normalized, domain) else listOf(normalized)
+                    }
+                }.filter { it.isNotBlank() }.distinct()
+                
+                Log.d(TAG, "KeywordBlocker configured. Active: $isTurnedOn, Groups: ${activeGroups.size}, Keywords: $blockedKeywords")
                 
                 isSearchAllTextFields = config.searchRecursively
                 redirectUrl = config.redirectUrl.ifBlank { "https://curbox.life" }

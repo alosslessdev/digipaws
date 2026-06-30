@@ -77,6 +77,9 @@ object KeywordBlockerMatchUtils {
         val parsedInput = parseInputForMatching(input)
         if (parsedInput.normalizedInput.isBlank()) return null
 
+        // Log.d is not available here easily without context, but this is a utility.
+        // We'll rely on the logging in KeywordBlocker.
+
         blockedEntries.firstOrNull { it in parsedInput.exactCandidates }?.let { return it }
 
         if (!allowSubstringMatch) return null
