@@ -54,12 +54,6 @@ class FragmentActivity : AppCompatActivity() {
         val lastBlock = CurboxProtectionStore.getLastBackPressTimeStamp(this)
 
         if (deadline > now || (lastBlock > 0 && (now - lastBlock) < 15000)) {
-            val remainingSeconds = if (deadline > now) {
-                ((deadline - now) / 1000).toInt().coerceAtLeast(1)
-            } else {
-                ((15000 - (now - lastBlock)) / 1000).toInt().coerceAtLeast(1)
-            }
-
             val intent = Intent(this, WarningActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
