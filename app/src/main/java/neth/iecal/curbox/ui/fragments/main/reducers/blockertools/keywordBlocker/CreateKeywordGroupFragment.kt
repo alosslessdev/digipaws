@@ -154,6 +154,20 @@ class CreateKeywordGroupFragment : Fragment() {
 
                     viewModel.warningScrnConfig = group.warningScreenConfig
                     
+                    binding.btnDeleteGroup.visibility = View.VISIBLE
+                    binding.btnDeleteGroup.setOnClickListener {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(R.string.delete_group)
+                            .setMessage("Are you sure you want to delete this group?")
+                            .setPositiveButton(R.string.delete) { _, _ ->
+                                viewModel.deleteGroup(existingGroupId!!)
+                                Toast.makeText(requireContext(), R.string.group_deleted, Toast.LENGTH_SHORT).show()
+                                requireActivity().finish()
+                            }
+                            .setNegativeButton(R.string.cancel, null)
+                            .show()
+                    }
+
                     updateKeywordsList()
                     captureInitialState()
                 }
@@ -179,7 +193,7 @@ class CreateKeywordGroupFragment : Fragment() {
         binding.btnConfigureBlocking.setOnClickListener {
             val type = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment", if (type == AppBlockingType.Usage) KeywordUsageBasedSettingsFragment.FRAGMENT_ID else KeywordTimeBasedSettingsFragment.FRAGMENT_ID)
+                putExtra("fragment_type", if (type == AppBlockingType.Usage) "app_usage_config" else "app_time_config")
                 putExtra("mode", "KEYWORD_BLOCKER")
             }
             startActivity(intent)
@@ -187,8 +201,7 @@ class CreateKeywordGroupFragment : Fragment() {
 
         binding.btnConfigureWarning.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
-                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.FRAGMENT_ID)
-                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.ARG_CONFIG, Gson().toJson(viewModel.warningScrnConfig))
+                putExtra("fragment_type", "warning_screen_config")
                 putExtra("mode", "KEYWORD_BLOCKER")
             }
             startActivity(intent)

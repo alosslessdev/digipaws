@@ -21,13 +21,6 @@ import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.CreateA
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.reelBlocker.ReelBlockerFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordBlockerFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.CreateKeywordGroupFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.TimeBasedSettingsFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.UsageBasedSettingsFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordTimeBasedSettingsFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordUsageBasedSettingsFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.AutoDndTimeSettingsFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.GrayscaleTimeSettingsFragment
-import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderEditorFragment
 import androidx.core.view.isVisible
@@ -52,16 +45,16 @@ class FragmentActivity : AppCompatActivity() {
         
         val selectedFragment = when (selectedFragmentStr) {
             "app_time_config" -> when (mode) {
-                "GRAYSCALE" -> GrayscaleTimeSettingsFragment.FRAGMENT_ID
-                "AUTODND" -> AutoDndTimeSettingsFragment.FRAGMENT_ID
-                "KEYWORD_BLOCKER" -> KeywordTimeBasedSettingsFragment.FRAGMENT_ID
-                else -> TimeBasedSettingsFragment.FRAGMENT_ID
+                "GRAYSCALE" -> "grayscale_time_settings"
+                "AUTODND" -> "autodnd_time_settings"
+                "KEYWORD_BLOCKER" -> "keyword_time_based_settings"
+                else -> "time_based_settings"
             }
             "app_usage_config" -> when (mode) {
-                "KEYWORD_BLOCKER" -> KeywordUsageBasedSettingsFragment.FRAGMENT_ID
-                else -> UsageBasedSettingsFragment.FRAGMENT_ID
+                "KEYWORD_BLOCKER" -> "KeywordUsageBasedSettingsBottomSheet"
+                else -> "usage_based_settings"
             }
-            "warning_screen_config" -> WarningConfigFragment.FRAGMENT_ID
+            "warning_screen_config" -> "warning_config"
             else -> selectedFragmentStr
         }
 
@@ -101,23 +94,23 @@ class FragmentActivity : AppCompatActivity() {
             ReelBlockerFragment.FRAGMENT_ID,
             AutoDndFragment.FRAGMENT_ID,
             CreateAutoDndGroupFragment.FRAGMENT_ID,
-            neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.reel_counter.ReelCounterFragment.FRAGMENT_ID,
+            "reel_counter_fragment",
             GrayscaleFragment.FRAGMENT_ID,
             CreateGrayscaleGroupFragment.FRAGMENT_ID,
                 UiHiderFragment.FRAGMENT_ID,
                 UiHiderEditorFragment.FRAGMENT_ID,
                 IntentsLogFragment.FRAGMENT_ID,
-            neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID,
+            "mindful_messages_fragment",
             KeywordBlockerFragment.FRAGMENT_ID,
-            neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID,
+            "api_fragment",
             CreateKeywordGroupFragment.FRAGMENT_ID,
-            TimeBasedSettingsFragment.FRAGMENT_ID,
-            UsageBasedSettingsFragment.FRAGMENT_ID,
-            KeywordTimeBasedSettingsFragment.FRAGMENT_ID,
-            KeywordUsageBasedSettingsFragment.FRAGMENT_ID,
-            AutoDndTimeSettingsFragment.FRAGMENT_ID,
-            GrayscaleTimeSettingsFragment.FRAGMENT_ID,
-            WarningConfigFragment.FRAGMENT_ID -> {
+            "time_based_settings",
+            "usage_based_settings",
+            "keyword_time_based_settings",
+            "KeywordUsageBasedSettingsBottomSheet",
+            "autodnd_time_settings",
+            "grayscale_time_settings",
+            "warning_config" -> {
                 // Hide bottom nav for these standalone fragments
                 bottomNav.visibility = android.view.View.GONE
                 
@@ -132,29 +125,29 @@ class FragmentActivity : AppCompatActivity() {
                     UiHiderEditorFragment.FRAGMENT_ID -> UiHiderEditorFragment()
                     AutoDndFragment.FRAGMENT_ID -> AutoDndFragment()
                     CreateAutoDndGroupFragment.FRAGMENT_ID -> CreateAutoDndGroupFragment()
-                    neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.reel_counter.ReelCounterFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.reel_counter.ReelCounterFragment()
+                    "reel_counter_fragment" -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.reel_counter.ReelCounterFragment()
                     GrayscaleFragment.FRAGMENT_ID -> GrayscaleFragment()
                     CreateGrayscaleGroupFragment.FRAGMENT_ID -> CreateGrayscaleGroupFragment()
-                    neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment()
+                    "mindful_messages_fragment" -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment()
                     IntentsLogFragment.FRAGMENT_ID -> IntentsLogFragment()
-                    neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment()
-                    TimeBasedSettingsFragment.FRAGMENT_ID -> TimeBasedSettingsFragment()
-                    UsageBasedSettingsFragment.FRAGMENT_ID -> UsageBasedSettingsFragment()
-                    KeywordTimeBasedSettingsFragment.FRAGMENT_ID -> KeywordTimeBasedSettingsFragment()
-                    KeywordUsageBasedSettingsFragment.FRAGMENT_ID -> KeywordUsageBasedSettingsFragment()
-                    AutoDndTimeSettingsFragment.FRAGMENT_ID -> AutoDndTimeSettingsFragment()
-                    GrayscaleTimeSettingsFragment.FRAGMENT_ID -> GrayscaleTimeSettingsFragment()
-                    WarningConfigFragment.FRAGMENT_ID -> {
-                        val configJson = intent.getStringExtra(WarningConfigFragment.ARG_CONFIG)
-                        val requestKey = intent.getStringExtra(WarningConfigFragment.ARG_REQUEST_KEY) ?: WarningConfigFragment.RESULT_KEY
-                        val isNew = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_NEW, false)
-                        val isOnOpen = intent.getBooleanExtra(WarningConfigFragment.ARG_IS_ON_OPEN, false)
+                    "api_fragment" -> neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment()
+                    "time_based_settings" -> neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.TimeBasedSettingsFragment()
+                    "usage_based_settings" -> neth.iecal.curbox.ui.fragments.main.reducers.blockertools.appBlocker.UsageBasedSettingsFragment()
+                    "keyword_time_based_settings" -> neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordTimeBasedSettingsFragment()
+                    "KeywordUsageBasedSettingsBottomSheet" -> neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker.KeywordUsageBasedSettingsFragment()
+                    "autodnd_time_settings" -> neth.iecal.curbox.ui.fragments.main.reducers.blockertools.autodnd.AutoDndTimeSettingsFragment()
+                    "grayscale_time_settings" -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale.GrayscaleTimeSettingsFragment()
+                    "warning_config" -> {
+                        val configJson = intent.getStringExtra("arg_config")
+                        val requestKey = intent.getStringExtra("arg_request_key") ?: "result_key"
+                        val isNew = intent.getBooleanExtra("arg_is_new", false)
+                        val isOnOpen = intent.getBooleanExtra("arg_is_on_open", false)
                         
                         if (configJson != null) {
                             val config = com.google.gson.Gson().fromJson(configJson, neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig::class.java)
-                            WarningConfigFragment.newInstance(config, requestKey, isNew, isOnOpen)
+                            neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.newInstance(config, requestKey, isNew, isOnOpen)
                         } else {
-                            WarningConfigFragment()
+                            neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment()
                         }
                     }
                     else -> AccessibilityGuide()
