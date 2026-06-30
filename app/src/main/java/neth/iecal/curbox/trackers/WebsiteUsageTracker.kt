@@ -198,7 +198,7 @@ class WebsiteUsageTracker {
         if (domain != null && identifier != null && packageName != null && startTime > 0) {
             val durationMs = SystemClock.uptimeMillis() - startTime
             if (durationMs > 1000) {
-                Log.d("saved session", "$identifier -> $durationMs")
+                Log.d("saved session", "$identifier -> $durationMs but no action is taken")
                 val date = TimeTools.getCurrentDate()
                 scope.launch {
                     try {

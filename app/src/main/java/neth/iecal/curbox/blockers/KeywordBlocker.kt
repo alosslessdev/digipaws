@@ -612,25 +612,38 @@ class KeywordBlocker : BaseBlocker() {
     private fun evaluateAndBlock(entry: WebsiteStatsEntity) {
         if (SystemClock.uptimeMillis() - lastEventTimeStamp < 2000) return
         
+        Log.d(TAG, "Evaluating website from DB: ${entry.urlIdentifier}")
+
         // Give UI thread a small head start for supported browsers
         if (URL_BAR_ID_LIST.containsKey(entry.packageName)) {
             Thread.sleep(200)
             if (SystemClock.uptimeMillis() - lastEventTimeStamp < 2000) return
         }
 
-        val matchedGroup = findMatchingGroup(entry.urlIdentifier) ?: return
+        val matchedGroup = findMatchingGroup(entry.urlIdentifier)
+        val keyword = containsBlockedKeyword(entry.urlIdentifier) ?: entry.urlIdentifier
+        val isBlockedByLimit = isTimeTrackingEnabled && isTimeLimitReached(keyword)
 
-        val cooldownEnd = cooldownGroupsList[matchedGroup.id]
-        if (cooldownEnd != null) {
-            if (cooldownEnd > System.currentTimeMillis()) return
-            else removeCooldownFrom(matchedGroup.id)
+        if (matchedGroup == null && !isBlockedByLimit) {
+            Log.d(TAG, "No block action for ${entry.urlIdentifier} (no matching active group or limit reached)")
+            return
         }
 
-        if (isBlocked(matchedGroup, entry.packageName)) {
-            val keyword = containsBlockedKeyword(entry.urlIdentifier) ?: entry.urlIdentifier
-            handleBlocking(matchedGroup, keyword, entry.packageName)
+        if (matchedGroup != null) {
+            val cooldownEnd = cooldownGroupsList[matchedGroup.id]
+            if (cooldownEnd != null) {
+                if (cooldownEnd > System.currentTimeMillis()) return
+                else removeCooldownFrom(matchedGroup.id)
+            }
         }
-        calculateAndSetNextRecheck(matchedGroup, entry.packageName)
+
+        if ((matchedGroup != null && isBlocked(matchedGroup, entry.packageName)) || isBlockedByLimit) {
+            handleBlocking(matchedGroup ?: KeywordGroup(id = "global_limit", name = "Global Limit", selectedKeywords = listOf(keyword)), keyword, entry.packageName)
+        }
+        
+        if (matchedGroup != null) {
+            calculateAndSetNextRecheck(matchedGroup, entry.packageName)
+        }
     }
 
     private fun handleBlocking(group: KeywordGroup, word: String, packageName: String) {
