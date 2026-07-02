@@ -1002,4 +1002,6 @@
     <string name="api_permission_message">%1$s wants to control Curbox. It can start focus sessions, turn blockers on or off, and read your screen time. You can remove this any time.</string>
     <string name="api_permission_allow">Allow</string>
     <string name="api_permission_deny">Deny</string>
+    <string name="empty_keywords_hint">Keywords and websites you add will appear here</string>
+    <string name="write_a_new_keyword">Write a new keyword</string>
 </resources>
