@@ -1002,4 +1002,8 @@
     <string name="api_permission_message">%1$s wants to control Curbox. It can start focus sessions, turn blockers on or off, and read your screen time. You can remove this any time.</string>
     <string name="api_permission_allow">Allow</string>
     <string name="api_permission_deny">Deny</string>
+    <string name="time_tracking">Time Tracking</string>
+    <string name="enable_time_tracking">Enable usage time tracking</string>
+    <string name="clustering_threshold">Clustering threshold (minutes)</string>
+    <string name="also_match_inside_longer_words_and_links">Also match inside longer words and links after exact matches (example: youtube.com matches m.youtube.com)</string>
 </resources>
