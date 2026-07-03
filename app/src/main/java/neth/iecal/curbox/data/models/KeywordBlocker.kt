@@ -5,7 +5,6 @@ data class KeywordBlocker(
     val keywordGroups: List<KeywordGroup> = emptyList(),
     val blockAllExceptSupported: Boolean = false,
     val redirectUrl: String = "https://curbox.life",
-    val searchRecursively: Boolean? = true,
     val ignoredApps: List<String> = emptyList(),
     val isTimeTrackingEnabled: Boolean = false,
     val keywordTimeLimits: Map<String, Int> = emptyMap(),
