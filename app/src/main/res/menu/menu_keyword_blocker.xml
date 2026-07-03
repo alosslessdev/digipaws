@@ -7,8 +7,10 @@
         android:checkable="true"
         app:showAsAction="never" />
     <item
-        android:id="@+id/menu_settings"
-        android:title="@string/advanced"
+        android:id="@+id/menu_search_recursively"
+        android:title="@string/search_recursively_for_blocked_keywords_on"
+        android:checkable="true"
+        android:checked="true"
         app:showAsAction="never" />
     <item
         android:id="@+id/menu_help"
