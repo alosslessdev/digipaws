@@ -17,4 +17,5 @@ local.properties
 /test-code*
 .idea/
 CLAUDE.md
-AGENT.md.omo/
+AGENT.md
+.omo/
