@@ -11,11 +11,14 @@ import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -44,7 +47,9 @@ class KeywordBlockerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if (!viewModel.keywordBlockerConfig.value.isActive) {
+
+        val currentConfig = viewModel.keywordBlockerConfig.value
+        if (!currentConfig.isActive) {
             viewModel.setIsActive(true)
         }
         binding.rvKeywordGroups.layoutManager = LinearLayoutManager(requireContext())
@@ -99,11 +104,12 @@ class KeywordBlockerFragment : Fragment() {
 
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.keywordBlockerConfig.collectLatest { config ->
-                val isEmpty = config.keywordGroups.isEmpty()
-                binding.tvEmptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
-                binding.rvKeywordGroups.visibility = if (isEmpty) View.GONE else View.VISIBLE
-                adapter.submitList(config.keywordGroups)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.keywordBlockerConfig.collectLatest { config ->
+                    val isEmpty = config.keywordGroups.isEmpty()
+                    binding.tvEmptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
+                    binding.rvKeywordGroups.visibility = if (isEmpty) View.GONE else View.VISIBLE
+                    adapter.submitList(config.keywordGroups)
             }
         }
     }

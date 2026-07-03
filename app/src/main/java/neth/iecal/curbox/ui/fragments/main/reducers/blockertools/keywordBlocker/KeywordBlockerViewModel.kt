@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import neth.iecal.curbox.data.db.AppDatabase
@@ -28,6 +29,14 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     private val _keywordBlockerConfig = MutableStateFlow(KeywordBlocker())
     val keywordBlockerConfig: StateFlow<KeywordBlocker> = _keywordBlockerConfig
+
+    init {
+        viewModelScope.launch {
+            dataStoreManager.settings.collectLatest { settings ->
+                _keywordBlockerConfig.value = settings.keywordBlockerConfig
+            }
+        }
+    }
 
     var currentUsageConfig = AppUsageConfig()
     var currentTimeConfig = AppTimeConfig()
@@ -126,4 +135,5 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
             config.copy(keywordGroups = groups)
         }
     }
+}
 }
