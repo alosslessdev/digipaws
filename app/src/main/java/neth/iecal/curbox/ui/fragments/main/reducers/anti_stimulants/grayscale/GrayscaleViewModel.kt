@@ -49,6 +49,15 @@ class GrayscaleViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun deleteGroup(groupId: String) {
+        viewModelScope.launch {
+            val currentSettings = dataStoreManager.settings.first()
+            val currentGroups = currentSettings.grayscaleGroups.toMutableList()
+            currentGroups.removeIf { it.groupId == groupId }
+            updateGroups(currentGroups)
+        }
+    }
+
     fun updateGroup(group: GrayscaleGroup) {
         viewModelScope.launch {
             val currentSettings = dataStoreManager.settings.first()
