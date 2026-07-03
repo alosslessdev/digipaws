@@ -3,15 +3,12 @@ package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,9 +26,16 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
     private val dataStoreManager = DataStoreManager(application)
     private val usageTracker = KeywordUsageTracker(application)
 
-    val keywordBlockerConfig: LiveData<KeywordBlocker> = dataStoreManager.settings
-        .map { it.keywordBlockerConfig }
-        .asLiveData()
+    private val _keywordBlockerConfig = MutableStateFlow(KeywordBlocker())
+    val keywordBlockerConfig: StateFlow<KeywordBlocker> = _keywordBlockerConfig
+
+    init {
+        viewModelScope.launch {
+            dataStoreManager.settings.collectLatest { settings ->
+                _keywordBlockerConfig.value = settings.keywordBlockerConfig
+            }
+        }
+    }
 
     var currentUsageConfig = AppUsageConfig()
     var currentTimeConfig = AppTimeConfig()
@@ -149,7 +153,7 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
     }
 
     fun getKeywordUsageMinutes(keyword: String): Double {
-        val config = keywordBlockerConfig.value ?: return 0.0
+        val config = keywordBlockerConfig.value
         val clusteringThresholdMs = config.clusteringThresholdMinutes * 60 * 1000L
         return usageTracker.calculateTotalUsageMinutesForToday(keyword, clusteringThresholdMs)
     }
