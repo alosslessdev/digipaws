@@ -104,7 +104,6 @@ class KeywordBlocker : BaseBlocker() {
     private var blockedKeywords: List<String> = emptyList()
     private var redirectUrl: String = "https://curbox.life"
     var isSearchAllTextFields = false
-    private var isSubstringMatchEnabled = false
     var recursionResultNodes: MutableList<AccessibilityNodeInfo> = mutableListOf()
     private var ignoredApps: HashSet<String> = hashSetOf()
     private var configJob: Job? = null
@@ -229,27 +228,21 @@ class KeywordBlocker : BaseBlocker() {
         val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
         if (normalizedInput == normalizedRedirect || normalizedInput.startsWith("$normalizedRedirect/")) return null
 
-        val cacheKey = buildString {
-            append(if (isSubstringMatchEnabled) "1|" else "0|")
-            append(normalizedInput)
-        }
-
-        val cachedResult = detectionCache.get(cacheKey)
+        val cachedResult = detectionCache.get(normalizedInput)
         if (cachedResult != null) {
             return if (cachedResult == SAFE_STRING_TOKEN) null else cachedResult
         }
 
         val matchedKeyword = KeywordBlockerMatchUtils.findBlockedEntry(
             input = normalizedInput,
-            blockedEntries = blockedKeywords,
-            allowSubstringMatch = isSubstringMatchEnabled
+            blockedEntries = blockedKeywords
         )
         if (matchedKeyword != null) {
-            detectionCache.put(cacheKey, matchedKeyword)
+            detectionCache.put(normalizedInput, matchedKeyword)
             return matchedKeyword
         }
 
-        detectionCache.put(cacheKey, SAFE_STRING_TOKEN)
+        detectionCache.put(normalizedInput, SAFE_STRING_TOKEN)
         return null
     }
 
@@ -933,7 +926,6 @@ class KeywordBlocker : BaseBlocker() {
                 
                 isSearchAllTextFields = config.searchRecursively
                 redirectUrl = config.redirectUrl.ifBlank { "https://curbox.life" }
-                isSubstringMatchEnabled = config.matchSubstrings
                 ignoredApps = config.ignoredApps.toHashSet()
                 isTimeTrackingEnabled = config.isTimeTrackingEnabled
                 keywordTimeLimits = config.keywordTimeLimits
