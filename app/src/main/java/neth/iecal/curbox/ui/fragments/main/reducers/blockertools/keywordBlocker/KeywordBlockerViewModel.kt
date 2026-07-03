@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import neth.iecal.curbox.data.db.AppDatabase
@@ -43,8 +44,13 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
 
     private fun updateConfig(transform: (KeywordBlocker) -> KeywordBlocker) {
         viewModelScope.launch {
-            dataStoreManager.updateKeywordBlockerConfig(transform)
-            requestKeywordBlockerRefresh()
+            // NonCancellable: CreateKeywordGroupFragment calls finish() right after the write, which
+            // cancels viewModelScope mid-persist (esp. the slow first/cold-start write) and drops the
+            // first keyword group. Keep the write + refresh broadcast alive until they complete.
+            withContext(NonCancellable) {
+                dataStoreManager.updateKeywordBlockerConfig(transform)
+                requestKeywordBlockerRefresh()
+            }
         }
     }
 
