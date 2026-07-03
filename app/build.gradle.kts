@@ -2,10 +2,10 @@ import java.util.Locale
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
 }
 
+@Suppress("DEPRECATION")
 android {
     namespace = "neth.iecal.curbox"
     compileSdk = 34
@@ -55,20 +55,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-
-            // required because of hardcoded f-droid values
-            applicationVariants.all {
-                val variant = this
-                if (variant.flavorName == "fdroid") {
-                    variant.outputs
-                        .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-                        .forEach { output ->
-                            val outputFileName = "app-fdroid-universal-release-unsigned.apk"
-                            println("OutputFileName: $outputFileName")
-                            output.outputFileName = outputFileName
-                        }
-                }
-            }
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -80,8 +66,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+        }
     }
     buildFeatures {
         viewBinding = true
@@ -100,6 +88,7 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.lifecycle.viewmodel.ktx)
+    implementation(libs.lifecycle.livedata.ktx)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.room.runtime)
@@ -126,6 +115,14 @@ dependencies {
 }
 androidComponents {
     onVariants { variant ->
+        /*
+        // TODO: Update APK renaming for AGP 9.0+
+        if (variant.flavorName == "fdroid" && variant.buildType == "release") {
+            variant.outputs.forEach { output ->
+                // output.outputFileName.set("app-fdroid-universal-release-unsigned.apk")
+            }
+        }
+        */
         val variantName = variant.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         tasks.register("installAndGrantAccessibility$variantName") {
             group = "install"
@@ -137,18 +134,18 @@ androidComponents {
                 val appId = variant.applicationId.get()
                 Thread.sleep(2000)
                 // Grant Accessibility Permission
-                exec {
+                project.providers.exec {
                     val baseId = "neth.iecal.curbox"
                     val combinedServices = "$appId/$baseId.services.AppBlockerService:$appId/$baseId.services.UsageTrackingService"
 
                     commandLine(adbPath, "shell", "settings", "put", "secure", "enabled_accessibility_services", combinedServices)
-                }
+                }.result.get()
 
                 // Launch MainActivity
-                exec {
+                project.providers.exec {
                     val baseId = "neth.iecal.curbox"
                     commandLine(adbPath, "shell", "am", "start", "-n", "$appId/$baseId.ui.activity.FragmentActivity")
-                }
+                }.result.get()
             }
         }
     }
