@@ -788,7 +788,7 @@ class KeywordBlocker : BaseBlocker() {
 
                 Log.d(TAG, "KeywordBlocker configured. Active: $isTurnedOn, Groups: ${activeGroups.size}, Keywords: $blockedKeywords")
 
-                isSearchAllTextFields = config.searchRecursively
+                isSearchAllTextFields = config.searchRecursively ?: true
                 redirectUrl = config.redirectUrl.ifBlank { "https://curbox.life" }
                 ignoredApps = config.ignoredApps.toHashSet()
                 isTimeTrackingEnabled = config.isTimeTrackingEnabled
