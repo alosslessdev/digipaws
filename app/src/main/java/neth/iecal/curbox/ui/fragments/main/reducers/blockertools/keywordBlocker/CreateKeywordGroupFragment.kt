@@ -150,7 +150,7 @@ class CreateKeywordGroupFragment : Fragment() {
     }
 
     private fun loadExistingGroup(groupId: String) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.keywordBlockerConfig.asFlow().collectLatest { config ->
                 val group = config.keywordGroups.find { it.id == groupId }
                 if (group != null && !isEditing) {
