@@ -38,7 +38,6 @@ import neth.iecal.curbox.data.models.FocusBlockMode
 import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.services.BaseBlockingService
 import neth.iecal.curbox.ui.activity.WarningActivity
-import neth.iecal.curbox.utils.KeywordBlockerMatchUtils
 import neth.iecal.curbox.utils.KeywordUsageTracker
 import neth.iecal.curbox.utils.TimeTools
 import java.util.Calendar
@@ -169,9 +168,16 @@ class KeywordBlocker : BaseBlocker() {
         return false
     }
 
+    private fun normalizeUrl(url: String): String {
+        var normalized = url.trim().lowercase(Locale.ROOT)
+        normalized = normalized.removePrefix("https://").removePrefix("http://")
+        normalized = normalized.removePrefix("www.")
+        return normalized.trimEnd('/')
+    }
+
     private fun matchesPatterns(patterns: Pair<List<Regex>, List<String>>, urlIdentifier: String): Boolean {
-        val normalizedInput = KeywordBlockerMatchUtils.normalizeBlockedEntry(urlIdentifier)
-        val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
+        val normalizedInput = normalizeUrl(urlIdentifier)
+        val normalizedRedirect = normalizeUrl(redirectUrl)
         if (normalizedInput == normalizedRedirect || normalizedInput.startsWith("$normalizedRedirect/")) return false
 
         val (regexes, literals) = patterns
@@ -225,10 +231,10 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun containsBlockedKeyword(url: String): String? {
-        val normalizedInput = KeywordBlockerMatchUtils.normalizeBlockedEntry(url)
+        val normalizedInput = normalizeUrl(url)
         if (normalizedInput.isEmpty() || isInternalBrowserPage(normalizedInput)) return null
 
-        val normalizedRedirect = KeywordBlockerMatchUtils.normalizeBlockedEntry(redirectUrl)
+        val normalizedRedirect = normalizeUrl(redirectUrl)
         if (normalizedInput == normalizedRedirect || normalizedInput.startsWith("$normalizedRedirect/")) return null
 
         val cacheKey = buildString {
@@ -241,11 +247,12 @@ class KeywordBlocker : BaseBlocker() {
             return if (cachedResult == SAFE_STRING_TOKEN) null else cachedResult
         }
 
-        val matchedKeyword = KeywordBlockerMatchUtils.findBlockedEntry(
-            input = normalizedInput,
-            blockedEntries = blockedKeywords,
-            allowSubstringMatch = isSubstringMatchEnabled
-        )
+        val matchedKeyword = blockedKeywords.firstOrNull { keyword ->
+            normalizedInput == keyword ||
+                normalizedInput.startsWith("$keyword/") ||
+                normalizedInput.startsWith("$keyword?") ||
+                (isSubstringMatchEnabled && normalizedInput.contains(keyword))
+        }
         if (matchedKeyword != null) {
             detectionCache.put(cacheKey, matchedKeyword)
             return matchedKeyword
@@ -797,7 +804,7 @@ class KeywordBlocker : BaseBlocker() {
 
                 blockedKeywords = activeGroups.flatMap { group ->
                     group.selectedKeywords.flatMap { kw ->
-                        val normalized = KeywordBlockerMatchUtils.normalizeBlockedEntry(kw)
+                        val normalized = normalizeUrl(kw)
                         val domain = if ("." in normalized) normalized.substringBefore(".") else ""
                         if (domain.length > 3) listOf(normalized, domain) else listOf(normalized)
                     }
