@@ -1005,4 +1005,8 @@
     <string name="unsaved_changes_dialog_title">Unsaved Changes</string>
     <string name="unsaved_changes_dialog_message">You have unsaved changes. Would you like to save them before leaving?</string>
     <string name="btn_discard">Discard</string>
+    <string name="time_tracking">Time Tracking</string>
+    <string name="enable_time_tracking">Enable usage time tracking</string>
+    <string name="clustering_threshold">Clustering threshold (minutes)</string>
+    <string name="also_match_inside_longer_words_and_links">Also match inside longer words and links after exact matches (example: youtube.com matches m.youtube.com)</string>
 </resources>
