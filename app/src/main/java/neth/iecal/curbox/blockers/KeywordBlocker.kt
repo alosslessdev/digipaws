@@ -55,6 +55,27 @@ class KeywordBlocker : BaseBlocker() {
                     AccessibilityEvent.TYPE_VIEW_CLICKED or
                     AccessibilityEvent.TYPE_VIEW_FOCUSED
 
+        internal fun matchesLiteral(keyword: String, urlIdentifier: String): Boolean {
+            val url = urlIdentifier.lowercase(Locale.ROOT)
+            val urlNoWww = url.removePrefix("www.")
+            val kwNoWww = keyword.removePrefix("www.")
+
+            if (url == keyword || urlNoWww == kwNoWww) return true
+            if (url.startsWith("$keyword/") || url.startsWith("$keyword?") ||
+                urlNoWww.startsWith("$kwNoWww/") || urlNoWww.startsWith("$kwNoWww?")) return true
+            if (keyword.startsWith("/") && url.contains(keyword)) return true
+            if (!keyword.contains('.') && !keyword.contains('/')) {
+                val domain = url.substringBefore('/')
+                if (domain.split('.').any { it == keyword }) return true
+            }
+            // Always match subdomains (e.g. youtube.com matches m.youtube.com)
+            if (kwNoWww.contains('.')) {
+                val domain = urlNoWww.substringBefore('/')
+                if (domain.endsWith(".$kwNoWww")) return true
+            }
+            return false
+        }
+
         val URL_BAR_ID_LIST = mapOf(
             "com.android.chrome" to BrowserUrlBarInfo(
                 displayUrlBarId = "url_bar",
@@ -142,27 +163,6 @@ class KeywordBlocker : BaseBlocker() {
             """(?:https?://)?(?:www\.)?"""
         } else ""
         return Regex(prefix + escaped, RegexOption.IGNORE_CASE)
-    }
-
-    private fun matchesLiteral(keyword: String, urlIdentifier: String): Boolean {
-        val url = urlIdentifier.lowercase(Locale.ROOT)
-        val urlNoWww = url.removePrefix("www.")
-        val kwNoWww = keyword.removePrefix("www.")
-
-        if (url == keyword || urlNoWww == kwNoWww) return true
-        if (url.startsWith("$keyword/") || url.startsWith("$keyword?") ||
-            urlNoWww.startsWith("$kwNoWww/") || urlNoWww.startsWith("$kwNoWww?")) return true
-        if (keyword.startsWith("/") && url.contains(keyword)) return true
-        if (!keyword.contains('.') && !keyword.contains('/')) {
-            val domain = url.substringBefore('/')
-            if (domain.split('.').any { it == keyword }) return true
-        }
-        // Always match subdomains (e.g. youtube.com matches m.youtube.com)
-        if (kwNoWww.contains('.')) {
-            val domain = urlNoWww.substringBefore('/')
-            if (domain.endsWith(".$kwNoWww")) return true
-        }
-        return false
     }
 
     private fun matchesPatterns(patterns: Pair<List<Regex>, List<String>>, urlIdentifier: String): Boolean {
