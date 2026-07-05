@@ -71,19 +71,12 @@ class KeywordBlockerFragment : Fragment() {
 
         val config = viewModel.keywordBlockerConfig.value
         popup.menu.findItem(R.id.menu_block_unsupported_browsers).isChecked = config?.blockAllExceptSupported == true
-        popup.menu.findItem(R.id.menu_search_recursively).isChecked = config?.searchRecursively ?: true
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_block_unsupported_browsers -> {
                     val newState = !item.isChecked
                     viewModel.setBlockAllExceptSupported(newState)
-                    item.isChecked = newState
-                    true
-                }
-                R.id.menu_search_recursively -> {
-                    val newState = !item.isChecked
-                    viewModel.setSearchRecursively(newState)
                     item.isChecked = newState
                     true
                 }
