@@ -166,7 +166,9 @@ class KeywordBlocker : BaseBlocker() {
                 else removeCooldownFrom(group.id)
             }
             if (isBlocked(group)) {
-                handleBlocking(group)
+                val patterns = groupPatternMap[group.id]
+                val matchedKeyword = patterns?.let { KeywordMatcher.findMatchedKeyword(it, entry.urlIdentifier) }
+                handleBlocking(group, matchedKeyword ?: group.selectedKeywords.firstOrNull() ?: group.name)
                 return
             }
         }
@@ -184,11 +186,11 @@ class KeywordBlocker : BaseBlocker() {
         }
     }
 
-    private fun handleBlocking(group: KeywordGroup) {
+    private fun handleBlocking(group: KeywordGroup, word: String) {
         Handler(Looper.getMainLooper()).post {
             Toast.makeText(
                 service,
-                service.getString(R.string.blocked_keyword_word_was_found).replace("-word", group.name),
+                service.getString(R.string.blocked_keyword_word_was_found).replace("-word", word),
                 Toast.LENGTH_LONG
             ).show()
         }
