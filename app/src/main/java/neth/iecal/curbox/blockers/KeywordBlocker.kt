@@ -185,8 +185,11 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun handleBlocking(group: KeywordGroup) {
+        Thread.sleep(250)
         service.pressBack()
-        Thread.sleep(1000)
+        Thread.sleep(250)
+        service.pressBack()
+        Thread.sleep(250)
         service.pressHome()
         Handler(Looper.getMainLooper()).postDelayed({
             val intent = Intent(service, WarningActivity::class.java).apply {
