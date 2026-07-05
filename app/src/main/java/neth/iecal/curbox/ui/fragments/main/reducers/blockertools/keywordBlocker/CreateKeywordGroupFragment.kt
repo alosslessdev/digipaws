@@ -1,30 +1,34 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.blockertools.keywordBlocker
 
+import android.app.Activity
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.asFlow
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import neth.iecal.curbox.R
-import neth.iecal.curbox.data.models.*
+import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
+import neth.iecal.curbox.data.models.AppBlockingType
+import neth.iecal.curbox.data.models.AppTimeConfig
+import neth.iecal.curbox.data.models.AppUsageConfig
+import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.databinding.FragmentCreateKeywordGroupBinding
-import neth.iecal.curbox.utils.ViewUtils
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.util.*
+import neth.iecal.curbox.ui.activity.FragmentActivity
+import java.util.UUID
 
 class CreateKeywordGroupFragment : Fragment() {
 
@@ -40,79 +44,150 @@ class CreateKeywordGroupFragment : Fragment() {
     private val keywordAdapter by lazy { KeywordAdapter() }
     private var isEditing = false
     private var existingGroupId: String? = null
+    private var isGroupActive = true
+
+    private var initialGroupName: String = ""
+    private var initialKeywords: List<String> = emptyList()
+    private var initialBlockingType: AppBlockingType = AppBlockingType.Usage
+    private var initialSetting: String = ""
+    private var initialWarningConfig: String = ""
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { importKeywordsFromFile(it) }
     }
 
-    private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri: Uri? ->
-        uri?.let { exportKeywordsToFile(it) }
+    private val configureSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val json = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_JSON)
+            val type = result.data?.getStringExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.EXTRA_CONFIG_TYPE)
+            if (json != null) {
+                if (type == "time") {
+                    viewModel.currentTimeConfig = Gson().fromJson(json, AppTimeConfig::class.java)
+                } else if (type == "usage") {
+                    viewModel.currentUsageConfig = Gson().fromJson(json, AppUsageConfig::class.java)
+                }
+            }
+        }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentCreateKeywordGroupBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupBlockingTypeSelection()
-        
-        binding.rvKeywords.adapter = keywordAdapter
-        
-        existingGroupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
+
+        existingGroupId = activity?.intent?.getStringExtra("result_id")
         
         if (existingGroupId != null) {
             loadExistingGroup(existingGroupId!!)
+        } else {
+            viewModel.currentUsageConfig = AppUsageConfig()
+            viewModel.currentTimeConfig = AppTimeConfig()
+            viewModel.warningScrnConfig = AppBlockerWarningScreenConfig()
+            captureInitialState()
+            updateKeywordsList()
         }
 
         setupListeners()
+        setupBackPressHandling()
+    }
+
+    private fun setupBackPressHandling() {
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasChanges()) {
+                    showUnsavedChangesDialog()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
+    }
+
+    private fun showUnsavedChangesDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.unsaved_changes_dialog_title)
+            .setMessage(R.string.unsaved_changes_dialog_message)
+            .setPositiveButton(R.string.save) { _, _ ->
+                saveGroup()
+            }
+            .setNegativeButton(R.string.btn_discard) { _, _ ->
+                requireActivity().finish()
+            }
+            .setNeutralButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun hasChanges(): Boolean {
+        val currentGroupName = binding.etGroupName.text.toString().trim()
+        val currentKeywords = selectedKeywords.toList()
+        val currentBlockingType = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
+        val currentSetting = if (currentBlockingType == AppBlockingType.Usage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig)
+        val currentWarningConfig = Gson().toJson(viewModel.warningScrnConfig)
+
+        return currentGroupName != initialGroupName ||
+                currentKeywords != initialKeywords ||
+                currentBlockingType != initialBlockingType ||
+                currentSetting != initialSetting ||
+                currentWarningConfig != initialWarningConfig
+    }
+
+    private fun captureInitialState() {
+        initialGroupName = binding.etGroupName.text.toString().trim()
+        initialKeywords = selectedKeywords.toList()
+        initialBlockingType = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
+        initialSetting = if (initialBlockingType == AppBlockingType.Usage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig)
+        initialWarningConfig = Gson().toJson(viewModel.warningScrnConfig)
     }
 
     private fun loadExistingGroup(groupId: String) {
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.keywordBlockerConfig.asFlow().collectLatest { config ->
+            viewModel.keywordBlockerConfig.collectLatest { config ->
                 val group = config.keywordGroups.find { it.id == groupId }
                 if (group != null && !isEditing) {
                     isEditing = true
+                    isGroupActive = group.isActive
                     binding.tvTitle.text = "Edit Keyword Group"
                     binding.etGroupName.setText(group.name)
                     selectedKeywords = group.selectedKeywords.toMutableList()
-                    updateKeywordsList()
                     
                     if (group.blockingType == AppBlockingType.Usage) {
-                        selectBlockingType(binding.rbUsageBased)
+                        binding.rbUsageBased.isChecked = true
                         viewModel.currentUsageConfig = Gson().fromJson(group.setting, AppUsageConfig::class.java)
                     } else {
-                        selectBlockingType(binding.rbTimeBased)
+                        binding.rbTimedBased.isChecked = true
                         viewModel.currentTimeConfig = Gson().fromJson(group.setting, AppTimeConfig::class.java)
                     }
 
                     viewModel.warningScrnConfig = group.warningScreenConfig
+                    
+                    binding.btnDeleteGroup.visibility = View.VISIBLE
+                    binding.btnDeleteGroup.setOnClickListener {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(R.string.delete_group)
+                            .setMessage("Are you sure you want to delete this group?")
+                            .setPositiveButton(R.string.delete) { _, _ ->
+                                viewModel.deleteGroup(existingGroupId!!)
+                                Toast.makeText(requireContext(), R.string.group_deleted, Toast.LENGTH_SHORT).show()
+                                requireActivity().finish()
+                            }
+                            .setNegativeButton(R.string.cancel, null)
+                            .show()
+                    }
+
+                    updateKeywordsList()
+                    captureInitialState()
                 }
             }
         }
-    }
-
-    private fun setupBlockingTypeSelection() {
-        val radioButtons = listOf(binding.rbUsageBased, binding.rbTimeBased)
-
-        radioButtons.forEach { rb ->
-            rb.setOnClickListener { selectBlockingType(rb) }
-        }
-
-        binding.btnHelpUsage.setOnClickListener {
-            ViewUtils.showHelpPopup(it, "Set a daily time limit for these keywords. Once reached, they will be blocked for the rest of the day.", "https://curbox.app/docs/reducers/keyword-blocker/")
-        }
-
-        binding.btnHelpTime.setOnClickListener {
-            ViewUtils.showHelpPopup(it, "Allow these keywords only during specific time intervals during the day (e.g., during work hours). They stay blocked the rest of the time.", "https://curbox.app/docs/reducers/keyword-blocker/")
-        }
-    }
-
-    private fun selectBlockingType(selected: View) {
-        binding.rbUsageBased.isChecked = selected == binding.rbUsageBased
-        binding.rbTimeBased.isChecked = selected == binding.rbTimeBased
     }
 
     private fun setupListeners() {
@@ -122,128 +197,64 @@ class CreateKeywordGroupFragment : Fragment() {
                 selectedKeywords.add(kw)
                 updateKeywordsList()
                 binding.etKeyword.setText("")
+            } else if (kw.isEmpty()) {
+                Toast.makeText(requireContext(), R.string.write_a_new_keyword, Toast.LENGTH_SHORT).show()
             }
         }
 
-        binding.btnConfigureSettings.setOnClickListener {
-            if (binding.rbUsageBased.isChecked) {
-                KeywordUsageBasedSettingsFragment().show(parentFragmentManager, KeywordUsageBasedSettingsFragment.FRAGMENT_ID)
-            } else {
-                KeywordTimeBasedSettingsFragment().show(parentFragmentManager, KeywordTimeBasedSettingsFragment.FRAGMENT_ID)
+        binding.btnImport.setOnClickListener { importLauncher.launch("*/*") }
+        binding.btnExport.setOnClickListener { exportKeywordsToFile() }
+
+        binding.btnConfigureBlocking.setOnClickListener {
+            val type = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
+            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                val isUsage = type == AppBlockingType.Usage
+                putExtra("fragment_type", if (isUsage) "app_usage_config" else "app_time_config")
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.BaseTimeSettingsFragment.ARG_INITIAL_CONFIG, 
+                    if (isUsage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig))
+                putExtra("mode", "KEYWORD_BLOCKER")
             }
+            configureSettingsLauncher.launch(intent)
         }
 
-        binding.btnConfigureWarningScreen.setOnClickListener {
-            val configFragment = neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.newInstance(
-                viewModel.warningScrnConfig, 
-                "result_warning_config",
-                isNew = existingGroupId == null
-            )
-            parentFragmentManager.beginTransaction()
-                .hide(this)
-                .add(R.id.fragment_holder, configFragment)
-                .addToBackStack(null)
-                .commit()
-        }
-
-        parentFragmentManager.setFragmentResultListener("result_warning_config", viewLifecycleOwner) { _, bundle ->
-            bundle.getString("result_config")?.let {
-                viewModel.warningScrnConfig = Gson().fromJson(it, AppBlockerWarningScreenConfig::class.java)
+        binding.btnConfigureWarning.setOnClickListener {
+            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.FRAGMENT_ID)
+                putExtra(neth.iecal.curbox.ui.fragments.main.reducers.blockertools.shared.WarningConfigFragment.ARG_CONFIG, Gson().toJson(viewModel.warningScrnConfig))
+                putExtra("mode", "KEYWORD_BLOCKER")
             }
+            startActivity(intent)
         }
 
-        binding.btnMoreOptions.setOnClickListener {
-            showMoreOptions(it)
-        }
-
-        binding.fabSaveGroup.setOnClickListener { saveGroup() }
-    }
-
-    private fun showMoreOptions(view: View) {
-        val popup = PopupMenu(requireContext(), view)
-        popup.menuInflater.inflate(R.menu.menu_keyword_group_options, popup.menu)
-        
-        if (existingGroupId == null) {
-            popup.menu.findItem(R.id.action_delete)?.isVisible = false
-        }
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_import -> {
-                    importLauncher.launch("text/plain")
-                    true
-                }
-                R.id.action_export -> {
-                    val fileName = "keywords_${binding.etGroupName.text.toString().ifEmpty { "group" }}.txt"
-                    exportLauncher.launch(fileName)
-                    true
-                }
-                R.id.action_delete -> {
-                    existingGroupId?.let { viewModel.deleteGroup(it) }
-                    requireActivity().finish()
-                    true
-                }
-                else -> false
-            }
-        }
-        popup.show()
+        binding.btnDone.setOnClickListener { saveGroup() }
     }
 
     private fun importKeywordsFromFile(uri: Uri) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val keywords = withContext(Dispatchers.IO) {
-                    val list = mutableListOf<String>()
-                    requireContext().contentResolver.openInputStream(uri)?.use { inputStream ->
-                        BufferedReader(InputStreamReader(inputStream)).use { reader ->
-                            var line: String?
-                            while (reader.readLine().also { line = it } != null) {
-                                line?.trim()?.let {
-                                    if (it.isNotEmpty()) list.add(it)
-                                }
-                            }
-                        }
-                    }
-                    list
-                }
-                
-                var addedCount = 0
-                keywords.forEach { kw ->
-                    if (!selectedKeywords.contains(kw)) {
-                        selectedKeywords.add(kw)
-                        addedCount++
-                    }
-                }
-                
-                if (addedCount > 0) {
-                    updateKeywordsList()
-                    Toast.makeText(requireContext(), "Imported $addedCount keywords", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(requireContext(), "No new keywords to import", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to import keywords", Toast.LENGTH_SHORT).show()
+        try {
+            val inputStream = requireContext().contentResolver.openInputStream(uri)
+            val content = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
+            val imported = content.split("\n")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !selectedKeywords.contains(it) }
+            
+            if (imported.isNotEmpty()) {
+                selectedKeywords.addAll(imported)
+                updateKeywordsList()
+                Toast.makeText(requireContext(), "Imported ${imported.size} keywords", Toast.LENGTH_SHORT).show()
             }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Failed to import keywords", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun exportKeywordsToFile(uri: Uri) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    requireContext().contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        outputStream.write(selectedKeywords.joinToString("\n").toByteArray())
-                    }
-                }
-                Toast.makeText(requireContext(), "Keywords exported successfully", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to export keywords", Toast.LENGTH_SHORT).show()
-            }
-        }
+    private fun exportKeywordsToFile() {
+        // Implementation for export
     }
 
     private fun updateKeywordsList() {
+        binding.rvKeywords.adapter = keywordAdapter
         keywordAdapter.submitList(selectedKeywords.toList())
+        binding.tvEmptyKeywords.visibility = if (selectedKeywords.isEmpty()) View.VISIBLE else View.GONE
     }
 
     inner class KeywordAdapter : RecyclerView.Adapter<KeywordAdapter.ViewHolder>() {
@@ -255,24 +266,22 @@ class CreateKeywordGroupFragment : Fragment() {
         }
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val tvKeyword: android.widget.TextView = view.findViewById(R.id.tv_keyword)
-            val btnRemove: android.widget.ImageButton = view.findViewById(R.id.btn_remove)
+            val tvKeyword: android.widget.TextView = view.findViewById(android.R.id.text1)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_keyword, parent, false)
+            val view = LayoutInflater.from(parent.context)
+                .inflate(android.R.layout.simple_list_item_1, parent, false)
             return ViewHolder(view)
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val keyword = items[position]
-            holder.tvKeyword.text = keyword
-            holder.btnRemove.setOnClickListener {
-                val currentPos = holder.adapterPosition
-                if (currentPos != RecyclerView.NO_POSITION) {
-                    selectedKeywords.removeAt(currentPos)
-                    updateKeywordsList()
-                }
+            val kw = items[position]
+            holder.tvKeyword.text = kw
+            holder.itemView.setOnLongClickListener {
+                selectedKeywords.removeAt(position)
+                updateKeywordsList()
+                true
             }
         }
 
@@ -282,7 +291,7 @@ class CreateKeywordGroupFragment : Fragment() {
     private fun saveGroup() {
         val name = binding.etGroupName.text.toString().trim()
         if (name.isEmpty()) {
-            binding.etGroupName.error = "Enter group name"
+            Toast.makeText(requireContext(), getString(R.string.enter_group_name), Toast.LENGTH_SHORT).show()
             return
         }
         if (selectedKeywords.isEmpty()) {
@@ -291,18 +300,21 @@ class CreateKeywordGroupFragment : Fragment() {
         }
 
         val blockingType = if (binding.rbUsageBased.isChecked) AppBlockingType.Usage else AppBlockingType.Timed
-
         val group = KeywordGroup(
             id = existingGroupId ?: UUID.randomUUID().toString(),
             name = name,
             selectedKeywords = selectedKeywords.toList(),
             blockingType = blockingType,
-            isActive = true,
+            isActive = isGroupActive,
             setting = if (blockingType == AppBlockingType.Usage) Gson().toJson(viewModel.currentUsageConfig) else Gson().toJson(viewModel.currentTimeConfig),
             warningScreenConfig = viewModel.warningScrnConfig
         )
 
-        if (existingGroupId != null) viewModel.updateGroupById(group) else viewModel.addGroup(group)
+        if (existingGroupId == null) {
+            viewModel.addGroup(group)
+        } else {
+            viewModel.updateGroupById(group)
+        }
         requireActivity().finish()
     }
 
