@@ -194,10 +194,13 @@ class KeywordBlocker : BaseBlocker() {
                 Toast.LENGTH_LONG
             ).show()
         }
+        Thread.sleep(250) //we need three waits for the Chrome ui to update the blocked word in the address bar
+        // so that the user is not locked out of the browser
+        service.pressBack()//if the user presses a Chrome home screen shortcut, this will cause Chrome to exit
+        //to the home screen, if the user is typing a blocked word it will close the keyboard
         Thread.sleep(250)
-        service.pressBack()
-        Thread.sleep(250)
-        service.pressBack()
+        service.pressBack()//we need a second back press on chrome so that the user is able to type
+        //another URL
         Thread.sleep(250)
         service.pressHome()
         Handler(Looper.getMainLooper()).postDelayed({
