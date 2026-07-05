@@ -40,6 +40,20 @@ class ReelBlocker : BaseBlocker() {
         const val INTENT_ACTION_REFRESH_REEL_BLOCKER_COOLDOWN =
             "neth.iecal.curbox.refresh.reelblocker.cooldown"
 
+        fun findElementById(node: AccessibilityNodeInfo?, id: String?): AccessibilityNodeInfo? {
+            if (node == null || id == null) return null
+            try {
+                val nodes = node.findAccessibilityNodeInfosByViewId(id)
+                if (nodes.isNotEmpty()) {
+                    val result = nodes[0]
+                    for (i in 1 until nodes.size) {
+                        try { nodes[i].recycle() } catch (_: Exception) {}
+                    }
+                    return result
+                }
+            } catch (_: Exception) {}
+            return null
+        }
 
         private const val TARGET_EVENTS_MASK = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                 AccessibilityEvent.TYPE_VIEW_SCROLLED or
