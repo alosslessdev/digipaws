@@ -108,10 +108,6 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
         updateConfig { it.copy(redirectUrl = url) }
     }
 
-    fun setSearchRecursively(enabled: Boolean) {
-        updateConfig { it.copy(searchRecursively = enabled) }
-    }
-
     fun setBlockAllExceptSupported(enabled: Boolean) {
         updateConfig { it.copy(blockAllExceptSupported = enabled) }
     }

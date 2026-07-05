@@ -98,7 +98,6 @@ class KeywordBlocker : BaseBlocker() {
 
     private var blockedKeywords: List<String> = emptyList()
     private var redirectUrl: String = "https://curbox.life"
-    var isSearchAllTextFields = false
     var recursionResultNodes: MutableList<AccessibilityNodeInfo> = mutableListOf()
     private var ignoredApps: HashSet<String> = hashSetOf()
     private var configJob: Job? = null
@@ -390,26 +389,6 @@ class KeywordBlocker : BaseBlocker() {
                 if (detectedKeyword != null) {
                     Log.d(TAG, "Detected keyword in URL bar: $detectedKeyword ('$displayText')")
                 }
-            }
-        }
-
-        // 2. If not found, try recursive search if enabled
-        if (detectedKeyword == null && isSearchAllTextFields) {
-            val rootNode = service.rootInActiveWindow
-            if (rootNode != null) {
-                recursionResultNodes.clear()
-                findNodesByClassName(rootNode, "android.widget.TextView", false)
-                for (node in recursionResultNodes) {
-                    val nodeText = node.text?.toString() ?: ""
-                    if (nodeText.isEmpty()) continue
-                    val word = containsBlockedKeyword(nodeText)
-                    if (word != null) {
-                        detectedKeyword = word
-                        Log.d(TAG, "Detected keyword via recursive search: $detectedKeyword")
-                        break
-                    }
-                }
-                safeRecycle(rootNode)
             }
         }
 
@@ -788,7 +767,6 @@ class KeywordBlocker : BaseBlocker() {
 
                 Log.d(TAG, "KeywordBlocker configured. Active: $isTurnedOn, Groups: ${activeGroups.size}, Keywords: $blockedKeywords")
 
-                isSearchAllTextFields = config.searchRecursively ?: true
                 redirectUrl = config.redirectUrl.ifBlank { "https://curbox.life" }
                 ignoredApps = config.ignoredApps.toHashSet()
                 isTimeTrackingEnabled = config.isTimeTrackingEnabled
