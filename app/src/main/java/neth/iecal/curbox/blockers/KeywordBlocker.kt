@@ -1,7 +1,5 @@
 package neth.iecal.curbox.blockers
 
-import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.GestureDescription
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -9,10 +7,7 @@ import android.content.Context.RECEIVER_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.content.res.Resources
-import android.graphics.Path
 import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -486,6 +481,7 @@ class KeywordBlocker : BaseBlocker() {
         lastEventTimeStamp = SystemClock.uptimeMillis()
 
         service.pressBack()
+        service.pressBack()//we need a second back press on chrome
         Thread.sleep(300)
         pressHome(keyword, matchedGroup)
 
@@ -515,55 +511,6 @@ class KeywordBlocker : BaseBlocker() {
         return result
     }
 
-    private fun submitEditedUrlBar(
-        rootNode: AccessibilityNodeInfo,
-        editUrlBar: AccessibilityNodeInfo,
-        idPrefixPart: String,
-        urlBarInfo: BrowserUrlBarInfo
-    ): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val imeEnterActionId = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id
-            val supportsImeEnter = editUrlBar.actionList.any { it.id == imeEnterActionId }
-            if (supportsImeEnter) {
-                if (editUrlBar.performAction(imeEnterActionId)) {
-                    return true
-                }
-            }
-        }
-
-        val goBtnNodeId = idPrefixPart + urlBarInfo.browserSugggestionBoxId
-        var goBtnNode: AccessibilityNodeInfo? = null
-        var lastUsedRootNode: AccessibilityNodeInfo? = null
-        
-        for (i in 1..5) {
-            val currentRootNode = service.rootInActiveWindow
-            if (currentRootNode != null) {
-                goBtnNode = ReelBlocker.findElementById(currentRootNode, goBtnNodeId)
-                if (goBtnNode != null) {
-                    lastUsedRootNode = currentRootNode
-                    break
-                }
-                safeRecycle(currentRootNode)
-            }
-            Thread.sleep(200)
-        }
-
-        if (goBtnNode == null) return false
-
-        val didClickGo = if (urlBarInfo.isSuggestionEqualToGo) {
-            goBtnNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        } else {
-            val child = goBtnNode.getChild(urlBarInfo.suggestionBoxIndexOfGoBtn)
-            val result = child?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
-            safeRecycle(child)
-            result
-        }
-        
-        safeRecycle(goBtnNode)
-        safeRecycle(lastUsedRootNode)
-        return didClickGo
-    }
-
     private fun findNodesByClassName(
         node: AccessibilityNodeInfo?,
         targetClassName: String,
@@ -583,23 +530,6 @@ class KeywordBlocker : BaseBlocker() {
             safeRecycle(child)
             if (returnOnFirstResult && recursionResultNodes.isNotEmpty()) return
         }
-    }
-
-    fun performSmallUpwardScroll() {
-        val path = Path()
-        val screenHeight = Resources.getSystem().displayMetrics.heightPixels
-        val startY = (screenHeight * 0.75).toFloat()
-        val endY = startY - (screenHeight * 0.1).toFloat()
-        val centerX = Resources.getSystem().displayMetrics.widthPixels / 2f
-
-        path.moveTo(centerX, startY)
-        path.lineTo(centerX, endY)
-
-        val gestureBuilder = GestureDescription.Builder()
-        val gestureStroke = GestureDescription.StrokeDescription(path, 0, 200)
-        val gesture = gestureBuilder.addStroke(gestureStroke).build()
-
-        service.dispatchGesture(gesture, null, null)
     }
 
     fun startObservingDatabase() {
@@ -670,6 +600,7 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         service.pressBack()
+        service.pressBack()//we need a second back press on chrome
         Thread.sleep(300)
         pressHome(word)
         Handler(Looper.getMainLooper()).postDelayed({
@@ -978,10 +909,6 @@ class KeywordBlocker : BaseBlocker() {
         val tracker = usageTracker ?: return 0.0
         val clusteringThresholdMs = clusteringThresholdMinutes * 60 * 1000L
         return tracker.calculateTotalUsageMinutesForToday(keyword, clusteringThresholdMs)
-    }
-
-    fun getTimeLimitForKeyword(keyword: String): Int {
-        return keywordTimeLimits[keyword] ?: 0
     }
 
     fun isTimeLimitReached(keyword: String): Boolean {
