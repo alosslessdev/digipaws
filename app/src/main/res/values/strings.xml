@@ -172,7 +172,6 @@
     <string name="redirection">Redirection</string>
     <string name="redirection_url">Redirection URL</string>
     <string name="configuration">Configuration</string>
-    <string name="search_recursively_for_blocked_keywords_on">Search recursively for blocked keywords on every text field on screen</string>
     <string name="block_all_browsers_except_supported_ones">Block unsupported browser</string>
     <string name="select_ignored_apps">Select Ignored Apps</string>
     <string name="activity_powered_by">POWERED BY CURBOX</string>
@@ -1002,4 +1001,12 @@
     <string name="api_permission_message">%1$s wants to control Curbox. It can start focus sessions, turn blockers on or off, and read your screen time. You can remove this any time.</string>
     <string name="api_permission_allow">Allow</string>
     <string name="api_permission_deny">Deny</string>
+    <string name="unsaved_changes_dialog_title">Unsaved Changes</string>
+    <string name="unsaved_changes_dialog_message">You have unsaved changes. Would you like to save them before leaving?</string>
+    <string name="btn_discard">Discard</string>
+    <string name="time_tracking">Time Tracking</string>
+    <string name="enable_time_tracking">Enable usage time tracking</string>
+    <string name="clustering_threshold">Clustering threshold (minutes)</string>
+    <string name="empty_keywords_hint">Keywords and websites you add will appear here</string>
+    <string name="write_a_new_keyword">Write a new keyword</string>
 </resources>
