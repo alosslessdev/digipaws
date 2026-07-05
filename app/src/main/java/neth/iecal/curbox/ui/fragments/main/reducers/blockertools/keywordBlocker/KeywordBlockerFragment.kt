@@ -10,9 +10,14 @@ import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import com.google.android.material.switchmaterial.SwitchMaterial
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.AppBlockingType
@@ -43,7 +48,7 @@ class KeywordBlockerFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val currentConfig = viewModel.keywordBlockerConfig.value
-        if (currentConfig == null || !currentConfig.isActive) {
+        if (!currentConfig.isActive) {
             viewModel.setIsActive(true)
         }
 
@@ -97,14 +102,18 @@ class KeywordBlockerFragment : Fragment() {
     }
 
     private fun observeViewModel() {
-        viewModel.keywordBlockerConfig.observe(viewLifecycleOwner) { config ->
-            if (config.keywordGroups.isEmpty()) {
-                binding.tvEmptyState.visibility = View.VISIBLE
-                binding.rvKeywordGroups.visibility = View.GONE
-            } else {
-                binding.tvEmptyState.visibility = View.GONE
-                binding.rvKeywordGroups.visibility = View.VISIBLE
-                binding.rvKeywordGroups.adapter = KeywordGroupAdapter(config.keywordGroups)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.keywordBlockerConfig.collectLatest { config ->
+                    if (config.keywordGroups.isEmpty()) {
+                        binding.tvEmptyState.visibility = View.VISIBLE
+                        binding.rvKeywordGroups.visibility = View.GONE
+                    } else {
+                        binding.tvEmptyState.visibility = View.GONE
+                        binding.rvKeywordGroups.visibility = View.VISIBLE
+                        binding.rvKeywordGroups.adapter = KeywordGroupAdapter(config.keywordGroups)
+                    }
+                }
             }
         }
     }
