@@ -102,10 +102,6 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
         updateConfig { it.copy(searchRecursively = enabled) }
     }
 
-    fun setMatchSubstrings(enabled: Boolean) {
-        updateConfig { it.copy(matchSubstrings = enabled) }
-    }
-
     fun setBlockAllExceptSupported(enabled: Boolean) {
         updateConfig { it.copy(blockAllExceptSupported = enabled) }
     }
