@@ -62,6 +62,11 @@ class KeywordBlockerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val currentConfig = viewModel.keywordBlockerConfig.value
+        if (currentConfig == null || !currentConfig.isActive) {
+            viewModel.setIsActive(true)
+        }
+
         binding.rvKeywordGroups.layoutManager = LinearLayoutManager(requireContext())
         binding.fabAddGroup.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
