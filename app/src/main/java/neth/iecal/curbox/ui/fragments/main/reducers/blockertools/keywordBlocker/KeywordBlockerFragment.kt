@@ -77,10 +77,6 @@ class KeywordBlockerFragment : Fragment() {
 
         binding.btnMenu.setOnClickListener { showPopupMenu(it) }
 
-        binding.switchActive.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) viewModel.setIsActive(isChecked)
-        }
-
         observeViewModel()
     }
 
@@ -176,10 +172,6 @@ class KeywordBlockerFragment : Fragment() {
 
     private fun observeViewModel() {
         viewModel.keywordBlockerConfig.observe(viewLifecycleOwner) { config ->
-            isUpdatingUi = true
-            binding.switchActive.isChecked = config.isActive
-            isUpdatingUi = false
-
             if (config.keywordGroups.isEmpty()) {
                 binding.tvEmptyState.visibility = View.VISIBLE
                 binding.rvKeywordGroups.visibility = View.GONE
