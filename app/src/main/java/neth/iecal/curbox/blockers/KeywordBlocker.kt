@@ -157,6 +157,11 @@ class KeywordBlocker : BaseBlocker() {
             val domain = url.substringBefore('/')
             if (domain.split('.').any { it == keyword }) return true
         }
+        // Always match subdomains (e.g. youtube.com matches m.youtube.com)
+        if (kwNoWww.contains('.')) {
+            val domain = urlNoWww.substringBefore('/')
+            if (domain.endsWith(".$kwNoWww")) return true
+        }
         return false
     }
 
