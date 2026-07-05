@@ -149,7 +149,7 @@ class CreateKeywordGroupFragment : Fragment() {
     }
 
     private fun loadExistingGroup(groupId: String) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             viewModel.keywordBlockerConfig.collectLatest { config ->
                 val group = config.keywordGroups.find { it.id == groupId }
                 if (group != null && !isEditing) {
@@ -291,7 +291,7 @@ class CreateKeywordGroupFragment : Fragment() {
     private fun saveGroup() {
         val name = binding.etGroupName.text.toString().trim()
         if (name.isEmpty()) {
-            binding.etGroupName.error = getString(R.string.enter_group_name)
+            Toast.makeText(requireContext(), getString(R.string.enter_group_name), Toast.LENGTH_SHORT).show()
             return
         }
         if (selectedKeywords.isEmpty()) {
