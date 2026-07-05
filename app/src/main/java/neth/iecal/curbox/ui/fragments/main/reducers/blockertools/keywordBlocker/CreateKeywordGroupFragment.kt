@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
@@ -70,7 +71,7 @@ class CreateKeywordGroupFragment : Fragment() {
 
     private fun loadExistingGroup(groupId: String) {
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.keywordBlockerConfig.collectLatest { config ->
+            viewModel.keywordBlockerConfig.asFlow().collectLatest { config ->
                 val group = config.keywordGroups.find { it.id == groupId }
                 if (group != null && !isEditing) {
                     isEditing = true
