@@ -108,6 +108,13 @@ class KeywordBlocker : BaseBlocker() {
     private var lastEventTimeStamp = 0L
     private var refreshCooldown : Int = 1000
 
+    // Stamped only when overlay actually launches. Kept separate from
+    // service.isDelayOver() because the event path does pressBack() right
+    // before pressHome(), resetting lastBackPressTimeStamp; gating overlay on
+    // the press delay swallowed the warning screen on every browser block.
+    private var lastOverlayShownTimeStamp = 0L
+    private val overlayCooldownMs = 2000L
+
     private var isTimeTrackingEnabled = false
     private var keywordTimeLimits: Map<String, Int> = emptyMap()
     private var keywordReminderIntervals: Map<String, Int> = emptyMap()
@@ -268,22 +275,25 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun pressHome(word: String, group: KeywordGroup? = null) {
-        val delayOver = service.isDelayOver(1000)
-        Log.d(TAG, "pressHome for $word. delayOver: $delayOver")
+        Log.d(TAG, "pressHome for $word")
 
         showMessage(word)
         service.pressHome()
 
-        if (group != null && delayOver) {
-            Handler(Looper.getMainLooper()).postDelayed({
-                val intent = Intent(service, WarningActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
-                    putExtra("result_id", group.id)
-                    putExtra("warning_config", Gson().toJson(group.warningScreenConfig))
-                }
-                service.startActivity(intent)
-            }, 300)
+        if (group != null) {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastOverlayShownTimeStamp > overlayCooldownMs) {
+                lastOverlayShownTimeStamp = now
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val intent = Intent(service, WarningActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        putExtra("mode", Constants.WARNING_SCREEN_MODE_KEYWORD_BLOCKER)
+                        putExtra("result_id", group.id)
+                        putExtra("warning_config", Gson().toJson(group.warningScreenConfig))
+                    }
+                    service.startActivity(intent)
+                }, 300)
+            }
         }
     }
 
