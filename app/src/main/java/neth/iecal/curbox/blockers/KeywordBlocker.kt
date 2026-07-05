@@ -185,6 +185,13 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun handleBlocking(group: KeywordGroup) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(
+                service,
+                service.getString(R.string.blocked_keyword_word_was_found).replace("-word", group.name),
+                Toast.LENGTH_LONG
+            ).show()
+        }
         Thread.sleep(250)
         service.pressBack()
         Thread.sleep(250)
