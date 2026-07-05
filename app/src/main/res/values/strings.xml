@@ -1007,4 +1007,7 @@
     <string name="btn_discard">Discard</string>
     <string name="empty_keywords_hint">Keywords and websites you add will appear here</string>
     <string name="write_a_new_keyword">Write a new keyword</string>
+    <string name="time_tracking">Time Tracking</string>
+    <string name="enable_time_tracking">Enable usage time tracking</string>
+    <string name="clustering_threshold">Clustering threshold (minutes)</string>
 </resources>
