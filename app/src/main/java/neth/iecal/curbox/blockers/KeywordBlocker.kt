@@ -485,89 +485,12 @@ class KeywordBlocker : BaseBlocker() {
         // Lock other blocking mechanisms immediately
         lastEventTimeStamp = SystemClock.uptimeMillis()
 
-        if (urlBarInfo == null) {
-            pressHome(keyword, matchedGroup)
-            safeRecycle(displayUrlTextNode)
-            safeRecycle(recursionResultNodes)
-            return
-        }
+        service.pressBack()
+        Thread.sleep(300)
+        pressHome(keyword, matchedGroup)
 
-        // If it's a supported browser but we didn't find the URL bar yet, try one more time
-        if (displayUrlTextNode == null) {
-            displayUrlTextNode = findUrlBarNode(packageName, urlBarInfo)
-        }
-
-        if (displayUrlTextNode == null) {
-            pressHome(keyword, matchedGroup)
-            safeRecycle(recursionResultNodes)
-            return
-        }
-
-        performSmallUpwardScroll()
-        Thread.sleep(250)
-        displayUrlTextNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        
-        var editUrlBar: AccessibilityNodeInfo? = null
-        val editUrlBarId = urlBarInfo.editUrlBarId ?: urlBarInfo.displayUrlBarId
-        
-        // Try finding the edit bar for up to 1 second
-        for (i in 1..5) {
-            Thread.sleep(200)
-            val freshRoot = service.rootInActiveWindow
-            if (freshRoot != null) {
-                editUrlBar = ReelBlocker.findElementById(freshRoot, idPrefixPart + editUrlBarId)
-                if (editUrlBar != null) {
-                    safeRecycle(freshRoot)
-                    break
-                }
-                safeRecycle(freshRoot)
-            }
-        }
-
-        if (editUrlBar == null) {
-            pressHome(keyword, matchedGroup)
-            safeRecycle(displayUrlTextNode)
-            safeRecycle(recursionResultNodes)
-            return
-        }
-
-        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-        val arguments = Bundle()
-        arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, redirectUrl)
-        editUrlBar.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
-        
-        Thread.sleep(100)
-        submitEditedUrlBar(
-            rootNode = service.rootInActiveWindow ?: editUrlBar,
-            editUrlBar = editUrlBar,
-            idPrefixPart = idPrefixPart,
-            urlBarInfo = urlBarInfo
-        )
-        
-        safeRecycle(editUrlBar)
         safeRecycle(displayUrlTextNode)
         safeRecycle(recursionResultNodes)
-
-        // Verify redirection
-        var redirectionSuccessful = false
-        for (i in 1..5) {
-            Thread.sleep(300)
-            val finalRoot = service.rootInActiveWindow ?: continue
-            val finalUrlNode = ReelBlocker.findElementById(finalRoot, idPrefixPart + urlBarInfo.displayUrlBarId)
-            val finalUrl = finalUrlNode?.text?.toString() ?: ""
-            if (finalUrl.isNotEmpty() && containsBlockedKeyword(finalUrl) == null) {
-                redirectionSuccessful = true
-                safeRecycle(finalUrlNode)
-                safeRecycle(finalRoot)
-                break
-            }
-            safeRecycle(finalUrlNode)
-            safeRecycle(finalRoot)
-        }
-
-        if (!redirectionSuccessful) {
-            pressHome(keyword, matchedGroup)
-        }
         lastEventTimeStamp = SystemClock.uptimeMillis()
     }
 
@@ -747,7 +670,7 @@ class KeywordBlocker : BaseBlocker() {
         }
 
         service.pressBack()
-        Thread.sleep(500)
+        Thread.sleep(300)
         pressHome(word)
         Handler(Looper.getMainLooper()).postDelayed({
             val intent = Intent(service, WarningActivity::class.java).apply {
