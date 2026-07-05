@@ -13,12 +13,10 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.AppBlockingType
 import neth.iecal.curbox.data.models.KeywordGroup
-import neth.iecal.curbox.databinding.DialogKeywordSettingsBinding
 import neth.iecal.curbox.databinding.FragmentKeywordBlockerBinding
 import neth.iecal.curbox.ui.activity.FragmentActivity
 
@@ -32,7 +30,6 @@ class KeywordBlockerFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: KeywordBlockerViewModel by activityViewModels()
-    private var isUpdatingUi = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -67,10 +64,22 @@ class KeywordBlockerFragment : Fragment() {
         val popup = PopupMenu(requireContext(), view)
         popup.menuInflater.inflate(R.menu.menu_keyword_blocker, popup.menu)
 
+        val config = viewModel.keywordBlockerConfig.value
+        popup.menu.findItem(R.id.menu_block_unsupported_browsers).isChecked = config?.blockAllExceptSupported == true
+        popup.menu.findItem(R.id.menu_search_recursively).isChecked = config?.searchRecursively ?: true
+
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.menu_settings -> {
-                    showSettingsDialog()
+                R.id.menu_block_unsupported_browsers -> {
+                    val newState = !item.isChecked
+                    viewModel.setBlockAllExceptSupported(newState)
+                    item.isChecked = newState
+                    true
+                }
+                R.id.menu_search_recursively -> {
+                    val newState = !item.isChecked
+                    viewModel.setSearchRecursively(newState)
+                    item.isChecked = newState
                     true
                 }
                 R.id.menu_help -> {
@@ -85,30 +94,6 @@ class KeywordBlockerFragment : Fragment() {
             }
         }
         popup.show()
-    }
-
-    private fun showSettingsDialog() {
-        val dialogBinding = DialogKeywordSettingsBinding.inflate(layoutInflater)
-        val config = viewModel.keywordBlockerConfig.value ?: return
-
-        isUpdatingUi = true
-        dialogBinding.cbSearchRecursively.isChecked = config.searchRecursively
-        dialogBinding.cbMatchSubstrings.isChecked = config.matchSubstrings
-        isUpdatingUi = false
-
-        dialogBinding.cbSearchRecursively.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) viewModel.setSearchRecursively(isChecked)
-        }
-
-        dialogBinding.cbMatchSubstrings.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingUi) viewModel.setMatchSubstrings(isChecked)
-        }
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.advanced)
-            .setView(dialogBinding.root)
-            .setPositiveButton(R.string.done, null)
-            .show()
     }
 
     private fun observeViewModel() {
