@@ -28,6 +28,9 @@
     <string name="close">Close</string>
     <string name="proceed">Proceed</string>
     <string name="cancel">Cancel</string>
+    <string name="unsaved_changes_dialog_title">Unsaved Changes</string>
+    <string name="unsaved_changes_dialog_message">You have unsaved changes. Would you like to save them before leaving?</string>
+    <string name="btn_discard">Discard</string>
     <string name="configure_warning_screen">Warning Screen</string>
     <string name="proceed_in">Please wait %1$d seconds before pressing proceed</string>
     <string name="select_all">Select all</string>
