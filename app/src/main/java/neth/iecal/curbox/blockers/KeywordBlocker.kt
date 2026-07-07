@@ -185,8 +185,9 @@ class KeywordBlocker : BaseBlocker() {
     }
 
     private fun handleBlocking(group: KeywordGroup) {
-        Thread.sleep(250) //we need three waits for the Chrome ui to update the blocked word in the address bar
+        //we need three waits for the Chrome ui to update the blocked word in the address bar
         // so that the user is not locked out of the browser
+        Thread.sleep(250)//if the user touches a home screen shortcut it allows time for the browser UI to update
         service.pressBack()//if the user presses a Chrome home screen shortcut, this will cause Chrome to exit
         //to the home screen, if the user is typing a blocked word it will close the keyboard
         Thread.sleep(250)
