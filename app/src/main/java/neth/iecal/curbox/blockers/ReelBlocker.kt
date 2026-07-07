@@ -45,21 +45,6 @@ class ReelBlocker : BaseBlocker() {
                 AccessibilityEvent.TYPE_VIEW_SCROLLED or
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
                 AccessibilityEvent.TYPE_VIEW_FOCUSED
-
-        fun findElementById(node: AccessibilityNodeInfo?, id: String?): AccessibilityNodeInfo? {
-            if (node == null || id == null) return null
-            try {
-                val nodes = node.findAccessibilityNodeInfosByViewId(id)
-                if (nodes.isNotEmpty()) {
-                    val result = nodes[0]
-                    for (i in 1 until nodes.size) {
-                        try { nodes[i].recycle() } catch (_: Exception) {}
-                    }
-                    return result
-                }
-            } catch (_: Exception) {}
-            return null
-        }
     }
     private lateinit var service : BaseBlockingService
 

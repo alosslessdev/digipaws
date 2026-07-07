@@ -85,22 +85,4 @@ object KeywordMatcher {
                literals.any { matchesLiteral(it, urlIdentifier) }
     }
 
-    /**
-     * Finds the first keyword pattern that matches [urlIdentifier] and returns the matched text.
-     * For regex patterns this returns the actual matched text from the URL.
-     * For literal keywords this returns the lowercased keyword that matched.
-     * Returns null when nothing matches.
-     */
-    fun findMatchedKeyword(patterns: Pair<List<Regex>, List<String>>, urlIdentifier: String): String? {
-        val lower = urlIdentifier.lowercase(Locale.ROOT)
-        val (regexes, literals) = patterns
-        for (regex in regexes) {
-            val match = regex.find(lower)
-            if (match != null) return match.value
-        }
-        for (keyword in literals) {
-            if (matchesLiteral(keyword, urlIdentifier)) return keyword
-        }
-        return null
-    }
 }

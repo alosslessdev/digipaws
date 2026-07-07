@@ -166,9 +166,7 @@ class KeywordBlocker : BaseBlocker() {
                 else removeCooldownFrom(group.id)
             }
             if (isBlocked(group)) {
-                val patterns = groupPatternMap[group.id]
-                val matchedKeyword = patterns?.let { KeywordMatcher.findMatchedKeyword(it, entry.urlIdentifier) }
-                handleBlocking(group, matchedKeyword ?: group.selectedKeywords.firstOrNull() ?: group.name)
+                handleBlocking(group)
                 return
             }
         }
@@ -186,14 +184,7 @@ class KeywordBlocker : BaseBlocker() {
         }
     }
 
-    private fun handleBlocking(group: KeywordGroup, word: String) {
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(
-                service,
-                service.getString(R.string.blocked_keyword_word_was_found).replace("-word", word),
-                Toast.LENGTH_LONG
-            ).show()
-        }
+    private fun handleBlocking(group: KeywordGroup) {
         Thread.sleep(250) //we need three waits for the Chrome ui to update the blocked word in the address bar
         // so that the user is not locked out of the browser
         service.pressBack()//if the user presses a Chrome home screen shortcut, this will cause Chrome to exit
