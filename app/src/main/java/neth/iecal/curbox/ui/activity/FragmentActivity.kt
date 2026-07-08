@@ -112,6 +112,7 @@ class FragmentActivity : AppCompatActivity() {
             neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID,
             KeywordBlockerFragment.FRAGMENT_ID,
             neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID,
+            neth.iecal.curbox.ui.fragments.main.reducers.sync.SyncFragment.FRAGMENT_ID,
             TimeBasedSettingsFragment.FRAGMENT_ID,
             UsageBasedSettingsFragment.FRAGMENT_ID,
             KeywordTimeBasedSettingsFragment.FRAGMENT_ID,
@@ -142,6 +143,7 @@ class FragmentActivity : AppCompatActivity() {
                     neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.mindful_messages.MindfulMessagesFragment()
                     IntentsLogFragment.FRAGMENT_ID -> IntentsLogFragment()
                     neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.api.ApiFragment()
+                    neth.iecal.curbox.ui.fragments.main.reducers.sync.SyncFragment.FRAGMENT_ID -> neth.iecal.curbox.ui.fragments.main.reducers.sync.SyncFragment()
                     TimeBasedSettingsFragment.FRAGMENT_ID -> TimeBasedSettingsFragment()
                     UsageBasedSettingsFragment.FRAGMENT_ID -> UsageBasedSettingsFragment()
                     KeywordTimeBasedSettingsFragment.FRAGMENT_ID -> KeywordTimeBasedSettingsFragment()
