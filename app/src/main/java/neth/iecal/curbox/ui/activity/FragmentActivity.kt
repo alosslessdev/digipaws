@@ -72,6 +72,19 @@ class FragmentActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
+
+        // Screens for features this flavor does not ship stay unreachable even
+        // through shortcuts or external intents.
+        val strippedFromFlavor =
+            (!neth.iecal.curbox.BuildConfig.SUPPORTS_UI_HIDER &&
+                (selectedFragment == UiHiderFragment.FRAGMENT_ID || selectedFragment == UiHiderEditorFragment.FRAGMENT_ID)) ||
+            (!neth.iecal.curbox.BuildConfig.SUPPORTS_ANTI_UNINSTALL &&
+                selectedFragment == AntiUninstallFragment.FRAGMENT_ID)
+        if (strippedFromFlavor) {
+            finish()
+            return
+        }
+
         enableEdgeToEdge()
         setContentView(R.layout.activity_fragment)
 
@@ -175,6 +188,15 @@ class FragmentActivity : AppCompatActivity() {
             else -> {
                 // Show bottom nav for main fragments
                 bottomNav.visibility = android.view.View.VISIBLE
+
+                // The last tab is "Info" on F-Droid. The Play Store build also
+                // hosts account and sync here, so it reads "Settings" instead.
+                if (!neth.iecal.curbox.BuildConfig.FDROID_VARIANT) {
+                    bottomNav.menu.findItem(R.id.nav_info)?.apply {
+                        title = getString(R.string.settings)
+                        setIcon(R.drawable.baseline_settings_24)
+                    }
+                }
 
                 neth.iecal.curbox.utils.DonationPrompt.maybeShow(this)
 
