@@ -59,7 +59,7 @@ class CreateKeywordGroupFragment : Fragment() {
         
         binding.rvKeywords.adapter = keywordAdapter
         
-        existingGroupId = requireActivity().intent.getStringExtra("group_id") ?: arguments?.getString("group_id")
+        existingGroupId = activity?.intent?.getStringExtra("result_id")
         
         if (existingGroupId != null) {
             loadExistingGroup(existingGroupId!!)

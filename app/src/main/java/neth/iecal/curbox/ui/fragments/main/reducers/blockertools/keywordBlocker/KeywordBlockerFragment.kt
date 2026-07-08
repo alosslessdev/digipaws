@@ -7,35 +7,34 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import com.google.android.material.switchmaterial.SwitchMaterial
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.AppBlockingType
 import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.databinding.FragmentKeywordBlockerBinding
 import neth.iecal.curbox.ui.activity.FragmentActivity
-import neth.iecal.curbox.utils.TimeTools
 
 class KeywordBlockerFragment : Fragment() {
+
+    companion object {
+        const val FRAGMENT_ID = "keyword_blocker"
+    }
 
     private var _binding: FragmentKeywordBlockerBinding? = null
     private val binding get() = _binding!!
 
     private val viewModel: KeywordBlockerViewModel by activityViewModels()
-    private val adapter = KeywordGroupAdapter()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -52,23 +51,18 @@ class KeywordBlockerFragment : Fragment() {
         if (!currentConfig.isActive) {
             viewModel.setIsActive(true)
         }
+
         binding.rvKeywordGroups.layoutManager = LinearLayoutManager(requireContext())
-        binding.rvKeywordGroups.adapter = adapter
-        setupListeners()
-        observeViewModel()
-    }
-
-    private fun setupListeners() {
-        binding.btnMenu.setOnClickListener { view ->
-            showPopupMenu(view)
-        }
-
         binding.fabAddGroup.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
                 putExtra("fragment", CreateKeywordGroupFragment.FRAGMENT_ID)
             }
             startActivity(intent)
         }
+
+        binding.btnMenu.setOnClickListener { showPopupMenu(it) }
+
+        observeViewModel()
     }
 
     private fun showPopupMenu(view: View) {
@@ -81,19 +75,17 @@ class KeywordBlockerFragment : Fragment() {
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_block_unsupported_browsers -> {
-                    val newValue = !item.isChecked
-                    item.isChecked = newValue
-                    viewModel.setBlockAllExceptSupported(newValue)
+                    val newState = !item.isChecked
+                    viewModel.setBlockAllExceptSupported(newState)
+                    item.isChecked = newState
                     true
                 }
                 R.id.menu_help -> {
                     val url = "https://curbox.app/docs/reducers/keyword-blocker/"
                     try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        startActivity(intent)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(browserIntent)
+                    } catch (_: Exception) {}
                     true
                 }
                 else -> false
@@ -106,16 +98,26 @@ class KeywordBlockerFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.keywordBlockerConfig.collectLatest { config ->
-                    val isEmpty = config.keywordGroups.isEmpty()
-                    binding.tvEmptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
-                    binding.rvKeywordGroups.visibility = if (isEmpty) View.GONE else View.VISIBLE
-                    adapter.submitList(config.keywordGroups)
+                    if (config.keywordGroups.isEmpty()) {
+                        binding.tvEmptyState.visibility = View.VISIBLE
+                        binding.rvKeywordGroups.visibility = View.GONE
+                    } else {
+                        binding.tvEmptyState.visibility = View.GONE
+                        binding.rvKeywordGroups.visibility = View.VISIBLE
+                        binding.rvKeywordGroups.adapter = KeywordGroupAdapter(config.keywordGroups)
+                    }
+                }
             }
         }
     }
 
-    inner class KeywordGroupAdapter :
-        ListAdapter<KeywordGroup, KeywordGroupAdapter.ViewHolder>(DIFF) {
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    private inner class KeywordGroupAdapter(private val groups: List<KeywordGroup>) :
+        RecyclerView.Adapter<KeywordGroupAdapter.ViewHolder>() {
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val tvName: TextView = view.findViewById(R.id.tv_group_name)
@@ -131,55 +133,31 @@ class KeywordBlockerFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val group = getItem(position)
+            val group = groups[position]
             holder.tvName.text = group.name
-            val typeText = if (group.blockingType == AppBlockingType.Usage) "Usage Based" else "Time Based"
-            holder.tvDetails.text = "${group.selectedKeywords.size} Keywords • $typeText"
-
-            holder.tvRemaining.visibility = View.GONE
-            holder.tvRemaining.tag = group.id
-            viewLifecycleOwner.lifecycleScope.launch {
-                val remaining = viewModel.getRemainingUsageMillis(group)
-                if (holder.tvRemaining.tag != group.id) return@launch
-                if (remaining == null) {
-                    holder.tvRemaining.visibility = View.GONE
-                } else {
-                    holder.tvRemaining.text = if (remaining <= 0L) "No time left today"
-                        else "${TimeTools.formatTimeForWidget(remaining)} left today"
-                    holder.tvRemaining.visibility = View.VISIBLE
-                }
+            
+            val typeStr = when (group.blockingType) {
+                AppBlockingType.Usage -> getString(R.string.usage_based)
+                AppBlockingType.Timed -> getString(R.string.time_based)
+                AppBlockingType.OnOpen -> getString(R.string.label_on_each_open)
             }
+            holder.tvDetails.text = "${group.selectedKeywords.size} Keywords • $typeStr"
 
             holder.switchActive.setOnCheckedChangeListener(null)
             holder.switchActive.isChecked = group.isActive
             holder.switchActive.setOnCheckedChangeListener { _, isChecked ->
                 viewModel.updateGroupActiveState(group.id, isChecked)
             }
-            
+
             holder.itemView.setOnClickListener {
                 val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
                     putExtra("fragment", CreateKeywordGroupFragment.FRAGMENT_ID)
-                    putExtra("group_id", group.id)
+                    putExtra("result_id", group.id)
                 }
                 startActivity(intent)
             }
         }
-    }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
-
-    companion object {
-        const val FRAGMENT_ID = "keyword_blocker"
-
-        private val DIFF = object : DiffUtil.ItemCallback<KeywordGroup>() {
-            override fun areItemsTheSame(oldItem: KeywordGroup, newItem: KeywordGroup) =
-                oldItem.id == newItem.id
-
-            override fun areContentsTheSame(oldItem: KeywordGroup, newItem: KeywordGroup) =
-                oldItem == newItem
-        }
+        override fun getItemCount() = groups.size
     }
 }

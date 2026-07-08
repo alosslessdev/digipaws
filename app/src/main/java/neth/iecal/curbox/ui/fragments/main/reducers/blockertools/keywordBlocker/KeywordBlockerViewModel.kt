@@ -16,9 +16,6 @@ import neth.iecal.curbox.data.db.AppDatabase
 import neth.iecal.curbox.data.models.KeywordBlocker
 import neth.iecal.curbox.data.models.KeywordGroup
 import neth.iecal.curbox.utils.DataStoreManager
-import neth.iecal.curbox.utils.KeywordMatcher
-import neth.iecal.curbox.utils.TimeTools
-import neth.iecal.curbox.data.models.AppBlockingType
 import neth.iecal.curbox.data.models.AppUsageConfig
 import neth.iecal.curbox.data.models.AppTimeConfig
 import neth.iecal.curbox.data.models.AppBlockerWarningScreenConfig
@@ -42,60 +39,25 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
     var currentTimeConfig = AppTimeConfig()
     var warningScrnConfig = AppBlockerWarningScreenConfig()
 
-    /**
-     * Time left today before this group hits its usage limit, in millis.
-     * Returns null for groups that are not usage based. Usage is the combined
-     * total of every keyword in the group across all browsers.
-     */
-    suspend fun getRemainingUsageMillis(group: KeywordGroup): Long? {
-        if (group.blockingType != AppBlockingType.Usage) return null
-        val config = runCatching {
-            Gson().fromJson(group.setting, AppUsageConfig::class.java)
-        }.getOrNull() ?: return null
-
-        val limitMillis = limitForToday(config) * 60_000L
-        val patterns = KeywordMatcher.compileKeywords(group.selectedKeywords)
-        val date = TimeTools.getCurrentDate()
-        val used = withContext(Dispatchers.IO) {
-            AppDatabase.getInstance(getApplication()).websiteStatsDao()
-                .getStatsForDate(date)
-                .filter { KeywordMatcher.matchesPatterns(patterns, it.urlIdentifier) }
-                .sumOf { it.totalTime }
-        }
-        return (limitMillis - used).coerceAtLeast(0L)
-    }
-
-    private fun limitForToday(config: AppUsageConfig): Long {
-        return if (config.isDailyUniform) config.uniformLimit
-        else config.dailyLimits[Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1]
-    }
-
-    init {
-        viewModelScope.launch {
-            dataStoreManager.settings.collectLatest { settings ->
-                _keywordBlockerConfig.value = settings.keywordBlockerConfig
-            }
-        }
-    }
-
-
     private fun requestKeywordBlockerRefresh() {
         val intent = Intent(neth.iecal.curbox.blockers.KeywordBlocker.INTENT_ACTION_REFRESH_CONFIG)
         getApplication<Application>().sendBroadcast(intent)
     }
-    private fun updateConfig(transform: (neth.iecal.curbox.data.models.KeywordBlocker) -> neth.iecal.curbox.data.models.KeywordBlocker) {
+
+    private fun updateConfig(transform: (KeywordBlocker) -> KeywordBlocker) {
         viewModelScope.launch {
-            dataStoreManager.updateKeywordBlockerConfig(transform)
-            requestKeywordBlockerRefresh()
+            // NonCancellable: CreateKeywordGroupFragment calls finish() right after the write, which
+            // cancels viewModelScope mid-persist (esp. the slow first/cold-start write) and drops the
+            // first keyword group. Keep the write + refresh broadcast alive until they complete.
+            withContext(NonCancellable) {
+                dataStoreManager.updateKeywordBlockerConfig(transform)
+                requestKeywordBlockerRefresh()
+            }
         }
     }
 
     fun setIsActive(isActive: Boolean) {
         updateConfig { it.copy(isActive = isActive) }
-    }
-
-    fun setBlockAllExceptSupported(enabled: Boolean) {
-        updateConfig { it.copy(blockAllExceptSupported = enabled) }
     }
 
     fun addGroup(group: KeywordGroup) {
@@ -135,5 +97,8 @@ class KeywordBlockerViewModel(application: Application) : AndroidViewModel(appli
             config.copy(keywordGroups = groups)
         }
     }
-}
+
+    fun setBlockAllExceptSupported(enabled: Boolean) {
+        updateConfig { it.copy(blockAllExceptSupported = enabled) }
+    }
 }
