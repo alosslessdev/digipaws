@@ -1,5 +1,6 @@
 package neth.iecal.curbox.hardcoded
 
+import neth.iecal.curbox.data.models.UiHiderConfig
 import neth.iecal.curbox.data.models.UiHiderScript
 
 /**
@@ -121,3 +122,26 @@ val DEFAULT_UIHIDER_SCRIPTS: List<UiHiderScript> = listOf(
         """.trimIndent()
     )
 )
+
+val DEFAULT_UIHIDER_SCRIPT_IDS: Set<String> = DEFAULT_UIHIDER_SCRIPTS.mapTo(HashSet()) { it.id }
+
+fun isPresetUiHiderScript(id: String): Boolean = id in DEFAULT_UIHIDER_SCRIPT_IDS
+
+/**
+ * Older versions persisted the preset scripts inside [UiHiderConfig.scripts]. Strip them out,
+ * keeping only their enabled state, so presets always take their source from code.
+ */
+fun UiHiderConfig.normalized(): UiHiderConfig {
+    val legacyPresets = scripts.filter { it.id in DEFAULT_UIHIDER_SCRIPT_IDS }
+    if (legacyPresets.isEmpty()) return this
+    return copy(
+        scripts = scripts.filterNot { it.id in DEFAULT_UIHIDER_SCRIPT_IDS },
+        enabledPresetIds = (enabledPresetIds + legacyPresets.filter { it.isEnabled }.map { it.id }).distinct()
+    )
+}
+
+/** Preset scripts (with the user's enabled state) followed by the user's own scripts. */
+fun UiHiderConfig.allScripts(): List<UiHiderScript> {
+    val config = normalized()
+    return DEFAULT_UIHIDER_SCRIPTS.map { it.copy(isEnabled = it.id in config.enabledPresetIds) } + config.scripts
+}

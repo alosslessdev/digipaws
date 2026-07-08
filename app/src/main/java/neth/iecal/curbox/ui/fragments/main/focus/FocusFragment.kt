@@ -168,7 +168,7 @@ class FocusFragment : Fragment() {
         val b = _binding ?: return
         viewModel.selectedMins = pos.coerceAtLeast(1)
         b.tvMinutes.text = viewModel.selectedMins.toString()
-        b.tvSeconds.text = "mins"
+        b.tvSeconds.text = getString(R.string.common_mins)
     }
 
     private fun setupRuler() {

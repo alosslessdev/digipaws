@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import neth.iecal.curbox.R
 import neth.iecal.curbox.databinding.FragmentScreenTimeEstimateBinding
 import neth.iecal.curbox.ui.fragments.installation.onboarding.OnboardingFragment
 import neth.iecal.curbox.ui.fragments.installation.onboarding.OnboardingViewModel
@@ -44,7 +45,7 @@ class ScreenTimeEstimateFragment : Fragment() {
 
     @SuppressLint("SetTextI18n")
     private fun updateRealityText(hours: Int) {
-        binding.tvHoursDisplay.text = "$hours hrs"
+        binding.tvHoursDisplay.text = getString(R.string.screen_time_hours, hours)
         
         // Calculate weeks over a year (hours * 365) / 24 / 7
         // Let's use days instead to make it simpler and sound scarier: (hours * 365) / 24
@@ -54,7 +55,7 @@ class ScreenTimeEstimateFragment : Fragment() {
         
         val weeks = daysPerYear / 7
         
-        binding.tvRealitySubtext.text = "That is $weeks full weeks of your life staring at a screen per year."
+        binding.tvRealitySubtext.text = getString(R.string.screen_time_reality, weeks)
     }
 
     override fun onDestroyView() {

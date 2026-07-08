@@ -199,43 +199,6 @@
                 app:strokeWidth="1dp">
 
                 <LinearLayout
-                    android:id="@+id/dnd_perm_root"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:id="@+id/dnd_perm_title"
-                        style="@style/TextAppearance.Material3.BodyLarge"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/onboarding_dnd_access"
-                        android:textColor="?attr/colorOnSurface" />
-
-                    <ImageView
-                        android:id="@+id/dnd_perm_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/baseline_close_24"
-                        app:tint="?attr/colorError" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@android:color/transparent"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
                     android:id="@+id/blocker_acc_perm_root"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -255,43 +218,6 @@
 
                     <ImageView
                         android:id="@+id/blocker_acc_perm_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/baseline_close_24"
-                        app:tint="?attr/colorError" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@android:color/transparent"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:id="@+id/tracker_acc_perm_root"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:id="@+id/tracker_acc_perm_title"
-                        style="@style/TextAppearance.Material3.BodyLarge"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/usage_tracker_accessibility"
-                        android:textColor="?attr/colorOnSurface" />
-
-                    <ImageView
-                        android:id="@+id/tracker_acc_perm_icon"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/baseline_close_24"

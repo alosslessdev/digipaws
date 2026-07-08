@@ -89,9 +89,9 @@ class WarningConfigFragment : Fragment() {
             val duration = pendingQrDuration
             currentQrMap[result.contents] = duration
             updateQrList()
-            Toast.makeText(requireContext(), "QR Code Saved Successfully!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), R.string.warning_qr_saved, Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(requireContext(), "Scan cancelled", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), R.string.warning_scan_cancelled, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -163,19 +163,19 @@ class WarningConfigFragment : Fragment() {
         binding.typingSentenceEdit.setText(config.typingSentence)
 
         binding.fixedTimeSlider.value = (config.timeInterval / 60000).toFloat().coerceIn(1f, 120f)
-        binding.timingTitle.text = "Fixed Unlock Duration: ${binding.fixedTimeSlider.value.toInt()} mins"
+        binding.timingTitle.text = getString(R.string.warning_fixed_unlock_duration, binding.fixedTimeSlider.value.toInt())
 
         binding.proceedDelaySlider.value = config.proceedDelayInSecs.toFloat().coerceIn(0f, 60f)
-        binding.proceedDelayTitle.text = "Wait before unlocking: ${binding.proceedDelaySlider.value.toInt()}s"
+        binding.proceedDelayTitle.text = getString(R.string.warning_wait_before_unlock, binding.proceedDelaySlider.value.toInt())
 
         binding.proceedLimitSwitch.isChecked = config.proceedLimitEnabled
         binding.proceedLimitContainer.visibility = if (config.proceedLimitEnabled) View.VISIBLE else View.GONE
 
         binding.allowedProceedsSlider.value = config.allowedProceeds.toFloat().coerceIn(1f, 20f)
-        binding.allowedProceedsTitle.text = "Allowed proceeds: ${binding.allowedProceedsSlider.value.toInt()}"
+        binding.allowedProceedsTitle.text = getString(R.string.warning_allowed_proceeds, binding.allowedProceedsSlider.value.toInt())
 
         binding.proceedWindowSlider.value = config.proceedsTimeWindowMn.toFloat().coerceIn(1f, 240f)
-        binding.proceedWindowTitle.text = "Time window: ${binding.proceedWindowSlider.value.toInt()} mins"
+        binding.proceedWindowTitle.text = getString(R.string.warning_time_window, binding.proceedWindowSlider.value.toInt())
 
         binding.warningMsgEdit.setText(config.message)
         binding.switchVibrateBrightness.isChecked = config.vibrateAndIncBrightness
@@ -230,11 +230,11 @@ class WarningConfigFragment : Fragment() {
         }
 
         binding.fixedTimeSlider.addOnChangeListener { _, value, _ ->
-            binding.timingTitle.text = "Fixed Unlock Duration: ${value.toInt()} mins"
+            binding.timingTitle.text = getString(R.string.warning_fixed_unlock_duration, value.toInt())
         }
 
         binding.proceedDelaySlider.addOnChangeListener { _, value, _ ->
-            binding.proceedDelayTitle.text = "Wait before unlocking: ${value.toInt()}s"
+            binding.proceedDelayTitle.text = getString(R.string.warning_wait_before_unlock, value.toInt())
         }
 
         binding.proceedLimitSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -242,11 +242,11 @@ class WarningConfigFragment : Fragment() {
         }
 
         binding.allowedProceedsSlider.addOnChangeListener { _, value, _ ->
-            binding.allowedProceedsTitle.text = "Allowed proceeds: ${value.toInt()}"
+            binding.allowedProceedsTitle.text = getString(R.string.warning_allowed_proceeds, value.toInt())
         }
 
         binding.proceedWindowSlider.addOnChangeListener { _, value, _ ->
-            binding.proceedWindowTitle.text = "Time window: ${value.toInt()} mins"
+            binding.proceedWindowTitle.text = getString(R.string.warning_time_window, value.toInt())
         }
 
         binding.advancedSettingsHeader.setOnClickListener {
@@ -270,16 +270,16 @@ class WarningConfigFragment : Fragment() {
                         setPadding(32, 32, 32, 32)
                     }
                     MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("QR/Barcode Generated")
-                        .setMessage("Please save or print this QR/Barcode. You will need it to unlock.")
+                        .setTitle(R.string.warning_qr_generated_title)
+                        .setMessage(R.string.warning_qr_generated_message)
                         .setView(imageView)
-                        .setPositiveButton("Done", null)
-                        .setNeutralButton("Save to Gallery") { _, _ ->
+                        .setPositiveButton(R.string.done, null)
+                        .setNeutralButton(R.string.warning_save_to_gallery) { _, _ ->
                             saveImageToGallery(bitmap)
                         }
                         .show()
                 } catch (e: Exception) {
-                    Toast.makeText(requireContext(), "Failed to generate QR image", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), R.string.warning_qr_generate_failed, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -375,12 +375,12 @@ class WarningConfigFragment : Fragment() {
                     values.put(android.provider.MediaStore.Images.Media.IS_PENDING, 0)
                     context.contentResolver.update(uri, values, null, null)
                 }
-                Toast.makeText(context, "Saved to Gallery!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.warning_saved_to_gallery, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.warning_save_image_failed, Toast.LENGTH_SHORT).show()
             }
         } else {
-            Toast.makeText(context, "Failed to create MediaStore entry", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.warning_mediastore_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -449,7 +449,7 @@ class WarningConfigFragment : Fragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
             addOnChangeListener { _, value, _ ->
-                timeLabel.text = "Fixed unlock duration: ${value.toInt()} mins"
+                timeLabel.text = getString(R.string.warning_fixed_unlock_duration_lower, value.toInt())
             }
         }
 
@@ -464,14 +464,14 @@ class WarningConfigFragment : Fragment() {
         pickerContainer.addView(pickerInnerContainer)
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("QR/Barcode Timing")
-            .setMessage("Configure the time behavior for this code before continuing.")
+            .setTitle(R.string.warning_qr_timing_title)
+            .setMessage(R.string.warning_qr_timing_message)
             .setView(pickerContainer)
-            .setPositiveButton("Continue") { _, _ ->
+            .setPositiveButton(R.string.common_continue) { _, _ ->
                 val duration = if (switchDynamic.isChecked) -1L else slider.value.toLong() * 60_000L
                 onConfigured(duration)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 

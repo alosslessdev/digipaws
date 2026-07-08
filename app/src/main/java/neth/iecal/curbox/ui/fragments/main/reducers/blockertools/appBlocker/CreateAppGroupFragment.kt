@@ -44,7 +44,7 @@ class CreateAppGroupFragment : Fragment() {
             val apps = result.data?.getStringArrayListExtra("SELECTED_APPS")
             if (apps != null) {
                 selectedApps = apps
-                binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
+                binding.btnSelectApps.text = getString(R.string.select_apps_count, selectedApps.size)
             }
         }
     }
@@ -73,7 +73,7 @@ class CreateAppGroupFragment : Fragment() {
         if (groupId == null && !isPrefilled && prefillPackage != null) {
             isPrefilled = true
             selectedApps = arrayListOf(prefillPackage)
-            binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
+            binding.btnSelectApps.text = getString(R.string.select_apps_count, selectedApps.size)
         }
 
         if (groupId != null) {
@@ -83,10 +83,10 @@ class CreateAppGroupFragment : Fragment() {
                     if (group != null && !isEditing) {
                         isEditing = true
                         existingGroup = group
-                        binding.textView2.text = "Edit App Group"
+                        binding.textView2.text = getString(R.string.app_group_edit_title)
                         binding.etGroupName.setText(group.name)
                         selectedApps = ArrayList(group.selectedPackages)
-                        binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
+                        binding.btnSelectApps.text = getString(R.string.select_apps_count, selectedApps.size)
 
                         binding.btnDeleteGroup.visibility = View.VISIBLE
                         binding.btnDeleteGroup.setOnClickListener {

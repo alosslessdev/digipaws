@@ -108,7 +108,7 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
                 daysAdapter.notifyItemChanged(dayPosition)
             },
             onDisabledClick = {
-                Toast.makeText(requireContext(), "Disable everyday to set granular ranges", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.time_disable_everyday_granular, Toast.LENGTH_SHORT).show()
             }
         )
         daysListContainer.layoutManager = LinearLayoutManager(requireContext())
@@ -167,7 +167,7 @@ abstract class BaseTimeSettingsFragment : BottomSheetDialogFragment() {
                 interval.endMinute = picker.minute
             }
             if (list.fixOvernightInterval(interval)) {
-                Toast.makeText(requireContext(), "Overnight range split into two (up to midnight and from midnight)", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), R.string.time_overnight_split, Toast.LENGTH_LONG).show()
             }
             onComplete()
         }

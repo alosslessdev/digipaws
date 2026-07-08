@@ -140,6 +140,8 @@ class OnboardingFragment : Fragment() {
     }
 
     private inner class OnboardingPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
+        // Onboarding never asks for a login. Sync lives in Settings (Play Store
+        // only) and stays out of the way until someone goes looking for it.
         override fun getItemCount(): Int = 5
 
         override fun createFragment(position: Int): Fragment {

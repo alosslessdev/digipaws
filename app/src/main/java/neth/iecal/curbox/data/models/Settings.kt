@@ -21,5 +21,6 @@ data class Settings(
     val reelCounterOverlayConfig: ReelCounterOverlayConfig = ReelCounterOverlayConfig(),
     val nextWebsiteRecheckTime: Long = 0L,
     val antiUninstallConfig: AntiUninstallConfig = AntiUninstallConfig(),
-    val serviceProtectionConfig: ServiceProtectionConfig = ServiceProtectionConfig()
+    val serviceProtectionConfig: ServiceProtectionConfig = ServiceProtectionConfig(),
+    val settingsChangeDelayConfig: SettingsChangeDelayConfig = SettingsChangeDelayConfig()
 )

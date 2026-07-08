@@ -20,6 +20,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import neth.iecal.curbox.Constants
+import neth.iecal.curbox.R
 import neth.iecal.curbox.blockers.uihider.NodeFinder
 import neth.iecal.curbox.data.models.ReelBlocker
 import neth.iecal.curbox.data.models.ReelBlockingType
@@ -138,7 +139,7 @@ class ReelBlocker : BaseBlocker() {
 
 
     fun applyCooldown(viewId: String, endTime: Long) {
-        notificationManager.startTimer(totalMillis = endTime - SystemClock.uptimeMillis(), timerId = viewId, title = "Remaining usage before reels lockdown")
+        notificationManager.startTimer(totalMillis = endTime - SystemClock.uptimeMillis(), timerId = viewId, title = service.getString(R.string.notification_remaining_usage_reels_lockdown))
         cooldownViewIdsList[viewId] = endTime
     }
 

@@ -26,8 +26,8 @@ import neth.iecal.curbox.utils.ServiceProtectionManager
 import java.util.concurrent.TimeUnit
 
 /**
- * The backstop watchdog. It wakes up on a schedule even when both accessibility services are dead,
- * checks whether they are still on, and either heals them silently through Shizuku or, if it can't,
+ * The backstop watchdog. It wakes up on a schedule even when the accessibility service is dead,
+ * checks whether it is still on, and either heals it silently through Shizuku or, if it can't,
  * nudges the user with a notification. It is scheduled with setPersisted so it survives a reboot.
  *
  * It cannot beat a force stop, which also cancels this job until the app is opened again.
@@ -43,10 +43,10 @@ class ServiceWatchdogJob : JobService() {
                 if (config.isEnabled) {
                     if (config.selfHealWithShizuku && ServiceProtectionManager.canSelfHeal()) {
                         ServiceProtectionManager.healNow(applicationContext)
-                    } else if (!ServiceProtectionManager.areBothServicesEnabled(applicationContext)) {
+                    } else if (!ServiceProtectionManager.isAppBlockerEnabled(applicationContext)) {
                         postServicesDownNotification(applicationContext)
                     } else {
-                        // Services are healthy again, take the reminder down and reset the cooldown.
+                        // Service is healthy again, take the reminder down and reset the cooldown.
                         clearServicesDownNotification(applicationContext)
                     }
                 }

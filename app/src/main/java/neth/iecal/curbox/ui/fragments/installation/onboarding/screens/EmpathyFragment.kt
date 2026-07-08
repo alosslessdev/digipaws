@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import neth.iecal.curbox.databinding.FragmentEmpathyBinding
 import neth.iecal.curbox.ui.fragments.installation.onboarding.OnboardingFragment
+import neth.iecal.curbox.utils.LanguageUtils
 
 class EmpathyFragment : Fragment() {
 
@@ -23,6 +24,7 @@ class EmpathyFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        LanguageUtils.bindLanguageSelector(binding.languageSelector, binding.languageSelector)
         binding.btnAction.setOnClickListener {
             (parentFragment as? OnboardingFragment)?.goToNextPage()
         }

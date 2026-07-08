@@ -67,7 +67,7 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
                 matchedAppGroups.forEach { group ->
                     addShortcutCard(
                         title = group.name,
-                        subtitle = "App Blocker",
+                        subtitle = getString(R.string.rule_type_app_blocker),
                         isActive = group.isActive,
                         iconRes = R.drawable.ic_app_blocker_aesthetic,
                         onToggle = { active -> viewModel.toggleAppGroup(group.id, active) },
@@ -84,7 +84,7 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
                 matchedGrayscale.forEach { group ->
                     addShortcutCard(
                         title = group.groupName,
-                        subtitle = "Grayscale",
+                        subtitle = getString(R.string.rule_type_grayscale),
                         isActive = group.isActive,
                         iconRes = R.drawable.ic_grayscale_aesthetic,
                         onToggle = { active -> viewModel.toggleGrayscaleGroup(group.groupId, active) },
@@ -100,9 +100,9 @@ class AppUsageBreakdown(private val stat: AllAppsUsageFragment.Stat) : Fragment(
         }
 
         binding.btnCreateNewRule.setOnClickListener {
-            val options = arrayOf("App Blocker", "Grayscale")
+            val options = arrayOf(getString(R.string.rule_type_app_blocker), getString(R.string.rule_type_grayscale))
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Create New Rule")
+                .setTitle(R.string.create_new_rule_title)
                 .setItems(options) { _, which ->
                     val fragmentId = when (which) {
                         0 -> CreateAppGroupFragment.FRAGMENT_ID

@@ -127,8 +127,8 @@ class KeywordBlockerFragment : Fragment() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val group = getItem(position)
             holder.tvName.text = group.name
-            val typeText = if (group.blockingType == AppBlockingType.Usage) "Usage Based" else "Time Based"
-            holder.tvDetails.text = "${group.selectedKeywords.size} Keywords • $typeText"
+            val typeText = getString(if (group.blockingType == AppBlockingType.Usage) R.string.group_type_usage_based else R.string.group_type_time_based)
+            holder.tvDetails.text = getString(R.string.group_details_keywords, group.selectedKeywords.size, typeText)
 
             holder.tvRemaining.visibility = View.GONE
             holder.tvRemaining.tag = group.id

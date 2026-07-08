@@ -10,9 +10,18 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.launch
 import java.io.File
+import neth.iecal.curbox.BuildConfig
+import neth.iecal.curbox.data.sync.SyncGateway
 import neth.iecal.curbox.databinding.FragmentInfoBinding
+import neth.iecal.curbox.ui.activity.FragmentActivity
+import neth.iecal.curbox.ui.fragments.main.reducers.sync.SyncFragment
+import neth.iecal.curbox.utils.LanguageUtils
 
 class InfoFragment : Fragment() {
 
@@ -29,8 +38,56 @@ class InfoFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
+        setupAccountSection()
         setupClickListeners()
+        LanguageUtils.bindLanguageSelector(binding.languageSelector, binding.textCurrentLanguage)
+    }
+
+    // Account and sync live here in the Play Store build only. F-Droid stays
+    // offline, so the card never appears and there is no login to be seen. The
+    // login flow opens as its own screen so the keyboard has room to breathe.
+    private fun setupAccountSection() {
+        if (BuildConfig.FDROID_VARIANT) return
+
+        binding.cardAccount.visibility = View.VISIBLE
+        binding.btnLogin.setOnClickListener {
+            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("fragment", SyncFragment.FRAGMENT_ID)
+            }
+            startActivity(intent)
+        }
+
+        // The card speaks to where someone is: signed out, mid setup, or fully on.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                SyncGateway.provider.status.collect { s ->
+                    val titleRes: Int
+                    val pitchRes: Int
+                    val buttonRes: Int
+                    when {
+                        s.unlocked -> {
+                            titleRes = R.string.sync_is_on
+                            pitchRes = R.string.sync_is_on_pitch
+                            buttonRes = R.string.manage_sync
+                        }
+                        s.signedIn -> {
+                            titleRes = R.string.sync_across_devices
+                            pitchRes = R.string.sync_finish_setup_pitch
+                            buttonRes = R.string.finish_sync_setup
+                        }
+                        else -> {
+                            titleRes = R.string.sync_across_devices
+                            pitchRes = R.string.sync_across_devices_pitch
+                            buttonRes = R.string.log_in
+                        }
+                    }
+                    binding.textAccountTitle.setText(titleRes)
+                    binding.textAccountPitch.setText(pitchRes)
+                    binding.btnLogin.setText(buttonRes)
+                }
+            }
+        }
     }
 
     private fun setupClickListeners() {
@@ -101,13 +158,13 @@ class InfoFragment : Fragment() {
         }
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Crash Logs")
+            .setTitle(R.string.crash_logs_title)
             .setMessage(displayContent)
-            .setPositiveButton("Share") { _, _ ->
+            .setPositiveButton(R.string.share) { _, _ ->
                 shareCrashLogs(content)
             }
-            .setNegativeButton("Close", null)
-            .setNeutralButton("Clear") { _, _ ->
+            .setNegativeButton(R.string.close, null)
+            .setNeutralButton(R.string.clear) { _, _ ->
                 if (logFile.exists() && logFile.delete()) {
                     Toast.makeText(requireContext(), getString(R.string.crash_logs_cleared), Toast.LENGTH_SHORT).show()
                 }

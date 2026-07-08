@@ -226,12 +226,12 @@ class AllAppsUsageFragment : Fragment() {
 
                                 val options =
                                     arrayOf(
-                                        "Daily Breakdown (Time Series)",
-                                        "Total Summary",
-                                        "Both"
+                                        getString(R.string.usage_export_daily_breakdown),
+                                        getString(R.string.usage_export_total_summary),
+                                        getString(R.string.usage_export_both)
                                     )
                                 MaterialAlertDialogBuilder(requireContext())
-                                    .setTitle("Select Data Format")
+                                    .setTitle(R.string.usage_export_format_title)
                                     .setSingleChoiceItems(options, 0) { dialog, which ->
                                         generateAndExportCsv(startDateMs, endDateMs, which)
                                         dialog.dismiss()
@@ -246,9 +246,9 @@ class AllAppsUsageFragment : Fragment() {
                             val appWidgetManager = AppWidgetManager.getInstance(requireContext())
 
                             if (appWidgetManager.isRequestPinAppWidgetSupported) {
-                                val options = arrayOf("Screentime Stats", "Reels Stats")
+                                val options = arrayOf(getString(R.string.usage_widget_screentime), getString(R.string.usage_widget_reels))
                                 MaterialAlertDialogBuilder(requireContext())
-                                    .setTitle("Select Widget to Pin")
+                                    .setTitle(R.string.usage_widget_pin_title)
                                     .setItems(options) { dialog, which ->
                                         val myProvider = if (which == 0) {
                                             ComponentName(
@@ -532,10 +532,10 @@ class AllAppsUsageFragment : Fragment() {
                 binding.root.setOnLongClickListener {
 
                     MaterialAlertDialogBuilder(binding.root.context)
-                        .setTitle("Add to ignored packages?")
-                        .setMessage("This action will cause the tracker to not display any stats from this app.")
+                        .setTitle(R.string.usage_ignore_title)
+                        .setMessage(R.string.usage_ignore_message)
                         .setCancelable(true)
-                        .setPositiveButton("Okay") { _, _ ->
+                        .setPositiveButton(R.string.okay) { _, _ ->
                             lifecycleScope.launch(Dispatchers.IO) {
                                 val dataStore = DataStoreManager(binding.root.context)
                                 val ignoredAppsSP =
@@ -552,7 +552,7 @@ class AllAppsUsageFragment : Fragment() {
                                 }
                             }
                         }
-                        .setNegativeButton("Cancel", null)
+                        .setNegativeButton(R.string.cancel, null)
                         .show()
                     true
                 }

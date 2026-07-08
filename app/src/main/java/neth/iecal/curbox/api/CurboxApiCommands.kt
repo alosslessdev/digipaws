@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import neth.iecal.curbox.BuildConfig
 import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
 import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.blockers.FocusModeBlocker
@@ -12,6 +13,7 @@ import neth.iecal.curbox.blockers.ReelBlocker
 import neth.iecal.curbox.blockers.uihider.UiHider
 import neth.iecal.curbox.data.db.AppDatabase
 import neth.iecal.curbox.data.db.FocusStatsEntity
+import neth.iecal.curbox.hardcoded.allScripts
 import neth.iecal.curbox.trackers.ReelsCountTracker
 import neth.iecal.curbox.utils.DataStoreManager
 import neth.iecal.curbox.utils.DndHelper
@@ -47,7 +49,10 @@ object CurboxApiCommands {
                 ApiCommand.SET_KEYWORD_BLOCKER -> setKeywordBlocker(app, dataStore, enable)
                 ApiCommand.SET_KEYWORD_GROUP -> setKeywordGroup(app, dataStore, target, enable)
                 ApiCommand.SET_REEL_BLOCKER -> setReelBlocker(app, dataStore, enable)
-                ApiCommand.SET_UI_HIDER -> setUiHider(app, dataStore, enable)
+                ApiCommand.SET_UI_HIDER -> {
+                    if (!BuildConfig.SUPPORTS_UI_HIDER) return false
+                    setUiHider(app, dataStore, enable)
+                }
                 ApiCommand.SET_GRAYSCALE_GROUP -> setGrayscaleGroup(app, dataStore, target, enable)
                 ApiCommand.SET_REEL_COUNTER -> setReelCounter(app, dataStore, enable)
                 ApiCommand.SET_DND -> DndHelper.applyDndState(app, enable)
@@ -127,8 +132,7 @@ object CurboxApiCommands {
     }
 
     private suspend fun setUiHider(context: Context, dataStore: DataStoreManager, enable: Boolean) {
-        val settings = dataStore.settings.first()
-        dataStore.updateUiHiderConfig(settings.uiHiderConfig.copy(isActive = enable))
+        dataStore.updateUiHiderConfig { it.copy(isActive = enable) }
         broadcast(context, UiHider.INTENT_ACTION_REFRESH_UI_HIDER)
     }
 
@@ -247,7 +251,7 @@ object CurboxApiCommands {
                 )
             }
 
-            ApiList.UI_HIDER_SCRIPTS -> settings.uiHiderConfig.scripts.map { s ->
+            ApiList.UI_HIDER_SCRIPTS -> if (!BuildConfig.SUPPORTS_UI_HIDER) emptyList() else settings.uiHiderConfig.allScripts().map { s ->
                 linkedMapOf(
                     "id" to s.id,
                     "label" to s.label,
@@ -270,7 +274,7 @@ object CurboxApiCommands {
                     "keywordBlocker" to settings.keywordBlockerConfig.isActive,
                     "reelBlocker" to settings.reelBlockerConfig.isActive,
                     "reelCounter" to settings.isReelCounterOn,
-                    "uiHider" to settings.uiHiderConfig.isActive
+                    "uiHider" to (BuildConfig.SUPPORTS_UI_HIDER && settings.uiHiderConfig.isActive)
                 )
             }
         }

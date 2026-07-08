@@ -214,7 +214,7 @@ class MindfulMessagesFragment : Fragment() {
     }
 
     private fun updateAppsButtonText() {
-        binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
+        binding.btnSelectApps.text = getString(R.string.select_apps_count, selectedApps.size)
     }
 
     override fun onDestroyView() {

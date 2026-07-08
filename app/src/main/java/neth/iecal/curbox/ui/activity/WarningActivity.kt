@@ -47,7 +47,7 @@ class WarningActivity : AppCompatActivity() {
         ScanContract()
     ) { result ->
         if (result.contents == null) {
-            Toast.makeText(this@WarningActivity, "Cancelled", Toast.LENGTH_LONG).show()
+            Toast.makeText(this@WarningActivity, R.string.warning_cancelled, Toast.LENGTH_LONG).show()
         } else {
             val warningScreenConfig = Gson().fromJson<AppBlockerWarningScreenConfig>(
                 intent.getStringExtra("warning_config"),
@@ -66,7 +66,7 @@ class WarningActivity : AppCompatActivity() {
                     binding.minsPicker.visibility = View.GONE
                 }
             } else {
-                 Toast.makeText(this@WarningActivity, "Invalid QR Code - Pattern does not match", Toast.LENGTH_LONG).show()
+                 Toast.makeText(this@WarningActivity, R.string.warning_invalid_qr, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -121,7 +121,7 @@ class WarningActivity : AppCompatActivity() {
             binding.btnProceed.visibility = View.GONE
             if (isProceedLimitExceeded) {
                 binding.proceedSeconds.visibility = View.VISIBLE
-                binding.proceedSeconds.text = "Proceed limit of ${warningScreenConfig.allowedProceeds} per ${warningScreenConfig.proceedsTimeWindowMn} minutes has been reached. Try again in $timeUntilNextProceedMn minutes."
+                binding.proceedSeconds.text = getString(R.string.warning_proceed_limit_reached, warningScreenConfig.allowedProceeds, warningScreenConfig.proceedsTimeWindowMn, timeUntilNextProceedMn)
             } else {
                 binding.proceedSeconds.visibility = View.GONE
             }
@@ -150,7 +150,7 @@ class WarningActivity : AppCompatActivity() {
                                 }
                             } else if (warningScreenConfig.isTypingRequirementEnabled) {
                                 binding.typingTargetSentence.visibility = View.VISIBLE
-                                binding.typingTargetSentence.text = "\"${warningScreenConfig.typingSentence}\""
+                                binding.typingTargetSentence.text = getString(R.string.warning_typing_quote, warningScreenConfig.typingSentence)
                                 binding.typingInputLayout.visibility = View.VISIBLE
                                 button.isEnabled = false
                                 button.setText(R.string.proceed)
@@ -159,7 +159,7 @@ class WarningActivity : AppCompatActivity() {
                                     button.isEnabled = s?.toString() == warningScreenConfig.typingSentence
                                 }
                             } else if (warningScreenConfig.isQrUnlockRequirementEnabled && !isQrScanned) {
-                                button.text = "Scan QR Code"
+                                button.text = getString(R.string.warning_scan_qr_code)
                                 button.isEnabled = true
                             } else {
                                 button.setText(R.string.proceed)

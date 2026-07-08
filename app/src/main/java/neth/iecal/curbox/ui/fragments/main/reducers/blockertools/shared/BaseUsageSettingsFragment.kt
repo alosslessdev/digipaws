@@ -61,7 +61,7 @@ abstract class BaseUsageSettingsFragment : BottomSheetDialogFragment() {
             dayItems,
             onUniformToggle = { isUniform -> handleUniformLimitToggle(isUniform) },
             onDisabledClick = {
-                Toast.makeText(requireContext(), "Disable everyday to add granular changes", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.usage_disable_everyday_granular, Toast.LENGTH_SHORT).show()
             }
         )
         daysListContainer.layoutManager = LinearLayoutManager(requireContext())

@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import neth.iecal.curbox.R
 import neth.iecal.curbox.data.db.IntentLogEntity
 import neth.iecal.curbox.databinding.ItemIntentLogBinding
 
@@ -24,7 +25,7 @@ class IntentsLogAdapter(private val onDelete: (Int) -> Unit) : ListAdapter<Inten
         holder.binding.run {
             intentText.text = item.intentText
             timeText.text = DateUtils.getRelativeTimeSpanString(item.timestamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
-            durationText.text = "Unlocked for ${item.unlockedDurationMs / 60_000} mins"
+            durationText.text = durationText.context.getString(R.string.intent_unlocked_for, item.unlockedDurationMs / 60_000)
 
             val pm = root.context.packageManager
             try {

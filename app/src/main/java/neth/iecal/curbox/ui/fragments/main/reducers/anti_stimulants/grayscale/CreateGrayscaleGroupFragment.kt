@@ -43,7 +43,7 @@ class CreateGrayscaleGroupFragment : Fragment() {
             val apps = result.data?.getStringArrayListExtra("SELECTED_APPS")
             if (apps != null) {
                 selectedApps = apps
-                binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
+                binding.btnSelectApps.text = getString(R.string.select_apps_count, selectedApps.size)
             }
         }
     }
@@ -67,7 +67,7 @@ class CreateGrayscaleGroupFragment : Fragment() {
         if (groupId == null && !isPrefilled && prefillPackage != null) {
             isPrefilled = true
             selectedApps = arrayListOf(prefillPackage)
-            binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
+            binding.btnSelectApps.text = getString(R.string.select_apps_count, selectedApps.size)
         }
 
         if (groupId == null) {
@@ -86,15 +86,15 @@ class CreateGrayscaleGroupFragment : Fragment() {
                     if (group != null && !isEditing) {
                         isEditing = true
                         existingGroup = group
-                        binding.textView.text = "Edit Grayscale Group"
+                        binding.textView.text = getString(R.string.grayscale_group_edit_title)
                         binding.etGroupName.setText(group.groupName)
                         selectedApps = ArrayList(group.packages.toList())
-                        binding.btnSelectApps.text = "Select Apps (${selectedApps.size})"
+                        binding.btnSelectApps.text = getString(R.string.select_apps_count, selectedApps.size)
 
                         binding.btnDeleteGroup.visibility = View.VISIBLE
                         binding.btnDeleteGroup.setOnClickListener {
                             viewModel.removeGroup(group)
-                            Toast.makeText(requireContext(), "Group deleted", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), R.string.group_deleted, Toast.LENGTH_SHORT).show()
                             requireActivity().finish()
                         }
 

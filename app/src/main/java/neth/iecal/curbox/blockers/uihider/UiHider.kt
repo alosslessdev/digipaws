@@ -23,6 +23,7 @@ import neth.iecal.curbox.blockers.uihider.script.Parser
 import neth.iecal.curbox.blockers.uihider.script.ScriptError
 import neth.iecal.curbox.blockers.uihider.script.Stmt
 import neth.iecal.curbox.data.models.UiHiderConfig
+import neth.iecal.curbox.hardcoded.allScripts
 import neth.iecal.curbox.services.BaseBlockingService
 
 /**
@@ -100,7 +101,7 @@ class UiHider : BaseBlocker() {
     private fun recompile() {
         val newMap = HashMap<String, MutableList<CompiledScript>>()
         if (config.isActive) {
-            for (script in config.scripts) {
+            for (script in config.allScripts()) {
                 if (!script.isEnabled || script.packageName.isBlank() || script.source.isBlank()) continue
                 try {
                     val program = Parser.parse(script.source)

@@ -10,16 +10,15 @@ import android.text.TextUtils
 import android.util.Log
 import neth.iecal.curbox.receivers.AdminReceiver
 import neth.iecal.curbox.services.AppBlockerService
-import neth.iecal.curbox.services.UsageTrackingService
 
 /**
  * The brain behind the Service Protection screen and the watchdog. It checks how well protected the
- * services are and, when Shizuku is available, repairs the things an OEM battery manager tends to
- * break: it turns the accessibility services back on and re keeps the app out of doze and background
+ * service is and, when Shizuku is available, repairs the things an OEM battery manager tends to
+ * break: it turns the accessibility service back on and re keeps the app out of doze and background
  * limits.
  *
  * Nothing here can make the app truly un killable. A force stop still wins. The goal is only to make
- * the services hard to kill and fast to bring back.
+ * the service hard to kill and fast to bring back.
  */
 object ServiceProtectionManager {
 
@@ -27,12 +26,6 @@ object ServiceProtectionManager {
 
     fun isAppBlockerEnabled(context: Context): Boolean =
         PermissionUtils.isAccessibilityServiceEnabled(context, AppBlockerService::class.java)
-
-    fun isUsageTrackerEnabled(context: Context): Boolean =
-        PermissionUtils.isAccessibilityServiceEnabled(context, UsageTrackingService::class.java)
-
-    fun areBothServicesEnabled(context: Context): Boolean =
-        isAppBlockerEnabled(context) && isUsageTrackerEnabled(context)
 
     /** Shizuku is the only thing that lets us silently turn services back on, so it gates self healing. */
     fun canSelfHeal(): Boolean =
@@ -64,7 +57,7 @@ object ServiceProtectionManager {
         try {
             if (!canSelfHeal()) return
             reinforceBackgroundExecution(context)
-            if (!areBothServicesEnabled(context)) {
+            if (!isAppBlockerEnabled(context)) {
                 reEnableAccessibilityServices(context)
             }
         } catch (e: Exception) {
@@ -72,11 +65,10 @@ object ServiceProtectionManager {
         }
     }
 
-    /** Adds any missing Curbox accessibility service back into the secure settings list, via Shizuku. */
+    /** Adds the Curbox accessibility service back into the secure settings list, via Shizuku. */
     private fun reEnableAccessibilityServices(context: Context) {
         val wanted = listOf(
-            ComponentName(context, AppBlockerService::class.java).flattenToString(),
-            ComponentName(context, UsageTrackingService::class.java).flattenToString()
+            ComponentName(context, AppBlockerService::class.java).flattenToString()
         )
 
         val current = Settings.Secure.getString(
@@ -97,7 +89,7 @@ object ServiceProtectionManager {
             "settings put secure enabled_accessibility_services '$merged'; " +
                 "settings put secure accessibility_enabled 1"
         )
-        Log.i(TAG, "Re enabled accessibility services via Shizuku")
+        Log.i(TAG, "Re enabled accessibility service via Shizuku")
     }
 
     /** Keeps the app out of doze and lets it run freely in the background. Needs Shizuku. */

@@ -3,6 +3,7 @@ package neth.iecal.curbox.ui.activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import neth.iecal.curbox.R
 import neth.iecal.curbox.databinding.ActivityCrashLogBinding
 import java.io.File
 
@@ -55,7 +56,7 @@ class CrashLogActivity : AppCompatActivity() {
 
         binding.btnClear.setOnClickListener {
             if (logFile.exists() && logFile.delete()) {
-                binding.tvCrashLogs.text = "No crash logs available."
+                binding.tvCrashLogs.text = getString(R.string.crash_logs_none_available)
             }
         }
     }

@@ -135,7 +135,7 @@ class FocusStatsFragment : Fragment() {
         binding.tvAvgDuration.text = formatDuration(avgDuration)
         
         val completionRate = if (totalSessions > 0) ((successfulSessions * 100).toFloat() / totalSessions.toFloat()).toInt() else 0
-        binding.tvCompletionRate.text = "$completionRate%"
+        binding.tvCompletionRate.text = getString(R.string.percent_value, completionRate)
         
         binding.tvStreak.text = computeStreak(completed).toString()
         
@@ -255,7 +255,7 @@ class FocusStatsFragment : Fragment() {
             val groupId = entry.key
             val count = entry.value
             
-            var name = "Unknown Group"
+            var name = getString(R.string.focus_unknown_group)
             val mGroup = manualGroups.find { it.groupId == groupId }
             if (mGroup != null) name = mGroup.groupName
             else {

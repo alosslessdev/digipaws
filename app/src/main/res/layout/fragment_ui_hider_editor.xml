@@ -96,6 +96,17 @@
             android:fontFamily="monospace"
             android:textSize="12sp" />
 
+        <TextView
+            android:id="@+id/text_preset_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:padding="12dp"
+            android:visibility="gone"
+            android:background="?attr/colorSurfaceContainer"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:text="@string/ui_hider_preset_note" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_save"
             android:layout_width="match_parent"

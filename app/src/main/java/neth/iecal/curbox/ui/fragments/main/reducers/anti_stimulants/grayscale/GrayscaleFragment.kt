@@ -1,6 +1,7 @@
 package neth.iecal.curbox.ui.fragments.main.reducers.anti_stimulants.grayscale
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,6 +15,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.BuildConfig
+import neth.iecal.curbox.R
+import neth.iecal.curbox.utils.GrayscaleControl
 import neth.iecal.curbox.utils.ViewUtils
 import neth.iecal.curbox.data.models.GrayscaleGroup
 import neth.iecal.curbox.databinding.FragmentGrayscaleBinding
@@ -32,6 +36,37 @@ class GrayscaleFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: GrayscaleViewModel by activityViewModels()
+
+    private val shizukuPermissionListener =
+        rikka.shizuku.Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+            if (requestCode == 1001 && grantResult == PackageManager.PERMISSION_GRANTED) {
+                activity?.runOnUiThread {
+                    if (BuildConfig.SUPPORTS_WRITE_SECURE_SETTINGS) {
+                        grantSecureSettings()
+                    } else if (_binding != null) {
+                        checkGrayscalePermission()
+                    }
+                }
+            }
+        }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        try {
+            rikka.shizuku.Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            rikka.shizuku.Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -90,7 +125,7 @@ class GrayscaleFragment : Fragment() {
             val group = groupList[position]
             holder.itemBinding.tvGroupName.text = group.groupName
             
-            holder.itemBinding.tvGroupDetails.text = "${group.packages.size} Apps"
+            holder.itemBinding.tvGroupDetails.text = getString(R.string.group_details_apps_only, group.packages.size)
             
             holder.itemBinding.switchActive.setOnCheckedChangeListener(null)
             holder.itemBinding.switchActive.isChecked = group.isActive
@@ -113,27 +148,50 @@ class GrayscaleFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        checkShizuku()
+        checkGrayscalePermission()
     }
 
-    private fun checkShizuku() {
-        val hasShizuku = PermissionUtils.hasShizukuPermission()
-        if (!hasShizuku) {
-            binding.cardShizukuWarning.visibility = View.VISIBLE
-            binding.btnActionShizuku.setOnClickListener {
-                if (PermissionUtils.isShizukuAvailable()) {
+    private fun checkGrayscalePermission() {
+        // Full and fdroid hold WRITE_SECURE_SETTINGS themselves; Shizuku is only
+        // needed once to grant it. Playstore shells out via Shizuku on every toggle.
+        val hasAccess = if (BuildConfig.SUPPORTS_WRITE_SECURE_SETTINGS) {
+            PermissionUtils.hasWriteSecureSettings(requireContext())
+        } else {
+            PermissionUtils.hasShizukuPermission()
+        }
+        if (hasAccess) {
+            binding.cardShizukuWarning.visibility = View.GONE
+            return
+        }
+
+        binding.cardShizukuWarning.visibility = View.VISIBLE
+        if (BuildConfig.SUPPORTS_WRITE_SECURE_SETTINGS) {
+            binding.tvShizukuDesc.setText(R.string.grayscale_secure_settings_desc)
+        }
+        binding.btnActionShizuku.setOnClickListener {
+            when {
+                !PermissionUtils.isShizukuAvailable() -> {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/"))
+                    startActivity(intent)
+                }
+                !PermissionUtils.hasShizukuPermission() -> {
                     try {
                         rikka.shizuku.Shizuku.requestPermission(1001)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                } else {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/"))
-                    startActivity(intent)
                 }
+                else -> grantSecureSettings()
             }
-        } else {
-            binding.cardShizukuWarning.visibility = View.GONE
+        }
+    }
+
+    private fun grantSecureSettings() {
+        val context = context ?: return
+        GrayscaleControl.grantWriteSecureSettings(context) {
+            activity?.runOnUiThread {
+                if (_binding != null) checkGrayscalePermission()
+            }
         }
     }
 

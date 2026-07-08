@@ -74,7 +74,7 @@ class CreateKeywordGroupFragment : Fragment() {
                 val group = config.keywordGroups.find { it.id == groupId }
                 if (group != null && !isEditing) {
                     isEditing = true
-                    binding.tvTitle.text = "Edit Keyword Group"
+                    binding.tvTitle.text = getString(R.string.keyword_group_edit_title)
                     binding.etGroupName.setText(group.name)
                     selectedKeywords = group.selectedKeywords.toMutableList()
                     updateKeywordsList()
@@ -216,12 +216,12 @@ class CreateKeywordGroupFragment : Fragment() {
                 
                 if (addedCount > 0) {
                     updateKeywordsList()
-                    Toast.makeText(requireContext(), "Imported $addedCount keywords", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.keyword_imported_count, addedCount), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(requireContext(), "No new keywords to import", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), R.string.keyword_no_new_import, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to import keywords", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.keyword_import_failed, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -234,9 +234,9 @@ class CreateKeywordGroupFragment : Fragment() {
                         outputStream.write(selectedKeywords.joinToString("\n").toByteArray())
                     }
                 }
-                Toast.makeText(requireContext(), "Keywords exported successfully", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.keyword_export_success, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to export keywords", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.keyword_export_failed, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -285,7 +285,7 @@ class CreateKeywordGroupFragment : Fragment() {
             return
         }
         if (selectedKeywords.isEmpty()) {
-            Toast.makeText(requireContext(), "Add at least one keyword", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), R.string.keyword_add_at_least_one, Toast.LENGTH_SHORT).show()
             return
         }
 

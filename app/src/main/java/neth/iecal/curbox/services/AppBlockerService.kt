@@ -1,8 +1,12 @@
 package neth.iecal.curbox.services
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.widget.Toast
+import androidx.core.net.toUri
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,9 +14,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.BuildConfig
 import neth.iecal.curbox.CrashLogger
+import neth.iecal.curbox.R
 import neth.iecal.curbox.anti_stimulants.AutoDnd
 import neth.iecal.curbox.anti_stimulants.GrayScaleFilter
+import neth.iecal.curbox.anti_stimulants.MindfulMessage
 import neth.iecal.curbox.blockers.AntiUninstallBlocker
 import neth.iecal.curbox.blockers.AppBlocker
 import neth.iecal.curbox.blockers.FocusModeBlocker
@@ -20,6 +27,10 @@ import neth.iecal.curbox.blockers.KeywordBlocker
 import neth.iecal.curbox.blockers.ReelBlocker
 import neth.iecal.curbox.blockers.uihider.NodePicker
 import neth.iecal.curbox.blockers.uihider.UiHider
+import neth.iecal.curbox.trackers.AppUsageTracker
+import neth.iecal.curbox.trackers.ReelsCountTracker
+import neth.iecal.curbox.trackers.WebsiteUsageTracker
+import neth.iecal.curbox.ui.overlay.ReelsOverlayManager
 
 @Suppress("DEPRECATION")
 class AppBlockerService : BaseBlockingService() {
@@ -35,7 +46,13 @@ class AppBlockerService : BaseBlockingService() {
 
     private var grayScaleFilter = GrayScaleFilter()
 
-    override val isAppBlockerService: Boolean = true
+    // Usage tracking, which used to live in its own accessibility service, now
+    // runs here so the user only has to grant one service.
+    private val reelsOverlayManager by lazy { ReelsOverlayManager(this) }
+    private val reelsCountTracker = ReelsCountTracker()
+    private val mindfulMessage = MindfulMessage()
+    private val websiteUsageTracker = WebsiteUsageTracker()
+    private val appUsageTracker = AppUsageTracker()
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -66,13 +83,24 @@ class AppBlockerService : BaseBlockingService() {
         super.onAccessibilityEvent(event)
 
         try {
-            antiUninstallBlocker.doAntiUninstallCheck(event)
+            if (BuildConfig.SUPPORTS_ANTI_UNINSTALL) {
+                antiUninstallBlocker.doAntiUninstallCheck(event)
+            }
             appBlocker.doAppBlockerCheck(event)
             grayScaleFilter.doGrayscaleCheck(event)
             focusModeBlocker.doFocusModeCheck(event)
         } catch (t: Throwable) {
             Log.e("error", t.message ?: "Unknown error")
             crashLogger.logNonFatalError(Exception(t))
+        }
+
+        try {
+            appUsageTracker.onEvent(event)
+            reelsCountTracker.onEvent(event)
+            mindfulMessage.onEvent(event)
+            websiteUsageTracker.onEvent(event)
+        } catch (error: Exception) {
+            Log.e("Usage Tracking error", error.toString())
         }
 
         val eventCopy = AccessibilityEvent.obtain(event)
@@ -93,7 +121,9 @@ class AppBlockerService : BaseBlockingService() {
                 try {
                     reelBlocker.doViewBlockerCheck(event)
                     keywordBlocker.checkIfUnsupportedBrowser(event)
-                    uiHider.doUiHiderCheck(event)
+                    if (BuildConfig.SUPPORTS_UI_HIDER) {
+                        uiHider.doUiHiderCheck(event)
+                    }
                 } catch (t: Throwable) {
                     // Don't log normal coroutine cancellations as crashes
                     if (t is CancellationException) throw t
@@ -115,18 +145,48 @@ class AppBlockerService : BaseBlockingService() {
         autoDnd.setup(this)
         reelBlocker.setupBlocker(this)
         keywordBlocker.setupBlocker(this)
-        uiHider.setupBlocker(this)
-        nodePicker.setupBlocker(this)
         grayScaleFilter.setup(this)
-        antiUninstallBlocker.setupBlocker(this)
+        if (BuildConfig.SUPPORTS_UI_HIDER) {
+            uiHider.setupBlocker(this)
+            nodePicker.setupBlocker(this)
+        }
+        if (BuildConfig.SUPPORTS_ANTI_UNINSTALL) {
+            antiUninstallBlocker.setupBlocker(this)
+        }
+
+        reelsCountTracker.setup(this, reelsOverlayManager)
+        mindfulMessage.setup(this)
+        websiteUsageTracker.setup(this)
+        appUsageTracker.setup(this)
+        neth.iecal.curbox.utils.UsageStatsCleaner.watch(this)
 
         focusModeBlocker.setupReceivers()
         appBlocker.setupReceivers()
         reelBlocker.setupReceivers()
         keywordBlocker.setupReceivers()
         grayScaleFilter.setupReceivers()
-        uiHider.setupReceivers()
-        nodePicker.setupReceivers()
+        if (BuildConfig.SUPPORTS_UI_HIDER) {
+            uiHider.setupReceivers()
+            nodePicker.setupReceivers()
+        }
+        reelsCountTracker.setupReceivers()
+
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(
+                this,
+                getString(R.string.please_provide_draw_over_other_apps),
+                Toast.LENGTH_LONG
+            ).show()
+
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                "package:$packageName".toUri()
+            ).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+
+            startActivity(intent)
+        }
 
         startBackgroundWorker()
     }
@@ -141,9 +201,17 @@ class AppBlockerService : BaseBlockingService() {
             appBlocker.onDestroy()
             keywordBlocker.removeReceivers()
             grayScaleFilter.unregisterReceivers()
-            uiHider.removeReceivers()
-            nodePicker.removeReceivers()
-            antiUninstallBlocker.onDestroy()
+            if (BuildConfig.SUPPORTS_UI_HIDER) {
+                uiHider.removeReceivers()
+                nodePicker.removeReceivers()
+            }
+            if (BuildConfig.SUPPORTS_ANTI_UNINSTALL) {
+                antiUninstallBlocker.onDestroy()
+            }
+            mindfulMessage.onDestroy()
+            reelsCountTracker.onDestroy()
+            websiteUsageTracker.onDestroy()
+            appUsageTracker.onDestroy()
 
             eventChannel.close()
             serviceScope.cancel()

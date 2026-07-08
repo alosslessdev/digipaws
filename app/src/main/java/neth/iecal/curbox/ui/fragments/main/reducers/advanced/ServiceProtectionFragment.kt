@@ -18,11 +18,11 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.BuildConfig
 import neth.iecal.curbox.R
 import neth.iecal.curbox.hardcoded.OemAutostartIntents
 import neth.iecal.curbox.services.AppBlockerService
 import neth.iecal.curbox.services.ServiceWatchdogJob
-import neth.iecal.curbox.services.UsageTrackingService
 import neth.iecal.curbox.utils.DataStoreManager
 import neth.iecal.curbox.utils.PermissionUtils
 import neth.iecal.curbox.utils.ServiceProtectionManager
@@ -147,10 +147,10 @@ class ServiceProtectionFragment : Fragment() {
 
         groupStatus.isVisible = isEnabled
 
-        // Both services running
-        val bothOn = ServiceProtectionManager.areBothServicesEnabled(context)
+        // Blocking service running
+        val serviceOn = ServiceProtectionManager.isAppBlockerEnabled(context)
         setRow(
-            iconServices, textServices, bothOn,
+            iconServices, textServices, serviceOn,
             getString(R.string.service_protection_services_on),
             getString(R.string.service_protection_services_off)
         )
@@ -176,9 +176,11 @@ class ServiceProtectionFragment : Fragment() {
         )
         btnSetupShizuku.isVisible = !shizukuOk
 
-        // Device owner advanced option only makes sense with Shizuku
-        deviceOwnerHeader.isVisible = shizukuOk
-        btnDeviceOwner.isVisible = shizukuOk
+        // Device owner needs Shizuku and the device admin receiver, which the
+        // Play Store flavor strips along with anti uninstall
+        val deviceOwnerAvailable = shizukuOk && BuildConfig.SUPPORTS_ANTI_UNINSTALL
+        deviceOwnerHeader.isVisible = deviceOwnerAvailable
+        btnDeviceOwner.isVisible = deviceOwnerAvailable
     }
 
     private fun setRow(icon: ImageView, text: TextView, ok: Boolean, okText: String, badText: String) {
@@ -241,13 +243,8 @@ class ServiceProtectionFragment : Fragment() {
             ServiceProtectionManager.healNow(context)
             Toast.makeText(context, R.string.service_protection_repair_started, Toast.LENGTH_SHORT).show()
         } else {
-            val downService = when {
-                !ServiceProtectionManager.isAppBlockerEnabled(context) -> AppBlockerService::class.java
-                !ServiceProtectionManager.isUsageTrackerEnabled(context) -> UsageTrackingService::class.java
-                else -> null
-            }
-            if (downService != null) {
-                PermissionUtils.openAccessibilityServiceScreen(context, downService)
+            if (!ServiceProtectionManager.isAppBlockerEnabled(context)) {
+                PermissionUtils.openAccessibilityServiceScreen(context, AppBlockerService::class.java)
             } else {
                 Toast.makeText(context, R.string.service_protection_services_on, Toast.LENGTH_SHORT).show()
             }

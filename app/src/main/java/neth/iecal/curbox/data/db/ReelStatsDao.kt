@@ -19,4 +19,10 @@ interface ReelStatsDao {
 
     @Query("SELECT * FROM reel_stats ORDER BY date DESC")
     suspend fun getAll(): List<ReelStatsEntity>
+
+    @Query("SELECT DISTINCT date FROM reel_stats")
+    suspend fun getDistinctDates(): List<String>
+
+    @Query("DELETE FROM reel_stats WHERE date IN (:dates)")
+    suspend fun deleteByDates(dates: List<String>)
 }

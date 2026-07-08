@@ -89,10 +89,10 @@ class GrayScaleFilter : BaseBlocker() {
 
         if (shouldGrayscale) {
             Log.d("GrayScaleFilter", "Enabling monochrome for $currentPackageName")
-            grayscaleControl.enableGrayscale()
+            grayscaleControl.enableGrayscale(service)
         } else {
             Log.d("GrayScaleFilter", "Disabling monochrome for $currentPackageName")
-            grayscaleControl.disableGrayscale()
+            grayscaleControl.disableGrayscale(service)
         }
     }
 

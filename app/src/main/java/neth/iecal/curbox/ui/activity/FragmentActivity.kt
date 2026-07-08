@@ -32,6 +32,7 @@ import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHider
 import neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderEditorFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.advanced.AntiUninstallFragment
 import neth.iecal.curbox.ui.fragments.main.reducers.advanced.ServiceProtectionFragment
+import neth.iecal.curbox.ui.fragments.main.reducers.advanced.SettingsChangeDelayFragment
 import androidx.core.view.isVisible
 import android.animation.ValueAnimator
 import android.content.Context
@@ -135,6 +136,7 @@ class FragmentActivity : AppCompatActivity() {
             WarningConfigFragment.FRAGMENT_ID,
             AntiUninstallFragment.FRAGMENT_ID,
             ServiceProtectionFragment.FRAGMENT_ID,
+            SettingsChangeDelayFragment.FRAGMENT_ID,
             CreateKeywordGroupFragment.FRAGMENT_ID -> {
                 // Hide bottom nav for these standalone fragments
                 bottomNav.visibility = android.view.View.GONE
@@ -177,6 +179,7 @@ class FragmentActivity : AppCompatActivity() {
                     }
                     AntiUninstallFragment.FRAGMENT_ID -> AntiUninstallFragment()
                     ServiceProtectionFragment.FRAGMENT_ID -> ServiceProtectionFragment()
+                    SettingsChangeDelayFragment.FRAGMENT_ID -> SettingsChangeDelayFragment()
                     else -> AccessibilityGuide()
                 }
                 fragment.arguments = intent.extras

@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import neth.iecal.curbox.BuildConfig
 import neth.iecal.curbox.R
 
 import android.content.Intent
@@ -87,6 +88,7 @@ class ReducersFragment : Fragment() {
         }
 
         val uiHiderCard = view.findViewById<MaterialCardView>(R.id.card_ui_hider)
+        uiHiderCard.isVisible = BuildConfig.SUPPORTS_UI_HIDER
         uiHiderCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
                 putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.blockertools.uiHider.UiHiderFragment.FRAGMENT_ID)
@@ -111,9 +113,18 @@ class ReducersFragment : Fragment() {
         }
 
         val antiUninstallCard = view.findViewById<MaterialCardView>(R.id.card_anti_uninstall)
+        antiUninstallCard.isVisible = BuildConfig.SUPPORTS_ANTI_UNINSTALL
         antiUninstallCard.setOnClickListener {
             val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
                 putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.advanced.AntiUninstallFragment.FRAGMENT_ID)
+            }
+            startActivity(intent)
+        }
+
+        val settingsChangeDelayCard = view.findViewById<MaterialCardView>(R.id.card_settings_change_delay)
+        settingsChangeDelayCard.setOnClickListener {
+            val intent = Intent(requireContext(), FragmentActivity::class.java).apply {
+                putExtra("fragment", neth.iecal.curbox.ui.fragments.main.reducers.advanced.SettingsChangeDelayFragment.FRAGMENT_ID)
             }
             startActivity(intent)
         }

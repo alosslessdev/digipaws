@@ -111,8 +111,8 @@ class AppBlockerGroupsFragment : Fragment() {
             val group = getItem(position)
             holder.tvName.text = group.name
 
-            val typeText = if (group.blockingType == AppBlockingType.Timed) "Time Based" else "Usage Based"
-            holder.tvDetails.text = "${group.selectedPackages.size} Apps • $typeText"
+            val typeText = getString(if (group.blockingType == AppBlockingType.Timed) R.string.group_type_time_based else R.string.group_type_usage_based)
+            holder.tvDetails.text = getString(R.string.group_details_apps, group.selectedPackages.size, typeText)
 
             holder.tvRemaining.visibility = View.GONE
             holder.tvRemaining.tag = group.id

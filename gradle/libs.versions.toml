@@ -19,8 +19,16 @@ lifecycleViewmodel = "2.10.0"
 mpandroidchart = "v3.1.0"
 room = "2.6.1"
 timerangepicker = "1.0.0"
+okhttp = "4.12.0"
+securityCrypto = "1.1.0-alpha06"
+work = "2.9.1"
+coroutines = "1.7.3"
 
 [libraries]
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
 androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref = "fragmentKtx" }

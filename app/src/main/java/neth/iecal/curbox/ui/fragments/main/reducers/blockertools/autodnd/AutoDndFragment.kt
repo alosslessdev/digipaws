@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import neth.iecal.curbox.R
 import neth.iecal.curbox.utils.ViewUtils
 import neth.iecal.curbox.data.models.AutoDndGroup
 import neth.iecal.curbox.databinding.FragmentAutodndBinding
@@ -87,7 +88,7 @@ class AutoDndFragment : Fragment() {
             val group = groupList[position]
             holder.itemBinding.tvGroupName.text = group.groupName
             
-            holder.itemBinding.tvGroupDetails.text = "Scheduled"
+            holder.itemBinding.tvGroupDetails.text = getString(R.string.autodnd_scheduled)
             
             holder.itemView.setOnClickListener {
                 val intent = Intent(requireContext(), neth.iecal.curbox.ui.activity.FragmentActivity::class.java).apply {

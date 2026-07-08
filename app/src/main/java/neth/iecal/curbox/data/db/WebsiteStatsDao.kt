@@ -5,12 +5,17 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WebsiteStatsDao {
 
     @Query("SELECT * FROM website_stats WHERE date = :date")
     suspend fun getStatsForDate(date: String): List<WebsiteStatsEntity>
+
+    @Query("SELECT * FROM website_stats WHERE date = :date")
+    fun observeStatsForDate(date: String): Flow<List<WebsiteStatsEntity>>
+
 
     @Query("SELECT * FROM website_stats WHERE date = :date AND packageName = :packageName AND urlIdentifier = :urlIdentifier")
     suspend fun getStat(date: String, packageName: String, urlIdentifier: String): WebsiteStatsEntity?
@@ -32,4 +37,10 @@ interface WebsiteStatsDao {
 
     @Query("UPDATE website_stats SET lastVisited = :lastVisited WHERE date = :date AND packageName = :packageName AND urlIdentifier = :urlIdentifier")
     suspend fun touch(date: String, packageName: String, urlIdentifier: String, lastVisited: Long)
+
+    @Query("SELECT DISTINCT date FROM website_stats")
+    suspend fun getDistinctDates(): List<String>
+
+    @Query("DELETE FROM website_stats WHERE date IN (:dates)")
+    suspend fun deleteByDates(dates: List<String>)
 }

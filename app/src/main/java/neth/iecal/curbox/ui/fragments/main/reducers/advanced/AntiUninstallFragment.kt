@@ -41,6 +41,9 @@ class AntiUninstallFragment : Fragment() {
 
     companion object {
         const val FRAGMENT_ID = "anti_uninstall"
+        private const val KEY_PENDING_MODE = "pending_mode"
+        private const val KEY_PENDING_HASH = "pending_hash"
+        private const val KEY_PENDING_DAYS = "pending_days"
     }
 
     private lateinit var dataStore: DataStoreManager
@@ -91,6 +94,13 @@ class AntiUninstallFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_anti_uninstall, container, false)
         dataStore = DataStoreManager(requireContext())
 
+        // The system admin prompt can outlive our process, so the pending choice must survive it.
+        savedInstanceState?.let {
+            pendingMode = AntiUninstallMode.valueOf(it.getString(KEY_PENDING_MODE) ?: pendingMode.name)
+            pendingHash = it.getString(KEY_PENDING_HASH) ?: pendingHash
+            pendingDays = it.getInt(KEY_PENDING_DAYS, pendingDays)
+        }
+
         statusTitle = view.findViewById(R.id.text_status_title)
         statusBody = view.findViewById(R.id.text_status_body)
         groupSetup = view.findViewById(R.id.group_setup)
@@ -139,6 +149,13 @@ class AntiUninstallFragment : Fragment() {
         }
 
         return view
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_PENDING_MODE, pendingMode.name)
+        outState.putString(KEY_PENDING_HASH, pendingHash)
+        outState.putInt(KEY_PENDING_DAYS, pendingDays)
     }
 
     override fun onResume() {
@@ -246,6 +263,11 @@ class AntiUninstallFragment : Fragment() {
     }
 
     private fun enableProtection() {
+        // Never lock the user in with a password that can't be entered.
+        if (pendingMode == AntiUninstallMode.PASSWORD && pendingHash.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.anti_uninstall_setup_again, Toast.LENGTH_LONG).show()
+            return
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             dataStore.updateAntiUninstallConfig {
                 it.copy(

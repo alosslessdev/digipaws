@@ -15,8 +15,13 @@ data class UiHiderScript(
 /**
  * Top-level configuration for the UIHider feature, stored in DataStore as part of Settings.
  * Scripts only run while [isActive] is true and the script's [UiHiderScript.isEnabled] is set.
+ *
+ * [scripts] holds only user-created scripts. The preset scripts ship in code
+ * (DEFAULT_UIHIDER_SCRIPTS) and are never persisted; only the ids the user turned on are
+ * stored in [enabledPresetIds], so preset source always comes from the current app version.
  */
 data class UiHiderConfig(
     val isActive: Boolean = false,
-    val scripts: List<UiHiderScript> = emptyList()
+    val scripts: List<UiHiderScript> = emptyList(),
+    val enabledPresetIds: List<String> = emptyList()
 )

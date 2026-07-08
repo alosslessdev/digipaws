@@ -7,8 +7,12 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.UiHiderScript
 import neth.iecal.curbox.databinding.FragmentUiHiderEditorBinding
+import neth.iecal.curbox.hardcoded.isPresetUiHiderScript
 
 class UiHiderEditorFragment : Fragment() {
 
@@ -32,6 +36,7 @@ class UiHiderEditorFragment : Fragment() {
 
         scriptId = arguments?.getString(EXTRA_SCRIPT_ID)
         val isEditing = scriptId != null
+        val isPreset = scriptId?.let { isPresetUiHiderScript(it) } == true
 
         if (isEditing) {
             existingIsEnabled = arguments?.getBoolean(EXTRA_IS_ENABLED, true) ?: true
@@ -40,12 +45,25 @@ class UiHiderEditorFragment : Fragment() {
             binding.editSource.setText(arguments?.getString(EXTRA_SOURCE).orEmpty())
         }
 
+        if (isPreset) {
+            binding.editPackage.isEnabled = false
+            binding.editLabel.isEnabled = false
+            binding.editSource.isEnabled = false
+            binding.textPresetNote.visibility = View.VISIBLE
+            binding.btnSave.visibility = View.GONE
+            binding.btnDelete.visibility = View.GONE
+            return
+        }
+
         binding.btnDelete.visibility = if (isEditing) View.VISIBLE else View.GONE
 
         binding.btnSave.setOnClickListener { save() }
         binding.btnDelete.setOnClickListener {
-            scriptId?.let { viewModel.deleteScript(it) }
-            requireActivity().finish()
+            val id = scriptId ?: return@setOnClickListener
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewModel.deleteScript(id)
+                requireActivity().finish()
+            }
         }
     }
 
@@ -55,7 +73,7 @@ class UiHiderEditorFragment : Fragment() {
         val label = binding.editLabel.text?.toString()?.trim().orEmpty()
 
         if (packageName.isEmpty()) {
-            Toast.makeText(requireContext(), "Enter a package name", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), R.string.uihider_enter_package, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -73,8 +91,13 @@ class UiHiderEditorFragment : Fragment() {
             source = source,
             isEnabled = existingIsEnabled
         )
-        viewModel.upsertScript(script)
-        requireActivity().finish()
+        // Finish only after the write lands; finishing earlier cancels the ViewModel scope
+        // and with it the save.
+        binding.btnSave.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.upsertScript(script)
+            requireActivity().finish()
+        }
     }
 
     override fun onDestroyView() {

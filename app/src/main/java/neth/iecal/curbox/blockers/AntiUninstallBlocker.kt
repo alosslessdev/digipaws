@@ -1,6 +1,7 @@
 package neth.iecal.curbox.blockers
 
-import android.util.Log
+import android.accessibilityservice.AccessibilityService
+import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.CoroutineScope
@@ -13,7 +14,8 @@ import neth.iecal.curbox.data.models.AntiUninstallConfig
 import neth.iecal.curbox.services.AppBlockerService
 import neth.iecal.curbox.services.BaseBlockingService
 import neth.iecal.curbox.utils.AntiUninstallManager
-import neth.iecal.curbox.utils.ViewUtils
+import java.util.Locale
+
 
 /**
  * Keeps Curbox installed and running by bouncing the user away from the screens that could undo
@@ -27,7 +29,8 @@ class AntiUninstallBlocker : BaseBlocker() {
         // The AOSP activity that activates or deactivates a device admin.
         const val DEVICE_ADMIN_SCREEN_CLASS = "DeviceAdminAdd"
         const val SETTINGS_PACKAGE = "com.android.settings"
-        val SERVICE_LABELS = listOf("App Blocker", "Usage Tracker")
+        const val SCREEN_SCAN_INTERVAL_MS = 300L
+        val SERVICE_LABELS = listOf("App Blocker")
     }
 
     @Volatile private var config: AntiUninstallConfig = AntiUninstallConfig()
@@ -35,6 +38,7 @@ class AntiUninstallBlocker : BaseBlocker() {
     private lateinit var service: AppBlockerService
     private var settingsJob: kotlinx.coroutines.Job? = null
 
+    private var foundCount = 0
     fun setupBlocker(service: BaseBlockingService) {
         if (service !is AppBlockerService) return
         this.service = service
@@ -51,7 +55,7 @@ class AntiUninstallBlocker : BaseBlocker() {
     fun doAntiUninstallCheck(event: AccessibilityEvent?) {
         event ?: return
         val current = config
-        if (!current.isEnabled || !AntiUninstallManager.isAdminActive(service)) return
+        if (!current.isEnabled) return
 
         // A finished timed or cooldown unlock lifts protection for good.
         if (AntiUninstallManager.isUnlockComplete(current)) {
@@ -59,31 +63,56 @@ class AntiUninstallBlocker : BaseBlocker() {
             return
         }
 
-        if (event.className?.toString()?.contains(DEVICE_ADMIN_SCREEN_CLASS) == true) {
-            service.pressBack()
-            service.pressHome()
+        // isAdminActive is a binder call, so only pay for it on the screens we may bounce from.
+        val onAdminScreen = event.className?.toString()?.contains(DEVICE_ADMIN_SCREEN_CLASS) == true
+        val inSettings = event.packageName?.toString() == SETTINGS_PACKAGE
+        if (!onAdminScreen && !inSettings) return
+        if (!AntiUninstallManager.isAdminActive(service)) return
+
+        if (onAdminScreen) {
+            bounce()
             return
         }
 
-        if(event.packageName == SETTINGS_PACKAGE) {
-            // Bounce the moment the user taps Curbox's row in accessibility settings.
-            if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED && clickHitsOurService(
-                event.source
-            )) {
-                service.pressBack()
-                service.pressHome()
-                return
-            }
-
-            val nodes = service.rootInActiveWindow.findAccessibilityNodeInfosByText(service.getString(R.string.accessibility_permission_app_blocker))
-            val nodes2 = service.rootInActiveWindow.findAccessibilityNodeInfosByText(service.getString(R.string.accessibility_permission_usage_tracker))
-
-            if(!(nodes.isNullOrEmpty() || nodes2.isNullOrEmpty())){
-                service.pressBack()
-                service.pressHome()
-            }
+        val appNameMatch = service.rootInActiveWindow.findAccessibilityNodeInfosByText(service.getString(R.string.app_name))
+        if(appNameMatch!=null){
+            //Device admin check
+            val admMatch = service.rootInActiveWindow.findAccessibilityNodeInfosByText("device admin app")
+            if(!admMatch.isNullOrEmpty()) bounce()
         }
 
+        //Accessibility Service Block
+        val matches = service.rootInActiveWindow.findAccessibilityNodeInfosByText("Curbox App Blocker shortcut")
+        if(!matches.isNullOrEmpty()){
+            bounce()
+            return
+        }
+
+
+
+        // Bounce the moment the user taps Curbox's row in accessibility settings.
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED && clickHitsOurService(event.source)) {
+            bounce()
+            return
+        }
+
+        val now = SystemClock.uptimeMillis()
+        if (now - lastScreenScan < SCREEN_SCAN_INTERVAL_MS) return
+        lastScreenScan = now
+
+        val root = service.rootInActiveWindow ?: return
+        val nodes = root.findAccessibilityNodeInfosByText(
+            service.getString(R.string.accessibility_permission_app_blocker)
+        )
+        if (!nodes.isNullOrEmpty()) {
+            nodes.forEach { NodeFinder.recycle(it) }
+            bounce()
+        }
+    }
+
+    private fun bounce() {
+        service.pressBack()
+        service.pressHome()
     }
 
     /** True if the clicked node, or anything under it, is one of Curbox's accessibility services. */
@@ -94,12 +123,28 @@ class AntiUninstallBlocker : BaseBlocker() {
                 val matches = source.findAccessibilityNodeInfosByText(label)
                 val found = !matches.isNullOrEmpty()
                 matches?.forEach { NodeFinder.recycle(it) }
-                Log.d("Anti Uninstall","click found")
-
                 found
             }
         } finally {
             NodeFinder.recycle(source)
+        }
+    }
+    private fun traverseNodesForKeywords(node: AccessibilityNodeInfo?) {
+        if (node == null) {
+            return
+        }
+
+        if (node.getClassName() != null && node.getClassName() == "android.widget.TextView") {
+            val nodeText = node.text.toString() + node.contentDescription.toString()
+            val textContent = nodeText.toString().lowercase(Locale.getDefault())
+            if(textContent.contains("curbox")){
+                foundCount++
+            }
+        }
+
+        for (i in 0..<node.getChildCount()) {
+            val childNode = node.getChild(i)
+            traverseNodesForKeywords(childNode)
         }
     }
 

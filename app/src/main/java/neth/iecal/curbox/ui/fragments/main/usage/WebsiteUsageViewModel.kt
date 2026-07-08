@@ -21,6 +21,17 @@ import java.util.*
 class WebsiteUsageViewModel(application: Application, private val packageName: String) : AndroidViewModel(application) {
 
     private val websiteStatsDao = AppDatabase.getInstance(application).websiteStatsDao()
+    private val isSynced = packageName == neth.iecal.curbox.data.sync.SYNCED_WEB_PACKAGE
+
+    private suspend fun websitesForDate(date: LocalDate, dateString: String): List<WebsiteStatsEntity> {
+        return if (isSynced) {
+            neth.iecal.curbox.data.sync.SyncGateway.provider.remoteWebsiteUsage(date.toString())
+                .map { (domain, ms) -> WebsiteStatsEntity(dateString, packageName, domain, domain, ms, 0L) }
+                .sortedByDescending { it.totalTime }
+        } else {
+            websiteStatsDao.getStatsForDate(dateString).filter { it.packageName == packageName && it.isWebsite() }
+        }
+    }
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -60,6 +71,19 @@ class WebsiteUsageViewModel(application: Application, private val packageName: S
 
     fun initialize() {
         loadWeekData()
+        if (isSynced) refreshSyncedUsage()
+    }
+
+    // Usage records never send a push to this device, so the freshest browsing
+    // from other devices only arrives when we ask. Pull once when the screen
+    // opens, then reload with whatever came in.
+    private fun refreshSyncedUsage() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val provider = neth.iecal.curbox.data.sync.SyncGateway.provider
+            if (!provider.isAvailable) return@launch
+            runCatching { provider.refresh() }
+            loadWeekData()
+        }
     }
 
     fun goToPreviousWeek() {
@@ -114,8 +138,7 @@ class WebsiteUsageViewModel(application: Application, private val packageName: S
                 val isFuture = date.isAfter(today)
 
                 val dateString = date.format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.getDefault()))
-                val stats = websiteStatsDao.getStatsForDate(dateString).filter { it.packageName == packageName && it.isWebsite() }
-                val totalTimeMs = if (isFuture) 0L else stats.sumOf { it.totalTime }
+                val totalTimeMs = if (isFuture) 0L else websitesForDate(date, dateString).sumOf { it.totalTime }
 
                 val hours = totalTimeMs / (1000f * 60f * 60f)
                 val dateMillis = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -144,7 +167,7 @@ class WebsiteUsageViewModel(application: Application, private val packageName: S
         val sublabel = if (isToday) "TOTAL TODAY" else "TOTAL · ${date.format(dayLabelFormatter)}"
 
         val dateString = date.format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.getDefault()))
-        val websiteStats = websiteStatsDao.getStatsForDate(dateString).filter { it.packageName == packageName && it.isWebsite() }
+        val websiteStats = websitesForDate(date, dateString)
         val total = websiteStats.sumOf { it.totalTime }
 
         withContext(Dispatchers.Main) {

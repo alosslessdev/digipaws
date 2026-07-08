@@ -16,6 +16,7 @@ import neth.iecal.curbox.utils.ViewUtils
 import neth.iecal.curbox.R
 import neth.iecal.curbox.data.models.UiHiderScript
 import neth.iecal.curbox.databinding.FragmentUiHiderBinding
+import neth.iecal.curbox.hardcoded.allScripts
 import neth.iecal.curbox.services.AppBlockerService
 import neth.iecal.curbox.services.NodePickerService
 import neth.iecal.curbox.ui.activity.FragmentActivity
@@ -63,7 +64,7 @@ class UiHiderFragment : Fragment() {
                 if (binding.switchEnableUiHider.isChecked != config.isActive) {
                     binding.switchEnableUiHider.isChecked = config.isActive
                 }
-                adapter.submitList(config.scripts)
+                adapter.submitList(config.allScripts())
                 isUpdatingUi = false
             }
         }

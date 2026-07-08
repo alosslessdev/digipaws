@@ -90,28 +90,29 @@ class SelectAppsActivity : AppCompatActivity() {
                 val popupMenu = PopupMenu(this@SelectAppsActivity, binding.selectAppsMagic)
 
                 val categoriesMap = mapOf(
-                    ApplicationInfo.CATEGORY_AUDIO to "Audio",
-                    ApplicationInfo.CATEGORY_GAME to "Games",
-                    ApplicationInfo.CATEGORY_IMAGE to "Images",
-                    ApplicationInfo.CATEGORY_MAPS to "Maps",
-                    ApplicationInfo.CATEGORY_NEWS to "News",
-                    ApplicationInfo.CATEGORY_PRODUCTIVITY to "Productivity",
-                    ApplicationInfo.CATEGORY_SOCIAL to "Social",
-                    ApplicationInfo.CATEGORY_VIDEO to "Video",
-                    ApplicationInfo.CATEGORY_UNDEFINED to "Undefined"
+                    ApplicationInfo.CATEGORY_AUDIO to getString(R.string.app_category_audio),
+                    ApplicationInfo.CATEGORY_GAME to getString(R.string.app_category_games),
+                    ApplicationInfo.CATEGORY_IMAGE to getString(R.string.app_category_images),
+                    ApplicationInfo.CATEGORY_MAPS to getString(R.string.app_category_maps),
+                    ApplicationInfo.CATEGORY_NEWS to getString(R.string.app_category_news),
+                    ApplicationInfo.CATEGORY_PRODUCTIVITY to getString(R.string.app_category_productivity),
+                    ApplicationInfo.CATEGORY_SOCIAL to getString(R.string.app_category_social),
+                    ApplicationInfo.CATEGORY_VIDEO to getString(R.string.app_category_video),
+                    ApplicationInfo.CATEGORY_UNDEFINED to getString(R.string.app_category_undefined)
                 )
 
                 val availableCategories = appItemList.mapNotNull { it.appInfo?.category }.toSet().sorted()
 
                 availableCategories.forEach { category ->
-                    val title = "Auto Select ${categoriesMap[category] ?: "Category $category"}"
+                    val categoryName = categoriesMap[category] ?: getString(R.string.select_apps_category_fallback, category)
+                    val title = getString(R.string.select_apps_auto_select, categoryName)
                     popupMenu.menu.add(0, category, 0, title)
                 }
 
-                popupMenu.menu.add(0, 1000, 0, "Add a custom android package")
+                popupMenu.menu.add(0, 1000, 0, getString(R.string.select_apps_add_custom_menu))
 
                 if (allGroups.isNotEmpty()) {
-                    popupMenu.menu.add(0, 1999, 0, "── Import from Group ──").isEnabled = false
+                    popupMenu.menu.add(0, 1999, 0, getString(R.string.select_apps_import_from_group)).isEnabled = false
                     allGroups.forEachIndexed { index, (name, _) ->
                         popupMenu.menu.add(0, 2000 + index, 0, name)
                     }
@@ -336,10 +337,10 @@ class SelectAppsActivity : AppCompatActivity() {
 
     private fun makeAddCustomPackageDialog() {
         val dialogBinding = DialogAddKeywordBinding.inflate(layoutInflater)
-        dialogBinding.wHint.hint = "com.real.android.app"
+        dialogBinding.wHint.hint = getString(R.string.select_apps_custom_hint)
 
         MaterialAlertDialogBuilder(this)
-            .setTitle("Add a custom package")
+            .setTitle(R.string.select_apps_add_custom_title)
             .setView(dialogBinding.root)
             .setPositiveButton(getString(R.string.add)) { dialog, _ ->
                 val packageName = dialogBinding.keywordInput.text.toString().trim()
